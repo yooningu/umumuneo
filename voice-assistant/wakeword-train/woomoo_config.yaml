@@ -1,0 +1,45 @@
+## "우무" 커스텀 웨이크워드 학습 설정
+## 긍정/부정 클립은 generate_positive_samples.py / generate_negative_samples.py로 이미 만들어둔 걸 사용함
+## (원래 예제처럼 --generate_clips 단계는 안 씀 - Piper 대신 MeloTTS로 직접 만들었으므로)
+
+model_name: "woomoo"
+
+target_phrase:
+  - "우무"
+
+custom_negative_phrases: []
+
+# generate_clips 단계를 안 쓰므로 의미 없지만 필드 자체는 필요해서 형식상 채워둠
+n_samples: 1500
+n_samples_val: 150
+tts_batch_size: 50
+augmentation_batch_size: 8
+piper_sample_generator_path: "./piper-sample-generator"
+
+output_dir: "./my_custom_model"
+
+rir_paths:
+  - "./mit_rirs/16khz"
+
+background_paths: []
+background_paths_duplication_rate:
+  - 1
+
+false_positive_validation_data_path: "./validation_set_features.npy"
+
+augmentation_rounds: 2
+
+feature_data_files:
+  "validation_set": "./validation_set_features.npy"
+
+batch_n_per_class:
+  "validation_set": 512
+  "adversarial_negative": 50
+  "positive": 50
+
+model_type: "dnn"
+layer_size: 32
+
+steps: 8000
+max_negative_weight: 1500
+target_false_positives_per_hour: 0.2

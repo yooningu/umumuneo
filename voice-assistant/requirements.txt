@@ -1,0 +1,8 @@
+sounddevice
+numpy
+scipy
+requests
+openwakeword
+playsound==1.2.2
+yt-dlp
+keyboard

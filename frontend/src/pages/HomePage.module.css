@@ -1,0 +1,33 @@
+.container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+.calendarPane {
+  flex: 1;
+  overflow: hidden;
+  border-right: 1px solid #e0e0e0;
+}
+
+.sidePane {
+  width: 420px;
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topSide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chatPane {
+  height: 240px;
+  min-height: 240px;
+}

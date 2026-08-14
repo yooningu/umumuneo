@@ -1,0 +1,11 @@
+# 로그인 토큰이 들어있어서 커밋하지 않음
+config.py
+# 녹음한 개인 음성 데이터도 커밋 안 함
+training_data/
+wakeword-train/my_custom_model/
+# 학습용으로 생성된 특징 벡터 파일 - 180MB라 GitHub 100MB 제한 넘음, 재생성 가능하니 커밋 안 함
+wakeword-train/validation_set_features.npy
+# 학습할 때 클론해온 외부 저장소들 - 우리 코드가 아니라 다시 클론하면 되는 것들
+wakeword-train/mit_rirs/
+wakeword-train/openwakeword/
+wakeword-train/piper-sample-generator/

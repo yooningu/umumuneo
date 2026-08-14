@@ -1,0 +1,194 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.headerRow {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.timeColSpacer {
+  width: 50px;
+  min-width: 50px;
+}
+
+.dayHeaderCell {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  cursor: pointer;
+  border-left: 1px solid #e0e0e0;
+}
+
+.dayLabel {
+  font-size: 11px;
+  color: #888;
+}
+
+.dayNumber {
+  font-size: 20px;
+  font-weight: bold;
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  margin: 2px auto 0;
+  border-radius: 50%;
+  background-color: transparent;
+  color: #333;
+}
+
+.dayNumber.today {
+  background-color: #7c8cf8;
+  color: #fff;
+}
+
+.alldayRow {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+.alldayLabel {
+  width: 50px;
+  min-width: 50px;
+  font-size: 10px;
+  color: #888;
+  padding: 4px;
+  text-align: right;
+}
+
+.alldayCell {
+  flex: 1;
+  min-width: 0;
+  /* flex 아이템 기본 min-width:auto 때문에 긴 텍스트가 컬럼을 밀어내는 것 방지 */
+  border-left: 1px solid #e0e0e0;
+  min-height: 28px;
+  padding: 2px;
+}
+
+.alldayBadge {
+  color: #fff;
+  font-size: 11px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-bottom: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.alldayMore {
+  color: #888;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1;
+  cursor: default;
+}
+
+.gridScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.gridRow {
+  display: flex;
+  position: relative;
+}
+
+.timeCol {
+  width: 50px;
+  min-width: 50px;
+}
+
+.hourCell {
+  height: 60px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-right: 6px;
+  text-align: right;
+}
+
+.hourLabel {
+  font-size: 10px;
+  color: #aaa;
+  position: relative;
+  top: -7px;
+}
+
+.dayCol {
+  flex: 1;
+  border-left: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.hourLine {
+  height: 60px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.nowLine {
+  position: absolute;
+  left: 50px;
+  right: 0;
+  height: 2px;
+  background-color: #f59e0b;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.nowBadge {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: #f59e0b;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  -webkit-text-stroke: 3px #fff;
+  paint-order: stroke fill;
+  text-shadow: 0 0 2px #fff;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.momentBadge {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 4;
+  cursor: pointer;
+}
+
+.scheduleBlock {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 11px;
+  color: #fff;
+  z-index: 3;
+  cursor: pointer;
+}
+
+.scheduleTitle {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

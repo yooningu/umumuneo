@@ -1,0 +1,127 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: mariadb-dev
+    environment:
+      MARIADB_ROOT_PASSWORD: 1234
+      MARIADB_DATABASE: calendar_app
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  backend:
+    image: gradle:8-jdk17
+    container_name: spring-dev
+    working_dir: /workspace
+    volumes:
+      - ./backend:/workspace
+      - gradle_cache:/home/gradle/.gradle
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - ollama
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/calendar_app
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHISPER_BASE_URL=http://whisper:9000
+      # Cloudflare Tunnel로 배포됐을 때 쓰는 값. 로컬에서만 켤 땐 없어도 application.properties 기본값(localhost)으로 동작함.
+      - KAKAO_REDIRECT_URI=https://umumuneo.com/auth/callback
+      - APP_PUBLIC_BASE_URL=https://api.umumuneo.com
+      # 기상청/부산버스 API 키 - 실제 값은 .env(gitignore됨)에 있음
+      - KMA_AUTH_KEY=${KMA_AUTH_KEY}
+      - BUS_BUSAN_SERVICE_KEY=${BUS_BUSAN_SERVICE_KEY}
+    command: sleep infinity
+    restart: unless-stopped
+
+  frontend:
+    image: node:20
+    container_name: react-dev
+    working_dir: /workspace
+    volumes:
+      - ./frontend:/workspace
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=https://api.umumuneo.com/api/v1
+      - VITE_KAKAO_REDIRECT_URI=https://umumuneo.com/auth/callback
+    command: sleep infinity
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama-dev
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  whisper:
+    image: python:3.11-slim
+    container_name: whisper-dev
+    working_dir: /workspace
+    volumes:
+      - ./whisper-service:/workspace
+      - whisper_models:/root/.cache
+    ports:
+      - "9000:9000"
+    environment:
+      - WHISPER_MODEL=large-v3
+    command: sleep infinity
+    restart: unless-stopped
+
+  # TTS (MeloTTS 채택 - Supertonic-3, 지금은 사용 안 함)
+  melotts:
+    image: python:3.11-slim
+    container_name: melotts-dev
+    working_dir: /workspace
+    volumes:
+      - ./melotts-service:/workspace
+      - melotts_models:/root/.cache
+    ports:
+      - "9002:9002"
+    command: sleep infinity
+    restart: unless-stopped
+
+  # "우무" 웨이크워드 커스텀 모델 학습용 (openWakeWord). 학습 끝나면 안 켜놔도 됨 - 결과물(.onnx)만 있으면 됨
+  wakeword-train:
+    image: python:3.10-slim
+    container_name: wakeword-train-dev
+    working_dir: /workspace
+    volumes:
+      - ./voice-assistant/wakeword-train:/workspace
+      - ./voice-assistant/training_data:/workspace/training_data
+      - wakeword_cache:/root/.cache
+    command: sleep infinity
+    restart: unless-stopped
+
+  # umumuneo.com(Cloudflare) → 이 미니피시로 들어오는 아웃바운드 전용 터널.
+  # 공유기 포트포워딩 없이도 외부에서 접근 가능하게 해줌.
+  # 사용법: Cloudflare Zero Trust > Tunnels 에서 터널 생성 후 토큰을 프로젝트 루트 .env 의
+  # CLOUDFLARE_TUNNEL_TOKEN 에 넣고, 터널의 Public Hostname을
+  #   umumuneo.com      → http://frontend:5173
+  #   api.umumuneo.com  → http://backend:8080
+  # 로 연결하면 됨.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-dev
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  gradle_cache:
+  ollama_data:
+  whisper_models:
+  melotts_models:
+  wakeword_cache:

@@ -1,0 +1,233 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.card {
+  width: 360px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  gap: 12px;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+}
+
+.closeBtn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 0 16px;
+}
+
+.body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.footer {
+  display: flex;
+  border-top: 1px solid #e0e0e0;
+}
+
+.footerBtn {
+  flex: 1;
+  padding: 14px;
+  text-align: center;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.footerBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.footerBtnDivider {
+  width: 1px;
+  background-color: #e0e0e0;
+}
+
+.deleteBtn {
+  color: #e74c3c;
+}
+
+.primaryBtn {
+  color: #7c8cf8;
+  font-weight: bold;
+}
+
+/* 토글 스위치 */
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  min-width: 40px;
+  border-radius: 11px;
+  background-color: #ccc;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.15s;
+}
+
+.toggleOn {
+  background-color: #7c8cf8;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+
+.toggleOnKnob {
+  transform: translateX(18px);
+}
+
+/* 수정 폼 */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 16px;
+}
+
+.label {
+  font-size: 12px;
+  color: #888;
+}
+
+.input,
+.textarea {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #333;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.row2 {
+  display: flex;
+  gap: 8px;
+}
+
+.row2 > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.typeRow {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+  flex-wrap: wrap;
+}
+
+.typeBtn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.typeBtnActive {
+  border-color: #7c8cf8;
+  background-color: #eef0ff;
+  color: #7c8cf8;
+  font-weight: bold;
+}
+
+.notifRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 16px;
+}
+
+.offsetInput {
+  width: 100px;
+}

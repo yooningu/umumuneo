@@ -1,0 +1,11 @@
+.shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  background-color: #f8f9fa;
+}

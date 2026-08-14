@@ -1,0 +1,39 @@
+.sidebar {
+  width: 200px;
+  min-width: 200px;
+  background-color: #1a1a2e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  gap: 4px;
+}
+
+.logo {
+  padding: 0 20px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #7c8cf8;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s;
+}
+
+.navButton.active {
+  background: #7c8cf820;
+  border-left: 3px solid #7c8cf8;
+  color: #7c8cf8;
+}
