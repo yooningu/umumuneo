@@ -23,7 +23,7 @@ TARGET_WORD = "우무"
 N_SYNTHETIC = 150           # MeloTTS로 만들 합성 샘플 수 (실제 녹음이 130개로 늘어서 더 줄임)
 REAL_DUPLICATES = 4         # 실제 녹음 1개당 몇 번 복제할지 (130개 * 4 = 520개)
 TEST_SPLIT = 0.1            # 검증용으로 뗄 비율
-OUTPUT_ROOT = "/workspace/my_custom_model/woomoo"
+OUTPUT_ROOT = "/workspace/my_custom_model/umu"
 REAL_SAMPLES_DIR = "/workspace/training_data/positive_real"
 TARGET_SR = 16000
 

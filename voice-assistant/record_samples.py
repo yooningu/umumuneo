@@ -45,7 +45,7 @@ def main():
             audio = record_one()
             print(" 완료")
 
-            path = os.path.join(OUTPUT_DIR, f"woomoo_{count + 1:03d}.wav")
+            path = os.path.join(OUTPUT_DIR, f"umu_{count + 1:03d}.wav")
             wav_write(path, SAMPLE_RATE, audio)
             count += 1
             time.sleep(0.3)

@@ -15,7 +15,7 @@ import scipy.io.wavfile as wavfile
 import scipy.signal
 
 MELOTTS_URL = "http://melotts:9002/synthesize"
-OUTPUT_ROOT = "/workspace/my_custom_model/woomoo"
+OUTPUT_ROOT = "/workspace/my_custom_model/umu"
 REAL_SAMPLES_DIR = "/workspace/training_data/negative_real"
 TARGET_SR = 16000
 REPEATS_PER_PHRASE = 8      # 합성 문구당 몇 번 만들지

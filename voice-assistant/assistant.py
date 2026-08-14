@@ -32,7 +32,7 @@ from playsound import playsound
 import config
 
 # ── 설정 ──
-WAKEWORD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "wakeword-train", "my_custom_model", "woomoo.onnx")
+WAKEWORD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "wakeword-train", "my_custom_model", "umu.onnx")
 WAKEWORD_THRESHOLD = 0.5
 
 # 우무 감지되면 sound3(듣기 시작 알림), 말 다 들으면 sound1(그만 말해도 됨 알림)
@@ -443,7 +443,7 @@ def main():
             frame, _ = stream.read(FRAME_SIZE)
             pcm = frame[:, 0]
             pred = model.predict(pcm)
-            score = pred.get("woomoo", 0)
+            score = pred.get("umu", 0)
 
             if score > WAKEWORD_THRESHOLD:
                 print(f"\n'우무' 감지! (score={score:.2f})")

@@ -2,7 +2,7 @@
 ## 긍정/부정 클립은 generate_positive_samples.py / generate_negative_samples.py로 이미 만들어둔 걸 사용함
 ## (원래 예제처럼 --generate_clips 단계는 안 씀 - Piper 대신 MeloTTS로 직접 만들었으므로)
 
-model_name: "woomoo"
+model_name: "umu"
 
 target_phrase:
   - "우무"
