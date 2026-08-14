@@ -29,6 +29,10 @@ public class User {
     @Column(length = 100)
     private String email;
 
+    // umumuneo.com 개인 메일 수신용 별칭 (예: "x7k2m9pq" -> x7k2m9pq@umumuneo.com 으로 온 메일이 이 유저 것)
+    @Column(name = "email_alias", length = 50, unique = true)
+    private String emailAlias;
+
     @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
 

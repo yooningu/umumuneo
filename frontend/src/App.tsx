@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import EmailAliasModal from './components/EmailAliasModal';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/auth/CallbackPage';
 import HomePage from './pages/HomePage';
@@ -8,6 +10,7 @@ import TimetablePage from './pages/TimetablePage';
 import ChatPage from './pages/ChatPage';
 import NasPage from './pages/NasPage';
 import SettingsPage from './pages/SettingsPage';
+import { getMe } from './api/user';
 import styles from './App.module.css';
 
 // 왼쪽 고정 사이드바 + 페이지 레이아웃
@@ -23,10 +26,26 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 로그인 여부 확인
+// 로그인 여부 확인 + 메일 별칭이 아직 없으면(최초 로그인) 정할 때까지 모달로 막음
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('accessToken');
-  return token ? <AppLayout>{children}</AppLayout> : <Navigate to="/login" />;
+  const [needsEmailAlias, setNeedsEmailAlias] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    getMe()
+      .then(user => setNeedsEmailAlias(user.emailAlias === null))
+      .catch(() => setNeedsEmailAlias(false)); // 조회 실패해도 화면은 정상적으로 보여줌
+  }, [token]);
+
+  if (!token) return <Navigate to="/login" />;
+
+  return (
+    <AppLayout>
+      {needsEmailAlias && <EmailAliasModal onDone={() => setNeedsEmailAlias(false)} />}
+      {children}
+    </AppLayout>
+  );
 }
 
 export default function App() {

@@ -69,6 +69,7 @@ public class AuthService {
                     User newUser = new User();
                     newUser.setKakaoId(kakaoId);
                     newUser.setNickname(finalNickname);
+                    // emailAlias는 여기서 안 만듦 - 최초 로그인 후 프론트에서 직접 입력받아서 설정함
                     return userRepository.save(newUser);
                 });
 

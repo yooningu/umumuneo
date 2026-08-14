@@ -26,7 +26,9 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/v1/auth/refresh",
             "/swagger-ui",
             "/api-docs",
-            "/public/files"
+            "/public/files",
+            // Cloudflare Email Routing(Worker)이 호출함 - JWT 대신 자체 공유 시크릿으로 검증함
+            "/api/v1/email/inbound"
     );
 
     @Override

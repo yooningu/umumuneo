@@ -11,4 +11,9 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     // kakao_id로 유저 조회
     Optional<User> findByKakaoId(Long kakaoId);
+
+    // umumuneo.com 메일 별칭으로 유저 조회 (받은 메일의 수신 주소 앞부분과 매칭)
+    Optional<User> findByEmailAlias(String emailAlias);
+
+    boolean existsByEmailAlias(String emailAlias);
 }

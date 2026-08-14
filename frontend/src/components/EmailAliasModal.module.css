@@ -1,0 +1,81 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.card {
+  width: 380px;
+  max-width: 90vw;
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 8px;
+}
+
+.description {
+  font-size: 13px;
+  color: #777;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.suffix {
+  padding: 12px;
+  color: #999;
+  font-size: 14px;
+  white-space: nowrap;
+  background-color: #f7f7f7;
+}
+
+.error {
+  color: #e5484d;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.submitBtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background-color: #333;
+  color: #fff;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  background-color: #bbb;
+  cursor: default;
+}

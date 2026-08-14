@@ -35,6 +35,8 @@ services:
       # 기상청/부산버스 API 키 - 실제 값은 .env(gitignore됨)에 있음
       - KMA_AUTH_KEY=${KMA_AUTH_KEY}
       - BUS_BUSAN_SERVICE_KEY=${BUS_BUSAN_SERVICE_KEY}
+      # Cloudflare Email Routing Worker가 메일을 전달할 때 검증용으로 쓰는 공유 시크릿
+      - EMAIL_INBOUND_SECRET=${EMAIL_INBOUND_SECRET}
     command: sleep infinity
     restart: unless-stopped
 

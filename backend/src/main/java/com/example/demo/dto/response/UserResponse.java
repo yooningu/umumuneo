@@ -9,6 +9,7 @@ public class UserResponse {
     private final String id;
     private final String nickname;
     private final String email;
+    private final String emailAlias;
     private final Integer notifOffsetMin;
     private final Boolean notifEnabled;
     private final String theme;
@@ -17,6 +18,7 @@ public class UserResponse {
         this.id = user.getId();
         this.nickname = user.getNickname();
         this.email = user.getEmail();
+        this.emailAlias = user.getEmailAlias();
         this.notifOffsetMin = user.getNotifOffsetMin();
         this.notifEnabled = user.getNotifEnabled();
         this.theme = user.getTheme().name();
