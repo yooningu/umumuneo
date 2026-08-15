@@ -369,6 +369,9 @@ public class ChatService {
         requestMap.put("think", false);  // ← 이렇게 해야 thinking 비활성화
         // 온도를 낮춰서 [ACTION:...] JSON 출력이 깨지는(글자 누락/오타) 걸 줄인다
         requestMap.put("options", Map.of("temperature", 0.2));
+        // 기본 채팅 모델(e4b)은 항상 켜둬서 응답 지연이 없게 하고(keep_alive: -1 = 무제한 유지),
+        // 비전 모델(12b)은 이미지 첨부할 때만 가끔 쓰니까 기본값(5분 유휴 시 자동 언로드) 그대로 둔다
+        requestMap.put("keep_alive", VISION_MODEL.equals(model) ? "5m" : -1);
         if (images != null && !images.isEmpty()) {
             requestMap.put("images", images);
         }
