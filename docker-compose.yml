@@ -37,6 +37,8 @@ services:
       - BUS_BUSAN_SERVICE_KEY=${BUS_BUSAN_SERVICE_KEY}
       # Cloudflare Email Routing Worker가 메일을 전달할 때 검증용으로 쓰는 공유 시크릿
       - EMAIL_INBOUND_SECRET=${EMAIL_INBOUND_SECRET}
+      # 우무(음성 비서) 고정 토큰 발급이 허용된 계정 ID - 실제 값은 .env(gitignore됨)에 있음
+      - DEVICE_TOKEN_OWNER_ID=${DEVICE_TOKEN_OWNER_ID}
     command: sleep infinity
     restart: unless-stopped
 

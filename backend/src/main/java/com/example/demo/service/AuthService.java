@@ -33,8 +33,10 @@ public class AuthService {
     @Value("${kakao.redirect-uri}")
     private String kakaoRedirectUri;
 
-    // 미니피시(음성 비서)용 고정 토큰은 이 계정으로만 발급 가능 - 다른 계정은 access/refresh만 사용
-    private static final String DEVICE_TOKEN_OWNER_ID = "11ba7325-dab5-42dd-a4a3-66cb97eabd57";
+    // 미니피시(음성 비서)용 고정 토큰은 이 계정으로만 발급 가능 - 다른 계정은 access/refresh만 사용.
+    // 실제 값은 커밋하지 않고 .env(gitignore됨) -> docker-compose 환경변수로 주입함
+    @Value("${device.token-owner-id}")
+    private String deviceTokenOwnerId;
 
     // 카카오 로그인
     @Transactional
@@ -131,7 +133,7 @@ public class AuthService {
 
     // 미니피시(음성 비서)용 고정 토큰 발급 - 지정된 계정 본인만 발급 가능
     public AuthResponse.DeviceToken generateDeviceToken(String userId) {
-        if (!DEVICE_TOKEN_OWNER_ID.equals(userId)) {
+        if (!deviceTokenOwnerId.equals(userId)) {
             throw new RuntimeException("이 계정은 고정 토큰을 발급할 수 없습니다.");
         }
         return new AuthResponse.DeviceToken(jwtUtil.generateDeviceToken(userId));
