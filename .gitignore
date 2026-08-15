@@ -2,6 +2,9 @@
 /.env
 frontend/.env
 
+# PC별로 다르게 쓰는 로컬 전용 docker-compose 오버라이드 (예: 이 PC에서 cloudflared 비활성화)
+docker-compose.override.yml
+
 # NAS에 업로드된 개인 파일 (사진/음성/문서 등) - 실제 파일이라 커밋하면 안 됨
 backend/uploads/
 
