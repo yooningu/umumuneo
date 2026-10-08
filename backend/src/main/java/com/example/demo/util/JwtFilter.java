@@ -27,7 +27,10 @@ public class JwtFilter extends OncePerRequestFilter {
             "/swagger-ui",
             "/api-docs",
             "/public/files",
+            // 카카오톡 메시지에 실리는 메일 첨부파일 링크 - 자체 서명된 단기 토큰으로만 검증함
+            "/public/email-attachments",
             // Cloudflare Email Routing(Worker)이 호출함 - JWT 대신 자체 공유 시크릿으로 검증함
+            // 주의: 로그인 유저용 메일 조회 API는 /api/v1/emails (복수형)로 따로 두어 이 경로와 겹치지 않게 함
             "/api/v1/email/inbound"
     );
 

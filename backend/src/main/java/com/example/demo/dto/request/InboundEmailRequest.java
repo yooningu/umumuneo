@@ -3,6 +3,8 @@ package com.example.demo.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public class InboundEmailRequest {
 
@@ -15,4 +17,10 @@ public class InboundEmailRequest {
     private String subject;
 
     private String body;
+
+    // 원본 HTML (Worker가 뽑아낸 것, 없으면 null)
+    private String bodyHtml;
+
+    // Worker가 MIME을 파싱해서 뽑아낸 첨부파일들 (없으면 null/빈 리스트)
+    private List<EmailAttachmentRequest> attachments;
 }
