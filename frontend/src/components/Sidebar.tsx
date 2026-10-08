@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: '/timetable', label: '시간표', icon: '📋' },
   { path: '/chat',      label: '챗봇',   icon: '💬' },
   { path: '/nas',       label: 'NAS',    icon: '🗂️' },
+  { path: '/mail',      label: '메일',   icon: '📧' },
   { path: '/settings',  label: '설정',   icon: '⚙️' },
 ];
 

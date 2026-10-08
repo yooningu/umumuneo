@@ -23,6 +23,7 @@ services:
     depends_on:
       - db
       - ollama
+      - ocr
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/calendar_app
       - SPRING_DATASOURCE_USERNAME=root
@@ -79,6 +80,20 @@ services:
     command: sleep infinity
     restart: unless-stopped
 
+  # 챗봇에 첨부된 이미지/PDF에서 텍스트를 뽑아서 프롬프트에 같이 넣어주는 용도
+  # (이미지: PaddleOCR, PDF: PyMuPDF). whisper/melotts랑 같은 패턴 - 실행은 docker exec로 따로 켬.
+  ocr:
+    image: python:3.11-slim
+    container_name: ocr-dev
+    working_dir: /workspace
+    volumes:
+      - ./ocr-service:/workspace
+      - ocr_models:/root/.paddleocr
+    ports:
+      - "9003:9003"
+    command: sleep infinity
+    restart: unless-stopped
+
   # TTS (MeloTTS 채택 - Supertonic-3, 지금은 사용 안 함)
   melotts:
     image: python:3.11-slim
@@ -129,3 +144,4 @@ volumes:
   whisper_models:
   melotts_models:
   wakeword_cache:
+  ocr_models:

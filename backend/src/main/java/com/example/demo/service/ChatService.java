@@ -49,6 +49,7 @@ public class ChatService {
     private final KakaoNotificationService kakaoNotificationService;
     private final SttService sttService;
     private final FileService fileService;
+    private final OcrService ocrService;
     private final WeatherService weatherService;
     private final BusService busService;
     private final ObjectMapper objectMapper;
@@ -58,6 +59,12 @@ public class ChatService {
 
     // 이미지가 첨부되면 vision을 지원하는 모델로 전환해서 호출한다
     private static final String VISION_MODEL = "gemma4:12b";
+
+    // ⚠️ 임시 점검 모드 (사용자 요청, 2026-09-28) - true면 Ollama를 아예 호출하지 않고
+    // 고정 문구만 돌려준다. 서버 램 절약을 위해 Ollama 컨테이너를 잠깐 꺼둘 때 씀.
+    // 원래대로 되돌리려면 이 값만 false로 바꾸면 됨 (다른 로직은 안 건드림).
+    private static final boolean AI_MAINTENANCE_MODE = true;
+    private static final String MAINTENANCE_MESSAGE = "🔧 지금은 AI 기능 점검 중이에요. 잠시 후 다시 시도해주세요.";
 
     // 시크릿(임시) 대화 - DB에 아예 저장하지 않고 메모리에 딱 1개 대화 슬롯만 유지한다.
     // 새 시크릿 대화가 시작되면(sessionId 없이 secret=true로 요청) 기존 슬롯은 버려지고(덮어쓰기) 새로 시작함.
@@ -192,6 +199,33 @@ public class ChatService {
         new Thread(() -> {
             StringBuilder fullResponse = new StringBuilder();
             try {
+                if (AI_MAINTENANCE_MODE) {
+                    // Ollama는 아예 안 건드리고 고정 문구만 스트리밍인 것처럼 바로 보냄
+                    emitter.send(SseEmitter.event()
+                            .name("chunk")
+                            .data("{\"content\":\"" + escapeJson(MAINTENANCE_MESSAGE) + "\"}"));
+
+                    if (finalIsUmu) {
+                        // 우무는 원래도 DB에 안 남기니 그대로 둠
+                    } else if (finalIsSecret) {
+                        ChatMessage aiMessage = new ChatMessage();
+                        aiMessage.setSession(finalSession);
+                        aiMessage.setRole(MessageRole.ASSISTANT);
+                        aiMessage.setContent(MAINTENANCE_MESSAGE);
+                        aiMessage.setIsSummarized(false);
+                        aiMessage.setTurnIndex(finalTurnIndex + 1);
+                        secretHistory.add(aiMessage);
+                    } else {
+                        chatSaveService.saveAiMessage(finalSession.getId(), MAINTENANCE_MESSAGE, finalTurnIndex + 1);
+                    }
+
+                    emitter.send(SseEmitter.event()
+                            .name("done")
+                            .data("{\"sessionId\":\"" + finalSession.getId() + "\"}"));
+                    emitter.complete();
+                    return;
+                }
+
                 // 음성 파일이 있으면 서버에서 STT로 변환해서 타이핑한 내용 뒤에 붙인다
                 // (프론트/DB에 저장되는 메시지는 사용자가 실제로 타이핑한 내용만 유지하고,
                 //  변환된 텍스트는 이 턴의 의도 파악/프롬프트 생성에만 사용한다)
@@ -209,13 +243,23 @@ public class ChatService {
                         log.error("음성 파일 STT 변환 실패: {}", e.getMessage());
                     }
                 }
+                // 첨부된 이미지/PDF가 있으면 텍스트를 뽑아서(OCR/PDF 파싱) 프롬프트에 같이 넣어준다.
+                // (화면/DB에 남는 메시지는 안 건드리고, 이 턴의 프롬프트 생성에만 반영함 - STT와 동일한 방식)
+                String attachmentText = extractAttachmentText(userId, sendableFiles);
+                if (!attachmentText.isBlank()) {
+                    effectiveMessage = effectiveMessage.isBlank()
+                            ? attachmentText
+                            : effectiveMessage + "\n\n" + attachmentText;
+                }
                 final String messageForPrompt = effectiveMessage;
 
                 // 첨부(이미지 포함) 여부와 무관하게 항상 의도를 분류한다.
                 // (이미지가 있어도 "이 사진 나에게 보내줘"처럼 SEND 의도일 수 있으므로 무조건 CHAT으로 넘기면 안 됨)
-                String intent = detectIntent(messageForPrompt, finalSession.getModelName());
-                // 파일이 첨부되면(이미지든 아니든) 더 성능 좋은 모델을 사용
-                String modelToUse = hasAttachment ? VISION_MODEL : finalSession.getModelName();
+                String intent = detectIntent(messageForPrompt, finalSession.getModelName(), hasAttachment);
+                // 기본 모델(e4b)도 비전을 지원해서, 첨부파일이 와도 별도 VISION_MODEL(12b)로
+                // 바꿔치기할 필요 없이 세션 모델을 그대로 씀. 이미지/PDF는 아래에서 OCR로 텍스트까지
+                // 뽑아서 프롬프트에 같이 넣어주기도 함(extractAttachmentText 참고).
+                String modelToUse = finalSession.getModelName();
 
                 String visibleContent;
                 if ("BUS".equals(intent)) {
@@ -367,11 +411,20 @@ public class ChatService {
         requestMap.put("stream", true);
         requestMap.put("system", "한국어로 간단히 대답하세요.");
         requestMap.put("think", false);  // ← 이렇게 해야 thinking 비활성화
-        // 온도를 낮춰서 [ACTION:...] JSON 출력이 깨지는(글자 누락/오타) 걸 줄인다
-        requestMap.put("options", Map.of("temperature", 0.2));
-        // 기본 채팅 모델(e4b)은 항상 켜둬서 응답 지연이 없게 하고(keep_alive: -1 = 무제한 유지),
-        // 비전 모델(12b)은 이미지 첨부할 때만 가끔 쓰니까 기본값(5분 유휴 시 자동 언로드) 그대로 둔다
-        requestMap.put("keep_alive", VISION_MODEL.equals(model) ? "5m" : -1);
+        // 온도를 낮춰서 [ACTION:...] JSON 출력이 깨지는(글자 누락/오타) 걸 줄인다.
+        // temperature가 낮으면 사실상 그리디 디코딩에 가까워지는데, repeat_penalty가 없으면(기본 1.0=억제 없음)
+        // 같은 단어를 계속 반복하는 무한 루프에 빠지기 쉬워서(특히 이미지 첨부 시 자주 발생) 반복 억제를 걸어둠.
+        // num_ctx도 기본 4096은 이미지 하나만으로도 프롬프트 토큰을 꽤 잡아먹어서 여유 있게 늘려둠.
+        requestMap.put("options", Map.of(
+                "temperature", 0.2,
+                "repeat_penalty", 1.2,
+                "num_ctx", 8192
+        ));
+        // 기본 채팅 모델(지금은 e4b)은 항상 켜둬서 응답 지연이 없게 함(keep_alive: -1 = 무제한 유지).
+        // 지금은 세션 모델이 하나뿐이라(hasAttachment로 다른 모델로 바꿔치기하지 않음, 위 참고) 항상 -1이면 됨.
+        // VISION_MODEL 상수는 나중에 "기본 모델과 다른 별도 비전 모델"을 쓰게 되면
+        // 그때 다시 "VISION_MODEL.equals(model) ? "5m" : -1"로 되돌릴 것.
+        requestMap.put("keep_alive", -1);
         if (images != null && !images.isEmpty()) {
             requestMap.put("images", images);
         }
@@ -407,17 +460,55 @@ public class ChatService {
         return fullResponse.toString();
     }
 
+    // 첨부된 이미지/PDF에서 텍스트를 뽑아낸다. NAS에 이미 업로드된 파일(sendableFiles)을 다시 읽어오는
+    // 방식이라 프론트에서 별도로 base64를 더 보낼 필요가 없음. 이미지는 PaddleOCR, PDF는 PyMuPDF를
+    // 쓰는 ocr-service를 호출하고(OcrService), 그 외 파일 형식은 건드리지 않는다(기존 동작 그대로
+    // 파일명만 참고용으로 남음). 하나가 실패해도 나머지/전체 응답에 영향 없게 각각 조용히 넘어간다.
+    private String extractAttachmentText(String userId, List<ChatRequest.FileRef> sendableFiles) {
+        StringBuilder sb = new StringBuilder();
+        for (ChatRequest.FileRef fileRef : sendableFiles) {
+            if (fileRef.getFileId() == null || fileRef.getFileId().isBlank()) continue;
+            try {
+                FileService.ShareableFile file = fileService.downloadFile(userId, fileRef.getFileId());
+                String mimeType = file.mimeType() != null ? file.mimeType() : "";
+                String text;
+                if (mimeType.startsWith("image/")) {
+                    text = ocrService.extractFromImage(file.resource(), fileRef.getName());
+                } else if (mimeType.equals("application/pdf")) {
+                    text = ocrService.extractFromPdf(file.resource(), fileRef.getName());
+                } else {
+                    continue; // 지원 안 하는 형식은 그냥 건너뜀 (파일명만 프롬프트에 남는 기존 동작 유지)
+                }
+                if (text != null && !text.isBlank()) {
+                    sb.append("[첨부파일 '").append(fileRef.getName()).append("'에서 추출된 텍스트]\n")
+                            .append(text.strip()).append("\n\n");
+                }
+            } catch (Exception e) {
+                log.warn("첨부파일 '{}' 텍스트 추출 중 오류: {}", fileRef.getName(), e.getMessage());
+            }
+        }
+        return sb.toString().strip();
+    }
+
     // 의도 파악 (일정 관련 / 카카오톡 나에게 보내기 / 일반 대화)
-    private String detectIntent(String userMessage, String modelName) throws Exception {
+    private String detectIntent(String userMessage, String modelName, boolean hasAttachment) throws Exception {
+        // 사진/파일이 첨부됐다는 걸 분류 모델한테 알려줘야 "이거", "이 사진" 같은 지칭어가
+        // 첨부파일을 가리킨다는 걸 알고, SEND(그대로 전송)와 CHAT(내용 분석/번역/설명)을 덜 헷갈려한다.
+        String attachmentNote = hasAttachment
+                ? "\n(참고: 이 메시지에는 사진/파일이 첨부되어 있습니다.)"
+                : "";
         String intentPrompt = String.format("""
                 다음 메시지의 의도를 분류해서 아래 중 하나로만 답하세요.
                 SCHEDULE: 일정 추가/수정/삭제/조회 요청
-                SEND: 카카오톡 "나에게 보내기"로 뭔가를 보내달라는 요청 (예: 일정 목록 나에게 보내줘, 이거 나에게 보내줘)
+                SEND: 첨부파일이나 대화 내용을 그대로/가공 없이 카카오톡 "나에게 보내기"로 전송해달라는 요청
+                  (예: 일정 목록 나에게 보내줘, 이 파일 나한테 보내줘, 이거 카톡으로 전송해줘)
+                  ※ 주의: 사진/파일의 내용을 분석·번역·설명·요약해달라는 요청은 SEND가 아니라 CHAT입니다.
+                  (예: 이 사진 번역해줘, 이거 뭐라고 써있어, 이 파일 요약해줘 → 전부 CHAT)
                 WEATHER: 날씨/기온/강수확률/비 여부 등에 대한 질문 (예: 오늘 날씨 어때, 이번 주 비 와?, 내일 기온 몇도야)
                 BUS: 출근버스/버스 도착시간 관련 질문 (예: 출근버스 언제 와, 버스 몇 분 남았어)
-                CHAT: 그 외 일반 대화
-                메시지: %s
-                """, userMessage);
+                CHAT: 그 외 일반 대화 (사진/파일 내용에 대한 질문, 분석, 번역 포함)
+                메시지: %s%s
+                """, userMessage, attachmentNote);
         StringBuilder result = new StringBuilder();
         callOllamaStreaming(modelName, intentPrompt, null, result);
         String r = result.toString().trim();

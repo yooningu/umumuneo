@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 // umumuneo.com으로 온 이메일 (Cloudflare Email Routing + Worker가 백엔드로 전달해준 것을 저장)
 @Entity
@@ -33,11 +35,20 @@ public class InboundEmail {
     @Column(length = 500)
     private String subject;
 
-    @Column(columnDefinition = "TEXT")
+    // MEDIUMTEXT로 둔 이유: Worker가 보내는 본문이 최대 5만자까지라 utf8mb4(한글 등 최대 4바이트/자)면
+    // TEXT(6만5천 bytes 한도)를 넘길 수 있어서 여유 있게 잡음
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String body;
+
+    // 원본 HTML (있을 때만) - 프론트에서 sandbox iframe으로 렌더링. body는 항상 순수 텍스트로 유지됨
+    @Column(name = "body_html", columnDefinition = "MEDIUMTEXT")
+    private String bodyHtml;
 
     @Column(name = "received_at", updatable = false)
     private LocalDateTime receivedAt;
+
+    @OneToMany(mappedBy = "inboundEmail", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EmailAttachment> attachments = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

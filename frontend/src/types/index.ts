@@ -87,6 +87,30 @@ export interface ChatMessage {
   turnIndex: number;
   createdAt: string;
 }
+export interface MailAttachment {
+  id: string;
+  filename: string;
+  contentType: string | null;
+  sizeBytes: number | null;
+  previewable: boolean; // true면 /view 로 브라우저에 바로 보여줄 수 있음 (이미지/영상/PDF)
+}
+export interface MailItem {
+  id: string;
+  fromAddress: string;
+  subject: string | null;
+  bodyPreview: string;
+  attachmentCount: number;
+  receivedAt: string;
+}
+export interface MailDetail {
+  id: string;
+  fromAddress: string;
+  subject: string | null;
+  body: string;
+  bodyHtml: string | null; // 있으면 HTML로 렌더링, 없으면 body를 텍스트로 보여줌
+  receivedAt: string;
+  attachments: MailAttachment[];
+}
 export interface FileItem {
   id: string;
   parentId: string | null;

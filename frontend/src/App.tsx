@@ -9,6 +9,7 @@ import SchedulePage from './pages/SchedulePage';
 import TimetablePage from './pages/TimetablePage';
 import ChatPage from './pages/ChatPage';
 import NasPage from './pages/NasPage';
+import MailPage from './pages/MailPage';
 import SettingsPage from './pages/SettingsPage';
 import { getMe } from './api/user';
 import styles from './App.module.css';
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/timetable" element={<PrivateRoute><TimetablePage /></PrivateRoute>} />
         <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
         <Route path="/nas" element={<PrivateRoute><NasPage /></PrivateRoute>} />
+        <Route path="/mail" element={<PrivateRoute><MailPage /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
