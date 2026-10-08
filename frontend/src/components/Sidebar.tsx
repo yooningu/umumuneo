@@ -46,7 +46,7 @@ export default function Sidebar() {
                 : { viewBox: item.iconViewBox, fill: 'currentColor' })
             : undefined;
 
-          const iconNode = cloneElement(icon as ReactElement<{ className?: string; attr?: Record<string, string> }>, {
+          const iconNode = cloneElement(icon as ReactElement<{ className?: string; attr?: Record<string, string | undefined> }>, {
             className: styles.icon,
             ...(attrOverride && { attr: attrOverride }),
           });
