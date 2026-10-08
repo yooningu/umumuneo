@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 import { sendMessage } from '../api/chat';
 import { uploadFiles } from '../api/file';
 import { transcribeAudio } from '../api/stt';
@@ -7,6 +9,7 @@ import styles from './ChatWidget.module.css';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  images?: string[]; // 미리보기용 object URL (전송한 이미지를 채팅 기록에도 그대로 보여주기 위함)
 }
 
 interface Props {
@@ -62,6 +65,7 @@ export default function ChatWidget({ onScheduleChange }: Props) {
   const [secretMode, setSecretMode] = useState(false); // 켜져있으면 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<(string | null)[]>([]); // pendingFiles와 순서 맞춘 미리보기 URL (이미지가 아니면 null)
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isWhisperRecording, setIsWhisperRecording] = useState(false);
@@ -74,12 +78,29 @@ export default function ChatWidget({ onScheduleChange }: Props) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const silenceRafRef = useRef<number | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentImageUrlsRef = useRef<string[]>([]); // 채팅 기록에 표시 중인 이미지 미리보기 URL들 (언마운트 시 정리용)
 
   // 메시지가 추가되거나(스트리밍 중 매 청크마다) 항상 맨 아래를 보도록 스크롤
   useEffect(() => {
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // 첨부 예정 파일이 바뀔 때마다 이미지 미리보기 URL을 새로 만들고, 이전 것들은 정리한다
+  useEffect(() => {
+    const urls = pendingFiles.map(f => (f.type.startsWith('image/') ? URL.createObjectURL(f) : null));
+    setPendingPreviews(urls);
+    return () => {
+      urls.forEach(u => u && URL.revokeObjectURL(u));
+    };
+  }, [pendingFiles]);
+
+  // 컴포넌트가 사라질 때 채팅 기록에 쓰인 이미지 미리보기 URL도 정리
+  useEffect(() => {
+    return () => {
+      sentImageUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+    };
+  }, []);
 
   const addFiles = (files: FileList | File[] | null) => {
     if (!files) return;
@@ -88,6 +109,23 @@ export default function ChatWidget({ onScheduleChange }: Props) {
 
   const removeFile = (index: number) => {
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 클립보드에 이미지를 복사한 상태에서 입력창에 Ctrl+V 하면 파일 첨부한 것처럼 추가한다
+  const onPasteInput = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const pastedImages: File[] = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) pastedImages.push(file);
+      }
+    }
+    if (pastedImages.length > 0) {
+      e.preventDefault(); // 이미지가 있으면 텍스트로 붙여넣기 시도하지 않게 막음
+      addFiles(pastedImages);
+    }
   };
 
   // 시크릿 모드 켜기/끄기. 켜고 끌 때마다 항상 "새 대화"로 취급해서 화면과 세션을 초기화한다
@@ -253,19 +291,33 @@ export default function ChatWidget({ onScheduleChange }: Props) {
           .map(f => ({ name: f.name, fileId: idByName.get(f.name) ?? '', isImage: imageFiles.includes(f) }))
           .filter(f => f.fileId);
 
-        // 화면/대화 기록에는 파일명만 남기고(실제 내용/이미지는 안 보이게), 내가 입력한 프롬프트만 그대로 유지
-        // (이미지도 빠뜨리지 않고 표시 - 예전엔 이미지 첨부하면 보낸 뒤 기록에 아무 흔적도 안 남았음)
-        const attachedText = [...imageFiles, ...otherFiles, ...audioFiles].map(f => `📎 ${f.name}`).join('\n');
+        // 이미지가 아닌 파일(문서/음성)은 미리보기를 그릴 수 없으니 파일명만 텍스트로 남긴다.
+        // 이미지는 아래에서 실제 썸네일로 채팅 기록에 표시한다.
+        const attachedText = [...otherFiles, ...audioFiles].map(f => `📎 ${f.name}`).join('\n');
         content = [content, attachedText].filter(Boolean).join('\n\n');
+        // 백엔드가 content를 필수값으로 요구해서, 텍스트 없이 이미지만 보내는 경우 기본 문구를 채운다
+        if (!content && imageFiles.length > 0) {
+          content = '(텍스트 없이 사진만 첨부함)';
+        }
       } catch (e) {
         console.error(e);
       } finally {
         setUploading(false);
       }
     }
-    if (!content) return;
+    // 텍스트 없이 이미지만 보내는 경우도 있으니(예: 붙여넣기 후 바로 전송), 텍스트가 없어도
+    // 이미지가 있으면 그냥 진행한다. 정말 아무것도 없을 때만(텍스트도 첨부도 없음) 막는다.
+    if (!content && imageFiles.length === 0) return;
 
-    setMessages(prev => [...prev, { role: 'user', content }, { role: 'assistant', content: '' }]);
+    // 방금 보낸 이미지를 채팅 기록에도 그대로 보여주기 위한 미리보기 URL (서버 왕복 없이 로컬 파일에서 바로 생성)
+    const imagePreviewUrls = imageFiles.map(f => URL.createObjectURL(f));
+    sentImageUrlsRef.current.push(...imagePreviewUrls);
+
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content, images: imagePreviewUrls.length > 0 ? imagePreviewUrls : undefined },
+      { role: 'assistant', content: '' },
+    ]);
     setLoading(true);
 
     let aiContent = '';
@@ -335,9 +387,22 @@ export default function ChatWidget({ onScheduleChange }: Props) {
         )}
         {messages.map((m, i) => (
           <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant}`}>
-            <span className={`${styles.bubble} ${m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}`}>
-              {m.content || (loading && i === messages.length - 1 ? '...' : '')}
-            </span>
+            {m.images && m.images.length > 0 && (
+              <div className={styles.messageImages}>
+                {m.images.map((url, j) => (
+                  <img key={j} src={url} alt="첨부 이미지" className={styles.messageImage} />
+                ))}
+              </div>
+            )}
+            {(m.content || (loading && i === messages.length - 1)) && (
+              <div className={`${styles.bubble} ${m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}`}>
+                {m.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{m.content}</ReactMarkdown>
+                ) : (
+                  loading && i === messages.length - 1 ? '...' : ''
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -347,6 +412,9 @@ export default function ChatWidget({ onScheduleChange }: Props) {
         <div className={styles.attachRow}>
           {pendingFiles.map((f, i) => (
             <div key={i} className={styles.attachChip}>
+              {pendingPreviews[i] && (
+                <img src={pendingPreviews[i]!} alt={f.name} className={styles.attachThumb} />
+              )}
               <span className={styles.attachName}>{f.name}</span>
               <button className={styles.attachRemove} onClick={() => removeFile(i)}>×</button>
             </div>
@@ -385,7 +453,8 @@ export default function ChatWidget({ onScheduleChange }: Props) {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="메시지 입력..."
+          onPaste={onPasteInput}
+          placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
           className={styles.input}
         />
         <button
