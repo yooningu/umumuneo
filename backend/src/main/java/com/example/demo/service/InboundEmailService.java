@@ -162,10 +162,10 @@ public class InboundEmailService {
         return publicBaseUrl + "/public/email-attachments/" + token;
     }
 
-    // 로그인한 유저 본인의 메일 목록 (최신순)
+    // 로그인한 유저 본인의 메일 목록 (최신순) - 본문 전체/첨부파일 전체를 안 불러오는 전용 쿼리 사용
     @Transactional(readOnly = true)
     public List<InboundEmailResponse> getEmailsForUser(String userId) {
-        return inboundEmailRepository.findByUserIdOrderByReceivedAtDesc(userId).stream()
+        return inboundEmailRepository.findListViewByUserId(userId).stream()
                 .map(InboundEmailResponse::new)
                 .toList();
     }

@@ -13,6 +13,7 @@
     "axios": "^1.19.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-icons": "^5.7.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
     "remark-breaks": "^4.0.0"
@@ -24,6 +25,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vite-plugin-svgr": "^5.2.0"
   }
 }

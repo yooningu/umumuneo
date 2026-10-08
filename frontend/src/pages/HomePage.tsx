@@ -25,12 +25,16 @@ export default function HomePage() {
       <div className={styles.sidePane}>
         {/* 미니캘린더 + 일정목록 */}
         <div className={styles.topSide}>
-          <MiniCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} refreshKey={refreshKey} />
-          <ScheduleList
-            selectedDate={selectedDate}
-            refreshKey={refreshKey}
-            onScheduleChange={() => setRefreshKey(k => k + 1)}
-          />
+          <div className={styles.miniCalendar}>
+            <MiniCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} refreshKey={refreshKey} />
+          </div>
+          <div className={styles.scheduleList}>
+            <ScheduleList
+              selectedDate={selectedDate}
+              refreshKey={refreshKey}
+              onScheduleChange={() => setRefreshKey(k => k + 1)}
+            />
+          </div>
         </div>
 
         {/* 챗봇 */}

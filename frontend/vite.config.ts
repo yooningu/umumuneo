@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import svgr from 'vite-plugin-svgr'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // svgr(): "파일.svg?react"로 불러오면 <img src=...>가 아니라 리액트 컴포넌트로 쓸 수 있게 해줌
+  plugins: [react(), svgr()],
   server: {
     // 기본값(localhost)만 열면 같은 docker 네트워크의 다른 컨테이너(cloudflared)에서 접근이 안 됨.
     host: true,

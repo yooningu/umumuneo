@@ -1,6 +1,6 @@
 package com.example.demo.dto.response;
 
-import com.example.demo.entity.InboundEmail;
+import com.example.demo.repository.InboundEmailListProjection;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -18,14 +18,15 @@ public class InboundEmailResponse {
     private final int attachmentCount;
     private final LocalDateTime receivedAt;
 
-    public InboundEmailResponse(InboundEmail email) {
-        this.id = email.getId();
-        this.fromAddress = email.getFromAddress();
-        this.subject = email.getSubject();
-        String body = email.getBody();
+    // DB에서 이미 PREVIEW_LENGTH+1자로 잘라서 가져온 프로젝션 기준 - 본문 전체/첨부파일 컬렉션은 안 건드림
+    public InboundEmailResponse(InboundEmailListProjection p) {
+        this.id = p.getId();
+        this.fromAddress = p.getFromAddress();
+        this.subject = p.getSubject();
+        String body = p.getBodyPreview();
         this.bodyPreview = body == null ? "" :
                 (body.length() > PREVIEW_LENGTH ? body.substring(0, PREVIEW_LENGTH) + "…" : body);
-        this.attachmentCount = email.getAttachments().size();
-        this.receivedAt = email.getReceivedAt();
+        this.attachmentCount = (int) p.getAttachmentCount();
+        this.receivedAt = p.getReceivedAt();
     }
 }

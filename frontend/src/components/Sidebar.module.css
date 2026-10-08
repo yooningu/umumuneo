@@ -1,39 +1,80 @@
 .sidebar {
-  width: 200px;
-  min-width: 200px;
-  background-color: #1a1a2e;
-  color: #fff;
+  width: 72px;
   display: flex;
   flex-direction: column;
-  padding: 24px 0;
-  gap: 4px;
+  align-items: center;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-right: solid 1px var(--gray3);
 }
 
-.logo {
-  padding: 0 20px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  color: #7c8cf8;
+.buttonContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  /* 사이드바 전체 높이를 차지해야 마지막 버튼의 margin-top: auto가 바닥까지 밀어낼 수 있음 */
+  flex: 1;
 }
+
+.buttonContainer>button:last-child {
+  margin-top: auto;
+}
+
 
 .navButton {
+  position: relative;
+  /* 호버 라벨을 이 버튼 기준 오른쪽에 띄우기 위한 기준점 */
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
+  justify-content: center;
   background: transparent;
   border: none;
-  border-left: 3px solid transparent;
-  color: #aaa;
   cursor: pointer;
-  font-size: 14px;
-  text-align: left;
-  width: 100%;
-  transition: all 0.15s;
+  font-size: 20px;
+  transition: background-color 0.15s;
 }
 
-.navButton.active {
-  background: #7c8cf820;
-  border-left: 3px solid #7c8cf8;
-  color: #7c8cf8;
+.navButton:hover {
+  background-color: var(--gray4);
+}
+
+/* 로고/리액트 아이콘처럼 컴포넌트로 들어오는 아이콘의 크기를 이모지 아이콘들과 맞춤.
+   span은 기본이 inline이라 width/height가 안 먹혀서 inline-flex로 바꿔줌 */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  color: var(--gray1);
+}
+
+/* 평소엔 숨겨져 있다가, 버튼에 호버하면 오른쪽에 뜨는 라벨 */
+.label {
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background-color: var(--gray2);
+  color: var(--gray5);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+
+.navButton:hover .label {
+  opacity: 1;
+  visibility: visible;
 }

@@ -1,0 +1,26 @@
+:root {
+  --black: #000;
+  --white: #fff;
+  /* 어두운 순서대로 gray1(가장 어두움) ~ gray5(가장 밝음) */
+  --gray1: #131514;
+  --gray2: #4a5567;
+  --gray3: #a1aebf;
+  --gray4: #e3e7f0;
+  --gray5: #f6f7fb;
+}
+
+/* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#root {
+  height: 100%;
+}
