@@ -51,6 +51,10 @@ public class Schedule {
     @Column(name = "end_time")
     private LocalTime endTime;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "repeat_rule", length = 10)
+    private RepeatRule repeatRule; // null이면 반복 없음, 있으면 무기한 반복
+
     @OneToOne(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     private Notification notification;
 
@@ -73,5 +77,9 @@ public class Schedule {
 
     public enum ScheduleType {
         TIMED, MOMENT, ALLDAY, PERIOD
+    }
+
+    public enum RepeatRule {
+        BIWEEKLY, MONTHLY, YEARLY
     }
 }

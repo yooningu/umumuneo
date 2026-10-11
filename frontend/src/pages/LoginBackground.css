@@ -1,0 +1,218 @@
+/* 로그인 배경 애니메이션 스타일 (frontend/ex/style.css 그대로, 단 body/html/전역 선택자만
+   .loginBg 아래로 스코프해서 다른 페이지로 새어나가지 않게 함 - 디자인/수치는 변경 없음) */
+
+.loginBg,
+.loginBg *,
+.loginBg *::before,
+.loginBg *::after {
+  box-sizing: border-box;
+}
+
+/* 아래 var(--...) 값들은 loginGalaxyConfig.ts에서 설정 (괄호 안 두 번째 값은 기본값) */
+.loginBg {
+  --stage-size: 600px;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg, #000C18);
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* aaa 배경 캔버스 */
+.loginBg #scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.loginBg #scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .16;
+  background: repeating-linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0) 4px);
+  mix-blend-mode: screen;
+}
+
+.loginBg #vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, .25) 72%, rgba(0, 0, 0, .72) 100%);
+}
+
+/* 구 영역 (화면 중앙에서 --offset-y만큼 위) */
+.loginBg .stage {
+  position: absolute;
+  top: calc(60%);
+  left: 50%;
+  width: var(--stage-size);
+  height: var(--stage-size);
+  margin: calc(var(--stage-size) / -2) 0 0 calc(var(--stage-size) / -2);
+  perspective: calc(var(--stage-size) * 2);
+  /* 구 크기에 맞춰 원근감도 비례 */
+  pointer-events: none;
+  transform-style: preserve-3d;
+  /* 구와 아이콘을 같은 3D 공간에 두어 앞뒤가 섞이게 */
+}
+
+.loginBg .sphere,
+.loginBg .galaxy,
+.loginBg .star,
+.loginBg .star::before,
+.loginBg .star::after {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+/* 처음엔 숨겨져 있다가, 아이콘이 다 모이면 크게 나타나며 작아져서 아이콘을 감쌈 */
+.loginBg .sphere {
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: scale3d(var(--intro-scale, 3), var(--intro-scale, 3), var(--intro-scale, 3));
+}
+
+.loginBg .stage.show .sphere {
+  transform: scale3d(1, 1, 1);
+  transition: transform var(--intro-time, 3s) cubic-bezier(.16, 1, .3, 1);
+}
+
+.loginBg .galaxy {
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  animation: loginBgRotation var(--rotate-time, 15s) linear infinite;
+}
+
+.loginBg .star::before,
+.loginBg .star::after {
+  content: "";
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  border-radius: 50%;
+  background: var(--sphere-color, #fff);
+  box-shadow: var(--shadow);
+  /* 처음엔 숨김 (3D가 평평해지지 않도록 투명도는 구 전체가 아니라 별 하나하나에) */
+  opacity: 0;
+}
+
+.loginBg .stage.show .star::before,
+.loginBg .stage.show .star::after {
+  opacity: 1;
+  transition: opacity var(--fade-time, 1.2s) ease;
+}
+
+.loginBg .star::before {
+  transform: var(--transform);
+}
+
+.loginBg .star::after {
+  transform: scale3d(-1, -1, -1) var(--transform);
+}
+
+/* 화면 전체에서 구 중심으로 모여 모양을 만드는 별 (구 중심, z=0) */
+.loginBg .shape {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 아이콘 별을 그리는 캔버스 (화면 전체 크기, 위치는 JS에서 맞춤) */
+.loginBg .shape canvas {
+  position: absolute;
+  display: block;
+}
+
+/* 상단 글자 (값은 loginGalaxyConfig.ts의 title) */
+.loginBg .title {
+  position: absolute;
+  top: var(--title-top, 8%);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  text-align: center;
+  color: var(--title-color, #fff);
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: var(--title-size, 36px);
+  font-weight: var(--title-weight, 300);
+  letter-spacing: var(--title-spacing, 6px);
+  text-shadow: 0 0 18px var(--title-glow, transparent);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--title-fade, 2s) ease, transform var(--title-fade, 2s) ease;
+}
+
+.loginBg .title.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 제목 아래 작은 설명 글 (값은 loginGalaxyConfig.ts의 title.subtitle*) */
+.loginBg .subtitle {
+  position: absolute;
+  top: calc(var(--title-top, 8%) + 48px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  text-align: center;
+  color: var(--subtitle-color, #cbd5e1);
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: var(--subtitle-size, 14px);
+  font-weight: var(--subtitle-weight, 400);
+  letter-spacing: var(--subtitle-spacing, 1px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--title-fade, 2s) ease, transform var(--title-fade, 2s) ease;
+}
+
+.loginBg .subtitle.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 아이콘 뒤 은은한 빛 (값은 loginGalaxyConfig.ts의 icon.backGlow) */
+.loginBg .icon-glow {
+  position: absolute;
+  left: calc(var(--glow-size) / -2);
+  top: calc(var(--glow-size) / -2);
+  width: var(--glow-size);
+  height: var(--glow-size);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow-color) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity var(--glow-fade, 2.5s) ease;
+}
+
+.loginBg .stage.show .icon-glow {
+  opacity: var(--glow-opacity, .35);
+  animation: loginBgGlowPulse var(--glow-pulse, 4s) ease-in-out infinite;
+}
+
+@keyframes loginBgGlowPulse {
+  50% {
+    transform: scale(var(--glow-pulse-scale, 1.12));
+  }
+}
+
+@keyframes loginBgRotation {
+  100% {
+    transform: rotate3d(1, 1, 1, 360deg);
+  }
+}

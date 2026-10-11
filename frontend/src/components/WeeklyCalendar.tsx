@@ -11,18 +11,21 @@ interface Props {
   onDateSelect: (date: Date) => void;
   refreshKey?: number;
   onScheduleChange?: () => void;
+  onVisibleCountChange?: (count: number) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-function getWeekDates(date: Date): Date[] {
-  const day = date.getDay();
-  const mon = new Date(date);
-  mon.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
-  mon.setHours(0, 0, 0, 0); // 추가
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(mon);
-    d.setDate(mon.getDate() + i);
+// 달력 주(월~일) 단위가 아니라, 선택한 날짜를 가운데 두고 앞뒤로 균등하게 보여줄 날짜들을 계산
+// (예: count=7이면 선택일 기준 앞 3일 + 선택일 + 뒤 3일)
+// 상위(SchedulePage)에서 헤더의 기간 라벨/이전·다음 이동 폭을 맞추는 데도 똑같이 써야 해서 export함
+export function getCenteredDates(center: Date, count: number): Date[] {
+  const start = new Date(center);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - Math.floor((count - 1) / 2));
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
     return d;
   });
 }
@@ -35,7 +38,7 @@ function mondayBasedDow(date: Date): number {
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 const MAX_ALLDAY_VISIBLE = 2;
 const TIME_COL_WIDTH = 50;
-const MIN_DAY_COL_WIDTH = 56; // 요일 칸 하나의 최소 너비
+const MIN_DAY_COL_WIDTH = 120; // 요일 칸 하나의 최소 너비 (CSS의 min-width와 맞춰야 함)
 
 // 사용 가능한 너비에 맞춰 한 번에 보여줄 요일 수를 정한다 (7 -> 5 -> 3)
 function calcVisibleCount(availableWidth: number): number {
@@ -84,22 +87,25 @@ function getOverlapMargins(index: number, total: number): { left: number; right:
   return { left: 8, right: 8 };
 }
 
-export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange }: Props) {
+export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const containerRef = useRef<HTMLDivElement>(null);
-  const weekDates = getWeekDates(selectedDate);
   const today = new Date();
 
+  // 달력 주 단위가 아니라, 선택한 날짜를 가운데 두고 그만큼(7/5/3일)만 보여줌
+  const visibleDates = getCenteredDates(selectedDate, visibleCount);
+
   useEffect(() => {
-    const from = toDateStr(weekDates[0]);
-    const to = toDateStr(weekDates[6]);
+    const from = toDateStr(visibleDates[0]);
+    const to = toDateStr(visibleDates[visibleDates.length - 1]);
     getSchedules(from, to)
       .then(setSchedules)
       .catch(console.error);
-  }, [selectedDate, refreshKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, refreshKey, visibleCount]);
 
   // 컨테이너 너비에 따라 보여줄 요일 수를 갱신
   useEffect(() => {
@@ -115,19 +121,16 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
     return () => observer.disconnect();
   }, []);
 
-  // 오늘을 최대한 가운데에 두고, 달력 범위(월~일)를 벗어나지 않게 보여줄 구간을 계산
-  const todayIndex = mondayBasedDow(today);
-  const windowStart = Math.min(
-    Math.max(todayIndex - Math.floor((visibleCount - 1) / 2), 0),
-    7 - visibleCount
-  );
-  const visibleDates = weekDates.slice(windowStart, windowStart + visibleCount);
+  // 헤더(SchedulePage)가 기간 라벨/이전·다음 이동 폭을 똑같이 맞출 수 있도록 현재 보여주는 일수를 알려줌
+  useEffect(() => {
+    onVisibleCountChange?.(visibleCount);
+  }, [visibleCount, onVisibleCountChange]);
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const nowLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const todayInView = weekDates.some(d => d.toDateString() === today.toDateString());
   const todayVisibleIndex = visibleDates.findIndex(d => d.toDateString() === today.toDateString());
+  const todayInView = todayVisibleIndex !== -1;
 
   return (
     <div className={styles.container} ref={containerRef}>

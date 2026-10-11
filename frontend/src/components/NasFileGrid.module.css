@@ -1,0 +1,157 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fff;
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  padding: 6px 12px;
+  border: 1px solid var(--gray3);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--gray1);
+}
+
+.actionBtn:hover {
+  background-color: var(--gray4);
+}
+
+.selectionBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.selectionCount {
+  font-size: 12px;
+  color: var(--gray2);
+  margin-right: 4px;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--gray3);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.iconBtn:hover {
+  background-color: var(--gray4);
+}
+
+.iconBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.header {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.headerBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #999;
+}
+
+.headerBtnActive {
+  color: #7c8cf8;
+  font-weight: bold;
+}
+
+.grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  align-content: start;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #bbb;
+  font-size: 13px;
+  margin-top: 40px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.tile:hover {
+  background-color: #fafafa;
+}
+
+.tileSelected {
+  background-color: #eef0ff;
+  border-color: #7c8cf8;
+}
+
+.tileIcon {
+  position: relative;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.favBadge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  font-size: 12px;
+  color: #f5a623;
+}
+
+.tileName {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #333;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.tileMeta {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.selectionBox {
+  background-color: rgba(124, 140, 248, 0.15);
+  border: 1px solid #7c8cf8;
+  pointer-events: none;
+  z-index: 500;
+}

@@ -1,0 +1,92 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--gray1);
+}
+
+.navCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--gray3);
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--gray2);
+}
+
+.navCircle:hover {
+  background-color: var(--gray4);
+}
+
+.rangeLabel {
+  font-size: 14px;
+  color: var(--gray2);
+  white-space: nowrap;
+}
+
+.todayBtn {
+  padding: 6px 12px;
+  border: 1px solid var(--gray3);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--gray1);
+}
+
+.todayBtn:hover {
+  background-color: var(--gray4);
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid var(--gray3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toggleBtn {
+  padding: 6px 12px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--gray2);
+}
+
+.toggleBtnActive {
+  background-color: #7c8cf8;
+  color: #fff;
+}
+
+.addBtn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #7c8cf8;
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background-color: #6b7ae8;
+}

@@ -14,6 +14,7 @@ export interface User {
   theme: 'LIGHT' | 'DARK' | 'SYSTEM';
 }
 export type ScheduleType = 'TIMED' | 'MOMENT' | 'ALLDAY' | 'PERIOD';
+export type RepeatRule = 'BIWEEKLY' | 'MONTHLY' | 'YEARLY';
 export interface NotificationInfo {
   id: string;
   offsetMin: number;
@@ -29,6 +30,7 @@ export interface Schedule {
   endDate: string | null;
   startTime: string | null;
   endTime: string | null;
+  repeatRule: RepeatRule | null;
   notification: NotificationInfo | null;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +44,7 @@ export interface ScheduleRequest {
   startTime?: string;
   endTime?: string;
   notifOffsetMin?: number;
+  repeatRule?: RepeatRule;
 }
 export interface Timetable {
   id: string;
@@ -111,6 +114,7 @@ export interface MailDetail {
   receivedAt: string;
   attachments: MailAttachment[];
 }
+export type NasTypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'PDF' | 'ARCHIVE' | 'OTHER';
 export interface FileItem {
   id: string;
   parentId: string | null;

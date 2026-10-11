@@ -45,3 +45,10 @@ export const downloadFile = async (id: string, filename: string): Promise<void> 
 export const deleteFile = async (id: string): Promise<void> => {
   await client.delete(`/files/${id}`);
 };
+
+// 썸네일/큰 미리보기용 - 인증 헤더가 필요해서 <img src="..."> 로 바로 못 쓰고,
+// blob으로 받아서 object URL을 만들어야 함 (다 쓰면 호출부에서 revokeObjectURL로 정리해야 함)
+export const getPreviewBlobUrl = async (id: string): Promise<string> => {
+  const res = await client.get(`/files/${id}/view`, { responseType: 'blob' });
+  return window.URL.createObjectURL(res.data);
+};

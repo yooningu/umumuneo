@@ -1,5 +1,6 @@
 package com.example.demo.dto.request;
 
+import com.example.demo.entity.Schedule.RepeatRule;
 import com.example.demo.entity.Schedule.ScheduleType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,4 +30,6 @@ public class ScheduleRequest {
     private LocalTime endTime;      // TIMED만 사용
 
     private Integer notifOffsetMin; // null이면 알림 없음
+
+    private RepeatRule repeatRule;  // null이면 반복 없음, 있으면 무기한 반복
 }

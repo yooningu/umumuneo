@@ -2,6 +2,7 @@ package com.example.demo.dto.response;
 
 import com.example.demo.entity.Notification;
 import com.example.demo.entity.Schedule;
+import com.example.demo.entity.Schedule.RepeatRule;
 import com.example.demo.entity.Schedule.ScheduleType;
 import lombok.Getter;
 
@@ -21,6 +22,7 @@ public class ScheduleResponse {
     private final LocalDate endDate;
     private final LocalTime startTime;
     private final LocalTime endTime;
+    private final RepeatRule repeatRule;
     private final NotificationInfo notification;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
@@ -35,6 +37,7 @@ public class ScheduleResponse {
         this.endDate = schedule.getEndDate();
         this.startTime = schedule.getStartTime();
         this.endTime = schedule.getEndTime();
+        this.repeatRule = schedule.getRepeatRule();
         this.notification = schedule.getNotification() != null
                 ? new NotificationInfo(schedule.getNotification())
                 : null;

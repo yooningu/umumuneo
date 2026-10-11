@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import { sendMessage } from '../api/chat';
+import { sendMessage, getMessages } from '../api/chat';
 import { uploadFiles } from '../api/file';
 import { transcribeAudio } from '../api/stt';
 import styles from './ChatWidget.module.css';
@@ -14,6 +14,8 @@ interface Message {
 
 interface Props {
   onScheduleChange?: () => void;
+  initialSessionId?: string | null; // 있으면 그 세션의 기존 대화를 불러와서 이어서 보여줌 (없으면 새 대화)
+  onSessionCreated?: (sessionId: string) => void; // 새 세션이 막 생겼을 때(첫 메시지 응답 직후) 알려줌 - 왼쪽 목록 갱신용
 }
 
 // 이미지 파일을 캔버스에 다시 그려서 PNG base64로 변환한다.
@@ -58,10 +60,11 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export default function ChatWidget({ onScheduleChange }: Props) {
+export default function ChatWidget({ onScheduleChange, initialSessionId, onSessionCreated }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(!!initialSessionId);
   const [input, setInput] = useState('');
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null);
   const [secretMode, setSecretMode] = useState(false); // 켜져있으면 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -79,6 +82,24 @@ export default function ChatWidget({ onScheduleChange }: Props) {
   const silenceRafRef = useRef<number | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sentImageUrlsRef = useRef<string[]>([]); // 채팅 기록에 표시 중인 이미지 미리보기 URL들 (언마운트 시 정리용)
+
+  // initialSessionId가 있으면(기존 대화를 골라서 들어온 경우) 그 세션의 메시지 기록을 불러온다.
+  // ChatPage에서 key={sessionId}로 세션이 바뀔 때마다 이 컴포넌트를 통째로 새로 마운트시키므로
+  // 이 effect는 mount당 한 번만 실행되면 된다.
+  useEffect(() => {
+    if (!initialSessionId) return;
+    getMessages(initialSessionId)
+      .then(history => {
+        setMessages(
+          history
+            .filter(m => m.role === 'USER' || m.role === 'ASSISTANT')
+            .map(m => ({ role: m.role === 'USER' ? 'user' : 'assistant', content: m.content }))
+        );
+      })
+      .catch(console.error)
+      .finally(() => setLoadingHistory(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 메시지가 추가되거나(스트리밍 중 매 청크마다) 항상 맨 아래를 보도록 스크롤
   useEffect(() => {
@@ -335,9 +356,11 @@ export default function ChatWidget({ onScheduleChange }: Props) {
         });
       },
       (newSessionId) => {
+        const isNewSession = !sessionId;
         setSessionId(newSessionId);
         setLoading(false);
         onScheduleChange?.();
+        if (isNewSession) onSessionCreated?.(newSessionId);
       },
       (err) => {
         console.error(err);
@@ -380,7 +403,9 @@ export default function ChatWidget({ onScheduleChange }: Props) {
 
       {/* 메시지 영역 */}
       <div className={styles.messages} ref={messagesRef}>
-        {messages.length === 0 && (
+        {loadingHistory ? (
+          <div className={styles.empty}>대화 불러오는 중...</div>
+        ) : messages.length === 0 && (
           <div className={styles.empty}>
             {secretMode ? '시크릿 대화를 시작해보세요' : '일정을 추가하거나 질문해보세요'}
           </div>

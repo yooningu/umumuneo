@@ -4,6 +4,7 @@ import com.example.demo.dto.request.ScheduleRequest;
 import com.example.demo.dto.response.ScheduleResponse;
 import com.example.demo.entity.Notification;
 import com.example.demo.entity.Schedule;
+import com.example.demo.entity.Schedule.RepeatRule;
 import com.example.demo.entity.Schedule.ScheduleType;
 import com.example.demo.entity.User;
 import com.example.demo.repository.NotificationRepository;
@@ -37,36 +38,95 @@ public class ScheduleService {
     }
 
     // 날짜 범위로 일정 삭제 (챗봇 SCHEDULE_DELETE_BY_DATE용)
+    // 반복 일정은 findSchedulesInRange가 "가상 복제"로도 돌려주는데, 그걸 그대로 지우면 발생일 하나 때문에
+    // 반복 규칙 전체(원본 row)가 삭제돼버리므로 여기서는 제외함 - 반복 일정 자체를 지우려면 단건 삭제를 써야 함
     @Transactional
     public void deleteSchedulesByDate(String userId, LocalDate from, LocalDate to) {
-        List<Schedule> schedules = findSchedulesInRange(userId, from, to, null);
+        List<Schedule> schedules = findSchedulesInRange(userId, from, to, null).stream()
+                .filter(s -> s.getRepeatRule() == null)
+                .toList();
         schedules.forEach(this::deleteKakaoEventIfAny);
         scheduleRepository.deleteAll(schedules);
     }
 
     // 날짜 범위 + (선택)유형으로 일정 조회 (getSchedules/deleteSchedulesByDate 공용)
+    // 반복 일정은 DB엔 규칙만 저장돼 있고 실제 row가 늘어나지 않으므로, 여기서 이 기간 안의 발생일들을 계산해서 합쳐준다.
     private List<Schedule> findSchedulesInRange(String userId, LocalDate from, LocalDate to, ScheduleType type) {
         List<Schedule> schedules = new ArrayList<>();
 
         if (type != null) {
             if (type == ScheduleType.PERIOD) {
-                schedules = scheduleRepository
-                        .findByUserIdAndTypeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                                userId, type, to, from);
+                schedules.addAll(scheduleRepository
+                        .findByUserIdAndTypeAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndRepeatRuleIsNull(
+                                userId, type, to, from));
             } else {
-                schedules = scheduleRepository.findByUserIdAndStartDateBetweenAndType(userId, from, to, type);
+                schedules.addAll(
+                        scheduleRepository.findByUserIdAndStartDateBetweenAndTypeAndRepeatRuleIsNull(userId, from, to, type));
             }
         } else {
             // 전체 조회 (PERIOD 포함)
-            schedules.addAll(scheduleRepository.findByUserIdAndStartDateBetween(userId, from, to));
+            schedules.addAll(scheduleRepository.findByUserIdAndStartDateBetweenAndRepeatRuleIsNull(userId, from, to));
             schedules.addAll(
-                    scheduleRepository.findByUserIdAndTypeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                    scheduleRepository.findByUserIdAndTypeAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndRepeatRuleIsNull(
                             userId, ScheduleType.PERIOD, to, from));
             // 중복 제거
-            schedules = schedules.stream().distinct().toList();
+            schedules = new ArrayList<>(schedules.stream().distinct().toList());
+        }
+
+        for (Schedule repeating : scheduleRepository.findByUserIdAndRepeatRuleIsNotNull(userId)) {
+            if (type != null && repeating.getType() != type) continue;
+            schedules.addAll(expandRepeatingSchedule(repeating, from, to));
         }
 
         return schedules;
+    }
+
+    // 반복 일정 하나를 받아서, [from, to] 구간 안에 실제로 발생하는 날짜들로 "가상 복제"된 일정 목록을 만든다.
+    // (DB에 저장되지 않는 임시 객체 - 응답/화면 표시 전용. 반복은 무기한이라 종료일 개념 없음)
+    private List<Schedule> expandRepeatingSchedule(Schedule original, LocalDate from, LocalDate to) {
+        List<Schedule> result = new ArrayList<>();
+        LocalDate originalStart = original.getStartDate();
+        long durationDays = original.getEndDate() != null
+                ? java.time.temporal.ChronoUnit.DAYS.between(originalStart, original.getEndDate())
+                : 0;
+        RepeatRule rule = original.getRepeatRule();
+
+        for (int n = 0; n < 2000; n++) {
+            LocalDate occStart = switch (rule) {
+                case BIWEEKLY -> originalStart.plusWeeks(2L * n);
+                case MONTHLY -> originalStart.plusMonths(n);
+                case YEARLY -> originalStart.plusYears(n);
+            };
+            if (occStart.isAfter(to)) break;
+
+            LocalDate occEnd = durationDays > 0 ? occStart.plusDays(durationDays) : occStart;
+            boolean overlaps = original.getType() == ScheduleType.PERIOD
+                    ? !occStart.isAfter(to) && !occEnd.isBefore(from)
+                    : !occStart.isBefore(from) && !occStart.isAfter(to);
+
+            // 반복 일정은 위쪽 기본 조회에서 전부 제외되므로(RepeatRuleIsNull), n=0(최초 발생) 포함 전부 여기서 만들어야 함
+            if (overlaps) {
+                result.add(cloneWithDates(original, occStart, original.getType() == ScheduleType.PERIOD ? occEnd : original.getEndDate()));
+            }
+        }
+        return result;
+    }
+
+    // 원본 일정을 복제하되 날짜만 특정 발생일로 바꾼 임시 객체 (저장 안 함, 응답 전용)
+    private Schedule cloneWithDates(Schedule original, LocalDate newStart, LocalDate newEnd) {
+        Schedule clone = new Schedule();
+        clone.setId(original.getId());
+        clone.setUser(original.getUser());
+        clone.setType(original.getType());
+        clone.setTitle(original.getTitle());
+        clone.setDescription(original.getDescription());
+        clone.setColor(original.getColor());
+        clone.setStartDate(newStart);
+        clone.setEndDate(newEnd);
+        clone.setStartTime(original.getStartTime());
+        clone.setEndTime(original.getEndTime());
+        clone.setRepeatRule(original.getRepeatRule());
+        return clone;
     }
 
     // 일정 단건 조회
@@ -92,6 +152,7 @@ public class ScheduleService {
         schedule.setEndDate(request.getEndDate());
         schedule.setStartTime(roundUpToFiveMinutes(request.getStartTime()));
         schedule.setEndTime(roundUpToFiveMinutes(request.getEndTime()));
+        schedule.setRepeatRule(request.getRepeatRule());
 
         scheduleRepository.save(schedule);
 
@@ -115,6 +176,7 @@ public class ScheduleService {
         schedule.setEndDate(request.getEndDate());
         schedule.setStartTime(roundUpToFiveMinutes(request.getStartTime()));
         schedule.setEndTime(roundUpToFiveMinutes(request.getEndTime()));
+        schedule.setRepeatRule(request.getRepeatRule());
 
         scheduleRepository.save(schedule);
 

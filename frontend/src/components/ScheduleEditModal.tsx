@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Schedule, ScheduleType } from '../types';
+import type { Schedule, ScheduleType, RepeatRule } from '../types';
 import { updateSchedule, deleteSchedule } from '../api/schedule';
 import styles from './ScheduleModal.module.css';
 
@@ -17,6 +17,13 @@ const TYPE_OPTIONS: { type: ScheduleType; label: string }[] = [
   { type: 'ALLDAY', label: '종일 일정' },
 ];
 
+const REPEAT_OPTIONS: { value: RepeatRule | null; label: string }[] = [
+  { value: null, label: '안 함' },
+  { value: 'BIWEEKLY', label: '격주' },
+  { value: 'MONTHLY', label: '매월' },
+  { value: 'YEARLY', label: '매년' },
+];
+
 // 타입별로 어떤 날짜/시간 입력을 보여줄지
 function showEndDate(type: ScheduleType) { return type === 'PERIOD'; }
 function showStartTime(type: ScheduleType) { return type === 'TIMED' || type === 'MOMENT'; }
@@ -30,6 +37,7 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
   const [endDate, setEndDate] = useState(schedule.endDate ?? schedule.startDate);
   const [startTime, setStartTime] = useState(schedule.startTime ? schedule.startTime.slice(0, 5) : '');
   const [endTime, setEndTime] = useState(schedule.endTime ? schedule.endTime.slice(0, 5) : '');
+  const [repeatRule, setRepeatRule] = useState<RepeatRule | null>(schedule.repeatRule);
   const [notifOn, setNotifOn] = useState(!!schedule.notification);
   const [offsetMin, setOffsetMin] = useState(schedule.notification?.offsetMin ?? 5);
   const [saving, setSaving] = useState(false);
@@ -50,6 +58,7 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
         startTime: showStartTime(type) && startTime ? `${startTime}:00` : undefined,
         endTime: showEndTime(type) && endTime ? `${endTime}:00` : undefined,
         notifOffsetMin: notifOn ? offsetMin : undefined,
+        repeatRule: repeatRule ?? undefined,
       });
       onSaved();
     } catch (e) {
@@ -117,6 +126,21 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
             </div>
           </div>
         )}
+
+        <div className={styles.formGroup}>
+          <span className={styles.label}>반복</span>
+          <div className={styles.typeRow}>
+            {REPEAT_OPTIONS.map(opt => (
+              <button
+                key={opt.label}
+                className={`${styles.typeBtn} ${repeatRule === opt.value ? styles.typeBtnActive : ''}`}
+                onClick={() => setRepeatRule(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className={styles.formGroup}>
           <span className={styles.label}>설명</span>

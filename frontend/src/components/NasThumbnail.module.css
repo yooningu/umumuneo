@@ -1,0 +1,38 @@
+.fallbackIcon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.thumbImg {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.thumbVideo {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  background-color: #000;
+}
+
+.thumbPdfClip {
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  position: relative;
+  background-color: #fff;
+}
+
+.thumbPdfEmbed {
+  width: 240px;
+  height: 240px;
+  transform: scale(0.2667);
+  transform-origin: top left;
+  pointer-events: none;
+  border: none;
+}

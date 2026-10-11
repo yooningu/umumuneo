@@ -553,15 +553,16 @@ public class ChatService {
                 반드시 아래 형식 중 하나로만 응답해. JSON 외에 다른 텍스트는 절대 쓰지 마.
 
                 [ACTION:SCHEDULE_GET] {"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}
-                [ACTION:SCHEDULE_ADD] {"type":"MOMENT","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","notifOffsetMin":null}
-                [ACTION:SCHEDULE_ADD] {"type":"TIMED","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","endTime":"HH:mm:ss","notifOffsetMin":null}
-                [ACTION:SCHEDULE_ADD] {"type":"ALLDAY","title":"제목","startDate":"YYYY-MM-DD","notifOffsetMin":null}
-                [ACTION:SCHEDULE_ADD] {"type":"PERIOD","title":"제목","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","notifOffsetMin":null}
+                [ACTION:SCHEDULE_ADD] {"type":"MOMENT","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","notifOffsetMin":null,"repeatRule":null}
+                [ACTION:SCHEDULE_ADD] {"type":"TIMED","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","endTime":"HH:mm:ss","notifOffsetMin":null,"repeatRule":null}
+                [ACTION:SCHEDULE_ADD] {"type":"ALLDAY","title":"제목","startDate":"YYYY-MM-DD","notifOffsetMin":null,"repeatRule":null}
+                [ACTION:SCHEDULE_ADD] {"type":"PERIOD","title":"제목","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","notifOffsetMin":null,"repeatRule":null}
                 [ACTION:SCHEDULE_DELETE] {"id":"일정ID"}
                 [ACTION:SCHEDULE_DELETE_BY_DATE] {"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}
 
                 규칙:
                 - 알림 또는 알람 언급 있으면 notifOffsetMin=5(몇 분 전인지 특정 언급 있으면 그 값), 없으면 null (알림 = 톡캘린더에 일정이 등록되고 그쪽 리마인더로 알려주는 것. "나에게 보내기"와는 다른 기능이니 헷갈리지 말 것)
+                - repeatRule: "격주"/"2주마다"면 BIWEEKLY, "매달"/"매월"이면 MONTHLY, "매년"/"해마다"면 YEARLY, 반복 언급 없으면 null. 매일/매주 반복은 이 기능이 아니라 시간표(Timetable) 영역이니 SCHEDULE_ADD로 만들지 말 것. 반복은 종료일 없이 무기한으로 계속됨
                 - 이번 주=오늘 포함 7일, 이번 달=이번 달 마지막 날까지, 모든/앞으로=1년치
                 - "몇 시"처럼 구체적인 시각 언급이 없으면 MOMENT/TIMED를 쓰지 말고 ALLDAY로 만들 것 (startTime을 null로 하지 말 것)
                 - "N분 뒤", "N시간 뒤"처럼 상대 시간 표현이면 반드시 위에 명시된 지금 시각을 기준으로 계산해서 정확한 날짜/시:분으로 변환할 것 (예: 지금이 22:15인데 "10분 뒤"면 22:25)
@@ -850,6 +851,14 @@ public class ChatService {
             case PERIOD -> koreanDateLabel(schedule.getStartDate()) + "부터 " + koreanDateLabel(schedule.getEndDate())
                     + "까지 '" + title + "' 일정을 추가했어요.";
         };
+        if (schedule.getRepeatRule() != null) {
+            String repeatLabel = switch (schedule.getRepeatRule()) {
+                case BIWEEKLY -> "격주";
+                case MONTHLY -> "매월";
+                case YEARLY -> "매년";
+            };
+            body += " (" + repeatLabel + " 반복)";
+        }
         if (notifOffsetMin != null) {
             body += " (" + notifOffsetMin + "분 전 카카오톡 알림도 넣어드렸어요)";
         }

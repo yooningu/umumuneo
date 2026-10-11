@@ -1,2 +1,30 @@
 .container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.mainPane {
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid var(--gray3);
+  border-radius: 20px;
+}
+
+.sidePane {
+  width: 260px;
+  min-width: 260px;
+  overflow: hidden;
+  border: 1px solid var(--gray3);
+  border-radius: 16px;
 }
