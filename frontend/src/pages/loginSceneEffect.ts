@@ -27,31 +27,58 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
     bootSequence: P.bootText
   };
 
-  const docIPs = [
-    '192.0.2.17', '192.0.2.44', '192.0.2.91', '198.51.100.12',
-    '198.51.100.42', '203.0.113.8', '203.0.113.27', '203.0.113.91'
+  // umumuneo 프로젝트의 실제/예정 구성 요소를 흉내 낸 가짜 노드 이름 (장식용 - 실제 상태 아님)
+  const docNodes = [
+    'umu-core', 'schedule-sync', 'nas-vault', 'chat-engine',
+    'mail-relay', 'voice-listener', 'kakao-auth', 'ollama-runtime',
+    'iot-gateway', 'iot-hub'
   ];
 
   const terminalPool = [
-    'uplink :: handshake accepted',
-    'node heartbeat nominal',
-    'entropy pool reseeded',
-    'cipher channel established',
-    'route mirror synchronized',
-    'relay latency 12.4ms',
-    'packet signature verified',
-    'ghost process sleeping',
-    'shadow index rebuilt',
-    'tunnel state :: encrypted',
-    'watchdog :: silent',
-    'kernel trace masked',
-    'access token rotated',
-    'sector map verified',
-    'cache line sanitized',
-    'mesh topology updated',
-    'signal noise within limits',
-    'breach monitor armed'
+    'schedule sync :: up to date',
+    'nas vault :: mounted',
+    'kakao session :: valid',
+    'chat model :: warm',
+    'mail inbox :: polling',
+    'wake word "우무" :: armed',
+    'reminder queue :: empty',
+    'calendar index :: rebuilt',
+    'thumbnail cache :: ready',
+    'notification channel :: linked',
+    'backup snapshot :: complete',
+    'device token :: rotated',
+    'ollama runtime :: nominal',
+    'whisper stt :: ready',
+    'melotts :: ready',
+    'umu core :: nominal',
+    'file watcher :: idle',
+    'session heartbeat :: ok',
+    'iot gateway :: listening',
+    'iot device :: paired',
+    'sensor feed :: nominal',
+    'iot hub :: standby'
   ];
+
+  // 일정 앱다운 느낌의 가짜 로그 한 줄 (전엔 의미 없는 16진수 문자열이었음 - 전부 장식용, 실제 데이터 아님)
+  const eventNames = [
+    'Team meeting', 'Project deadline', 'Doctor appointment', 'Dinner plans', 'Code review',
+    'Team dinner', 'Presentation prep', 'Workout', 'Study session', 'Birthday'
+  ];
+  const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const randDate = () => `2026-${pad2(1 + ((Math.random() * 12) | 0))}-${pad2(1 + ((Math.random() * 28) | 0))}`;
+  const randTime = () => `${pad2((Math.random() * 24) | 0)}:${pad2(((Math.random() * 12) | 0) * 5)}`;
+  const randDuration = () => `${pad2((Math.random() * 3) | 0)}:${pad2((Math.random() * 60) | 0)}:${pad2((Math.random() * 60) | 0)}`;
+
+  function randomScheduleLine() {
+    switch ((Math.random() * 5) | 0) {
+      case 0: return `${eventNames[(Math.random() * eventNames.length) | 0]} :: ${randDate()} ${randTime()}`;
+      case 1: return `sync ${randDate()}T${randTime()}:${pad2((Math.random() * 60) | 0)}+09:00`;
+      case 2: return `next event in ${randDuration()}`;
+      case 3: return `${weekdays[(Math.random() * 7) | 0]} ${randTime()}-${randTime()} busy`;
+      default: return `reminder queued :: ${randDate()} ${randTime()}`;
+    }
+  }
 
   const hexPool = '0123456789ABCDEF';
 
@@ -126,9 +153,9 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
     const y = rand(h * .13, h * .78);
     const lines: string[] = [];
     const lineCount = 2 + ((Math.random() * 5) | 0);
-    lines.push(`[${hex(4)}:${hex(4)}] ${docIPs[(Math.random() * docIPs.length) | 0]}`);
+    lines.push(`[${hex(4)}:${hex(4)}] ${docNodes[(Math.random() * docNodes.length) | 0]}.umu.local`);
     for (let i = 1; i < lineCount; i++) {
-      if (Math.random() < .38) lines.push(`0x${hex(8)}  ${hex(4)}:${hex(4)}:${hex(4)}`);
+      if (Math.random() < .38) lines.push(randomScheduleLine());
       else lines.push(terminalPool[(Math.random() * terminalPool.length) | 0]);
     }
     terminals.push({
@@ -347,11 +374,11 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
   function drawBoot() {
     if (!opts.bootSequence || elapsed > 8.5) return;
     const lines = [
-      'cold start :: secure display',
-      'mapping silent relay mesh',
-      'loading passive monitor',
-      'link state :: isolated',
-      'visual layer online'
+      'umu core :: waking up',
+      'kakao session :: verifying',
+      'schedule & nas :: syncing',
+      'iot gateway :: discovering devices',
+      'login screen :: ready'
     ];
     const shown = Math.min(lines.length, Math.floor(elapsed / .85));
     if (shown <= 0) return;
