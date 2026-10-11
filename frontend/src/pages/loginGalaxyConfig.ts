@@ -43,20 +43,20 @@ export const CONFIG = {
     eyeColor: '#FFFFFF',       // 눈 색
     scale: 1,               // 아이콘 크기 배율 (원본 SVG 159×168 기준)
     spacing: 2.7,              // 몸통 별 간격 (작을수록 촘촘, 너무 작으면 버벅일 수 있음)
-    eyeSpacing: 1.9,           // 눈 별 간격
+    eyeSpacing: 2,           // 눈 별 간격
     starSize: [1.4, 2.6],      // 별 크기 범위 (px) [최소, 최대]
     glow: 1.8,                 // 빛 번짐 크기 배율
-    gatherSeconds: 3.5,        // 별 하나가 모이는 데 걸리는 시간 (초)
+    gatherSeconds: 2.5,        // 별 하나가 모이는 데 걸리는 시간 (초)
     maxDelay: 1.2,             // 별마다 출발 시점을 흩뜨리는 최대 지연 (초)
     startOpacity: 0.35,        // 흩어져 있을 때 별 투명도 (0~1)
 
     // 아이콘 뒤 은은한 빛 (별이 다 모이면 서서히 나타남)
     backGlow: {
       enabled: true,           // false면 빛 없음
-      color: '#FFA500',        // 빛 색
-      size: 2.6,               // 빛 크기 (아이콘 너비의 몇 배)
-      opacity: 0.2,           // 빛 세기 (0~1)
-      fadeSeconds: 2.5,        // 나타나는 데 걸리는 시간 (초)
+      color: '#ffc04aff',        // 빛 색
+      size: 4,               // 빛 크기 (아이콘 너비의 몇 배)
+      opacity: 0.15,           // 빛 세기 (0~1)
+      fadeSeconds: 2,        // 나타나는 데 걸리는 시간 (초)
       pulseSeconds: 4,         // 숨 쉬듯 커졌다 작아지는 주기 (초, 0이면 멈춤)
       pulseScale: 1.12         // 숨 쉴 때 최대 크기 배율
     }
