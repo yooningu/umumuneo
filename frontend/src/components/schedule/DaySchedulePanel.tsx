@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getSchedules, createSchedule } from '../api/schedule';
-import type { Schedule } from '../types';
-import { toDateStr } from '../utils/date';
+import { getSchedules, createSchedule } from '../../api/schedule';
+import type { Schedule } from '../../types';
+import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
 import styles from './DaySchedulePanel.module.css';

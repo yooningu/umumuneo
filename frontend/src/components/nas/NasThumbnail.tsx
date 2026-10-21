@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getPreviewBlobUrl } from '../api/file';
-import type { FileItem } from '../types';
+import { getPreviewBlobUrl } from '../../api/file';
+import type { FileItem } from '../../types';
 import styles from './NasThumbnail.module.css';
 
 interface Props {

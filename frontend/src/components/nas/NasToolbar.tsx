@@ -1,4 +1,4 @@
-import type { NasTypeFilter } from '../types';
+import type { NasTypeFilter } from '../../types';
 import styles from './NasToolbar.module.css';
 
 const TYPE_OPTIONS: { value: NasTypeFilter; label: string }[] = [

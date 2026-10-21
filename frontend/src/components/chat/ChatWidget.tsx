@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import { sendMessage, getMessages } from '../api/chat';
-import { uploadFiles } from '../api/file';
-import { transcribeAudio } from '../api/stt';
+import { sendMessage, getMessages } from '../../api/chat';
+import { uploadFiles } from '../../api/file';
+import { transcribeAudio } from '../../api/stt';
 import styles from './ChatWidget.module.css';
 
 interface Message {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getSchedules } from '../api/schedule';
-import type { Schedule } from '../types';
-import { toDateStr } from '../utils/date';
+import { getSchedules } from '../../api/schedule';
+import type { Schedule } from '../../types';
+import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
 import styles from './ScheduleList.module.css';

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import WeeklyCalendar, { getCenteredDates } from '../components/WeeklyCalendar';
-import MonthCalendar from '../components/MonthCalendar';
-import ScheduleList from '../components/ScheduleList';
-import DaySchedulePanel from '../components/DaySchedulePanel';
-import ScheduleHeader, { type ScheduleViewMode } from '../components/ScheduleHeader';
+import WeeklyCalendar, { getCenteredDates } from '../components/schedule/WeeklyCalendar';
+import MonthCalendar from '../components/schedule/MonthCalendar';
+import ScheduleList from '../components/schedule/ScheduleList';
+import DaySchedulePanel from '../components/schedule/DaySchedulePanel';
+import ScheduleHeader, { type ScheduleViewMode } from '../components/schedule/ScheduleHeader';
 import styles from './SchedulePage.module.css';
 
 // WeeklyCalendar는 폭에 따라 7/5/3일만 보여주는 반응형이라(달력 주 단위 고정이 아님),

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getSchedules } from '../api/schedule';
-import type { Schedule } from '../types';
-import { toDateStr } from '../utils/date';
+import { getSchedules } from '../../api/schedule';
+import { getHolidays } from '../../api/holiday';
+import type { Schedule } from '../../types';
+import { toDateStr } from '../../utils/date';
 import styles from './MonthCalendar.module.css';
 
 interface Props {
@@ -18,6 +19,7 @@ const MAX_DOTS = 3;
 // 여기선 그 달을 그려서 보여주는 역할만 한다.
 export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -39,6 +41,13 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
       .then(setSchedules)
       .catch(console.error);
   }, [monthStart, monthEnd, refreshKey]);
+
+  // 공휴일(빨간날)
+  useEffect(() => {
+    getHolidays(year, month + 1)
+      .then(list => setHolidayDates(new Set(list.map(h => h.date))))
+      .catch(console.error);
+  }, [year, month]);
 
   // 날짜별로 보여줄 점(dot) 색상들을 계산 (기간 일정은 걸치는 모든 날에 다 찍음)
   const dotsByDay = new Map<number, string[]>();
@@ -68,13 +77,19 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
           const date = new Date(year, month, day, 0, 0, 0, 0);
           const isToday = date.toDateString() === today.toDateString();
           const isSelected = date.toDateString() === selectedDate.toDateString();
+          const isHoliday = holidayDates.has(toDateStr(date));
+          const numberClassName = [
+            styles.dayNumber,
+            isHoliday ? styles.holiday : '',
+            isToday ? styles.today : '',
+          ].join(' ').trim();
           return (
             <div
               key={i}
               onClick={() => onDateSelect(date)}
               className={`${styles.dayCell} ${isSelected ? styles.selected : ''}`}
             >
-              <span className={`${styles.dayNumber} ${isToday ? styles.today : ''}`.trim()}>
+              <span className={numberClassName}>
                 {day}
               </span>
               <div className={styles.dotsRow}>

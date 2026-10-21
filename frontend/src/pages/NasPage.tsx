@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import NasToolbar from '../components/NasToolbar';
-import NasFileGrid from '../components/NasFileGrid';
-import NasSidebar from '../components/NasSidebar';
+import NasToolbar from '../components/nas/NasToolbar';
+import NasFileGrid from '../components/nas/NasFileGrid';
+import NasSidebar from '../components/nas/NasSidebar';
 import type { NasTypeFilter } from '../types';
 import styles from './NasPage.module.css';
 

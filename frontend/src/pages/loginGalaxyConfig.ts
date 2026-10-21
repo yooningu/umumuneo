@@ -4,7 +4,7 @@ export const CONFIG = {
 
   // ── 배경 ──
   background: {
-    color: '#000000ff',          // 배경색
+    color: '#000000',          // 배경색
     scanlines: true,           // 가로 줄무늬 효과
     vignette: true             // 가장자리 어둡게
   },
@@ -12,7 +12,7 @@ export const CONFIG = {
   // ── 배경 프로그램 효과 (네트워크 선, 터미널 창, 16진수, 글리치) ──
   program: {
     color: '#FFA500',          // 효과 색 (선, 점, 글자 등 전부)
-    alertColor: '#ff5100ff',     // 가끔 나오는 경고 터미널/글리치 강조 색
+    alertColor: '#6b9caa',     // 가끔 나오는 경고 터미널/글리치 강조 색
     activity: 58,              // 전체 활동량 (10~100, 클수록 움직임/패킷 많음)
     networkDensity: 150,       // 네트워크 점 개수 (20~160)
     terminalAmount: 62,        // 터미널 창 등장 빈도 (0~100, 0이면 안 나옴)

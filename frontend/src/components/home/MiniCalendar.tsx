@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getSchedules } from '../api/schedule';
-import type { Schedule } from '../types';
-import { toDateStr } from '../utils/date';
+import { getSchedules } from '../../api/schedule';
+import { getHolidays } from '../../api/holiday';
+import type { Schedule } from '../../types';
+import { toDateStr } from '../../utils/date';
 import styles from './MiniCalendar.module.css';
+import { PiAlarmFill } from "react-icons/pi";
 
 interface Props {
   selectedDate: Date;
@@ -36,6 +38,7 @@ const MAX_PERIOD_BARS = 3;
 
 export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -56,6 +59,13 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
       .then(setSchedules)
       .catch(console.error);
   }, [year, month, daysInMonth, refreshKey]);
+
+  // 공휴일(빨간날) - 월이 바뀔 때만 새로 조회
+  useEffect(() => {
+    getHolidays(year, month + 1)
+      .then(list => setHolidayDates(new Set(list.map(h => h.date))))
+      .catch(console.error);
+  }, [year, month]);
 
   // 날짜별 점(dot)/알림 정보 + 기간 일정 바 계산
   const monthStartStr = toDateStr(new Date(year, month, 1));
@@ -164,15 +174,17 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
             styles.dayCell,
             isSelected ? styles.selected : '',
           ].join(' ').trim();
+          const isHoliday = holidayDates.has(toDateStr(date));
           const numberClassName = [
             styles.dayNumber,
+            isHoliday ? styles.holiday : '',
             isToday ? styles.today : '',
           ].join(' ').trim();
           return (
             <div key={i} onClick={() => onDateSelect(date)} className={wrapperClassName}>
               <span className={numberClassName}>
                 {day}
-                {info?.hasNotification && <span className={styles.bell}>⏰</span>}
+                {info?.hasNotification && <span className={styles.bell}><PiAlarmFill /></span>}
               </span>
               <div className={styles.dotsRow}>
                 {(info?.dots ?? []).map((c, idx) => (

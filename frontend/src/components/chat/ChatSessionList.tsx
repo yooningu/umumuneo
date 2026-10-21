@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getSessions, deleteSession } from '../api/chat';
-import type { ChatSession } from '../types';
+import { getSessions, deleteSession } from '../../api/chat';
+import type { ChatSession } from '../../types';
 import styles from './ChatSessionList.module.css';
 
 interface Props {

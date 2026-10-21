@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import ChatSessionList from '../components/ChatSessionList';
-import ChatWidget from '../components/ChatWidget';
+import ChatSessionList from '../components/chat/ChatSessionList';
+import ChatWidget from '../components/chat/ChatWidget';
 import styles from './ChatPage.module.css';
 
 // 챗봇 페이지: 왼쪽은 대화 목록(ChatSessionList), 오른쪽은 실제 대화창(ChatWidget).

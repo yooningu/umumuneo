@@ -7,6 +7,9 @@
   --gray3: #a1aebf;
   --gray4: #e3e7f0;
   --gray5: #f6f7fb;
+
+  --brand: #FFA500;
+  --survey: #6b9caa;
 }
 
 /* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */

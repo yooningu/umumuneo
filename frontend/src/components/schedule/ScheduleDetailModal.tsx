@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Schedule } from '../types';
-import { deleteSchedule } from '../api/schedule';
+import type { Schedule } from '../../types';
+import { deleteSchedule } from '../../api/schedule';
 import styles from './ScheduleModal.module.css';
 
 interface Props {

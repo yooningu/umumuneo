@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import WeeklyCalendar from '../components/WeeklyCalendar';
-import MiniCalendar from '../components/MiniCalendar';
-import ScheduleList from '../components/ScheduleList';
-import ChatWidget from '../components/ChatWidget';
+import WeeklyCalendar from '../components/schedule/WeeklyCalendar';
+import MiniCalendar from '../components/home/MiniCalendar';
+import ScheduleList from '../components/schedule/ScheduleList';
+import ChatWidget from '../components/chat/ChatWidget';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {

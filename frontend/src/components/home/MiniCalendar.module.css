@@ -32,7 +32,7 @@
 
 .weekdayCell {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #aaa;
   padding: 2px 0;
 }
@@ -61,14 +61,20 @@
 
 .dayNumber {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 22px;
   height: 22px;
-  line-height: 22px;
   font-size: 12px;
   border-radius: 50%;
   color: #333;
   font-weight: normal;
   background-color: transparent;
+}
+
+.dayNumber.holiday {
+  color: #e5484d;
 }
 
 .dayNumber.today {
@@ -81,8 +87,9 @@
   position: absolute;
   top: -4px;
   right: -7px;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1;
+  color: var(--brand);
 }
 
 .dotsRow {

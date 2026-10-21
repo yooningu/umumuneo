@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getFiles, uploadFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile } from '../api/file';
-import type { FileItem, NasTypeFilter } from '../types';
+import { getFiles, uploadFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile } from '../../api/file';
+import type { FileItem, NasTypeFilter } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
 import NasContextMenu, { type ContextMenuItem } from './NasContextMenu';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getFiles, downloadFile } from '../api/file';
-import type { FileItem } from '../types';
+import { getFiles, downloadFile } from '../../api/file';
+import type { FileItem } from '../../types';
 import styles from './NasSidebar.module.css';
 
 interface Props {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { getSchedules } from '../api/schedule';
-import type { Schedule } from '../types';
-import { toDateStr } from '../utils/date';
+import { getSchedules } from '../../api/schedule';
+import { getHolidays } from '../../api/holiday';
+import type { Schedule } from '../../types';
+import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
 import styles from './WeeklyCalendar.module.css';
@@ -89,6 +90,7 @@ function getOverlapMargins(index: number, total: number): { left: number; right:
 
 export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
@@ -106,6 +108,18 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, refreshKey, visibleCount]);
+
+  // 공휴일(빨간날) - 보이는 날짜 구간이 걸쳐있는 달(최대 2개)만 조회해서 합침
+  useEffect(() => {
+    const months = new Set(visibleDates.map(d => `${d.getFullYear()}-${d.getMonth() + 1}`));
+    Promise.all([...months].map(m => {
+      const [y, mo] = m.split('-').map(Number);
+      return getHolidays(y, mo);
+    }))
+      .then(results => setHolidayDates(new Set(results.flat().map(h => h.date))))
+      .catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, visibleCount]);
 
   // 컨테이너 너비에 따라 보여줄 요일 수를 갱신
   useEffect(() => {
@@ -139,10 +153,16 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
         <div className={styles.timeColSpacer} />
         {visibleDates.map((date, i) => {
           const isToday = date.toDateString() === today.toDateString();
+          const isHoliday = holidayDates.has(toDateStr(date));
+          const numberClassName = [
+            styles.dayNumber,
+            isHoliday ? styles.holiday : '',
+            isToday ? styles.today : '',
+          ].join(' ').trim();
           return (
             <div key={i} onClick={() => onDateSelect(date)} className={styles.dayHeaderCell}>
               <div className={styles.dayLabel}>{DAY_LABELS[mondayBasedDow(date)]}</div>
-              <div className={`${styles.dayNumber} ${isToday ? styles.today : ''}`.trim()}>
+              <div className={numberClassName}>
                 {date.getDate()}
               </div>
             </div>

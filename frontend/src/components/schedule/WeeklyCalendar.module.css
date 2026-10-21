@@ -44,6 +44,10 @@
   color: #333;
 }
 
+.dayNumber.holiday {
+  color: #e5484d;
+}
+
 .dayNumber.today {
   background-color: #7c8cf8;
   color: #fff;
