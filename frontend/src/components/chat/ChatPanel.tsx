@@ -4,7 +4,7 @@ import remarkBreaks from 'remark-breaks';
 import { sendMessage, getMessages } from '../../api/chat';
 import { uploadFiles } from '../../api/file';
 import { transcribeAudio } from '../../api/stt';
-import styles from './ChatWidget.module.css';
+import styles from './ChatPanel.module.css';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -60,7 +60,9 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export default function ChatWidget({ onScheduleChange, initialSessionId, onSessionCreated }: Props) {
+// 챗봇 전용 페이지(ChatPage)에서 쓰는 대화창. 홈 화면의 ChatWidget과 기능은 같지만
+// UI를 서로 다르게 가져갈 예정이라 컴포넌트를 분리해둠 (디자인은 이후 별도로 손볼 것).
+export default function ChatPanel({ onScheduleChange, initialSessionId, onSessionCreated }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(!!initialSessionId);
   const [input, setInput] = useState('');

@@ -4,6 +4,7 @@ import { getHolidays } from '../../api/holiday';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import styles from './MiniCalendar.module.css';
+import Tooltip from '../common/Tooltip';
 import { PiAlarmFill } from "react-icons/pi";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 interface DayInfo {
   dots: string[];
   hasNotification: boolean;
+  titles: string[];
 }
 
 interface PeriodBar {
@@ -38,7 +40,7 @@ const MAX_PERIOD_BARS = 3;
 
 export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -56,14 +58,15 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
     const from = toDateStr(new Date(year, month, 1));
     const to = toDateStr(new Date(year, month, daysInMonth));
     getSchedules(from, to)
-      .then(setSchedules)
+      // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
+      .then(data => setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data)))
       .catch(console.error);
   }, [year, month, daysInMonth, refreshKey]);
 
   // 공휴일(빨간날) - 월이 바뀔 때만 새로 조회
   useEffect(() => {
     getHolidays(year, month + 1)
-      .then(list => setHolidayDates(new Set(list.map(h => h.date))))
+      .then(list => setHolidays(new Map(list.map(h => [h.date, h.name]))))
       .catch(console.error);
   }, [year, month]);
 
@@ -86,16 +89,18 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
       periodIntervals.push({ color, clipStartDay, clipEndDay, isTrueStart, isTrueEnd, hasNotification: !!s.notification });
       for (let d = clipStartDay; d <= clipEndDay; d++) {
         // 기간 일정은 아래 바(bar)로 표시되므로 점은 따로 찍지 않음 (중복 방지)
-        const info = dayInfos.get(d) ?? { dots: [], hasNotification: false };
+        const info = dayInfos.get(d) ?? { dots: [], hasNotification: false, titles: [] };
         if (s.notification) info.hasNotification = true;
+        info.titles.push(s.title);
         dayInfos.set(d, info);
       }
     } else {
       if (s.startDate < monthStartStr || s.startDate > monthEndStr) continue;
       const d = Number(s.startDate.slice(8, 10));
-      const info = dayInfos.get(d) ?? { dots: [], hasNotification: false };
+      const info = dayInfos.get(d) ?? { dots: [], hasNotification: false, titles: [] };
       if (info.dots.length < MAX_DOTS) info.dots.push(color);
       if (s.notification) info.hasNotification = true;
+      info.titles.push(s.title);
       dayInfos.set(d, info);
     }
   }
@@ -127,6 +132,9 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
       periodBarByDay.set(d, arr);
     }
   }
+
+  // 달력 아래에 보여줄 이번 달 일정 목록 (시작일 순)
+  const sortedSchedules = [...schedules].sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   const prevMonth = () => {
     const d = new Date(selectedDate);
@@ -172,59 +180,87 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
           const isGridRightEdge = col === 6;
           const wrapperClassName = [
             styles.dayCell,
+            isToday ? styles.today : '',
             isSelected ? styles.selected : '',
           ].join(' ').trim();
-          const isHoliday = holidayDates.has(toDateStr(date));
+          const holidayName = holidays.get(toDateStr(date));
+          const tooltipText = [holidayName, ...(info?.titles ?? [])].filter(Boolean).join('\n');
+          const dow = date.getDay();
           const numberClassName = [
             styles.dayNumber,
-            isHoliday ? styles.holiday : '',
+            dow === 6 ? styles.saturday : '',
+            dow === 0 ? styles.sunday : '',
+            holidayName ? styles.holiday : '',
             isToday ? styles.today : '',
           ].join(' ').trim();
           return (
-            <div key={i} onClick={() => onDateSelect(date)} className={wrapperClassName}>
-              <span className={numberClassName}>
-                {day}
-                {info?.hasNotification && <span className={styles.bell}><PiAlarmFill /></span>}
-              </span>
-              <div className={styles.dotsRow}>
-                {(info?.dots ?? []).map((c, idx) => (
-                  <span key={idx} className={styles.dot} style={{ backgroundColor: c }} />
-                ))}
-              </div>
-              {periodSlots.length > 0 && (
-                <div className={styles.periodBarStack}>
-                  {periodSlots.map((pb, idx) => {
-                    if (!pb) return <div key={idx} className={styles.periodBarRow} />;
-                    // 실제로 옆 칸까지 이어지는 방향으로만 틈(gap)을 메워 붙이고,
-                    // 진짜 시작/종료 칸은 끝까지 가지 않고 칸 중간에서 끊어서 시작/종료되게 한다.
-                    const bleedLeft = !pb.roundLeft && !isGridLeftEdge;
-                    const bleedRight = !pb.roundRight && !isGridRightEdge;
-                    const isSingleDay = pb.roundLeft && pb.roundRight;
-                    const left = bleedLeft ? '-1px' : pb.roundLeft ? (isSingleDay ? '25%' : '50%') : '0';
-                    const right = bleedRight ? '-1px' : pb.roundRight ? (isSingleDay ? '25%' : '50%') : '0';
-                    return (
-                      <div key={idx} className={styles.periodBarRow}>
-                        <div
-                          className={styles.periodBar}
-                          style={{
-                            backgroundColor: pb.color,
-                            left,
-                            right,
-                            borderTopLeftRadius: pb.roundLeft ? 4 : 0,
-                            borderBottomLeftRadius: pb.roundLeft ? 4 : 0,
-                            borderTopRightRadius: pb.roundRight ? 4 : 0,
-                            borderBottomRightRadius: pb.roundRight ? 4 : 0,
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
+            <Tooltip key={i} content={tooltipText}>
+              <div onClick={() => onDateSelect(date)} className={wrapperClassName}>
+                <span className={numberClassName}>
+                  {day}
+                  {info?.hasNotification && <span className={styles.bell}><PiAlarmFill /></span>}
+                </span>
+                <div className={styles.dotsRow}>
+                  {(info?.dots ?? []).map((c, idx) => (
+                    <span key={idx} className={styles.dot} style={{ backgroundColor: c }} />
+                  ))}
                 </div>
-              )}
-            </div>
+                {periodSlots.length > 0 && (
+                  <div className={styles.periodBarStack}>
+                    {periodSlots.map((pb, idx) => {
+                      if (!pb) return <div key={idx} className={styles.periodBarRow} />;
+                      // 실제로 옆 칸까지 이어지는 방향으로만 틈(gap)을 메워 붙이고,
+                      // 진짜 시작/종료 칸은 끝까지 가지 않고 칸 중간에서 끊어서 시작/종료되게 한다.
+                      const bleedLeft = !pb.roundLeft && !isGridLeftEdge;
+                      const bleedRight = !pb.roundRight && !isGridRightEdge;
+                      // 줄이 바뀌는 경계(왼쪽 끝/오른쪽 끝 칸)는 옆 칸과 실제로 붙어있지 않으므로
+                      // 이어지는 중이어도 칸 끝까지 채우지 않고 중간에서 끊어 보이게 한다.
+                      const rowWrapLeft = !pb.roundLeft && isGridLeftEdge;
+                      const rowWrapRight = !pb.roundRight && isGridRightEdge;
+                      const isSingleDay = pb.roundLeft && pb.roundRight;
+                      const left = bleedLeft ? '-1px' : pb.roundLeft ? (isSingleDay ? '25%' : '50%') : rowWrapLeft ? '50%' : '0';
+                      const right = bleedRight ? '-1px' : pb.roundRight ? (isSingleDay ? '25%' : '50%') : rowWrapRight ? '50%' : '0';
+                      return (
+                        <div key={idx} className={styles.periodBarRow}>
+                          <div
+                            className={styles.periodBar}
+                            style={{
+                              backgroundColor: pb.color,
+                              left,
+                              right,
+                              borderTopLeftRadius: pb.roundLeft ? 4 : 0,
+                              borderBottomLeftRadius: pb.roundLeft ? 4 : 0,
+                              borderTopRightRadius: pb.roundRight ? 4 : 0,
+                              borderBottomRightRadius: pb.roundRight ? 4 : 0,
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </Tooltip>
           );
         })}
       </div>
+
+      {/* 이번 달 일정 목록 (점 색상 + 일정 이름, 2열, 넘치면 스크롤) */}
+      {sortedSchedules.length > 0 && (
+        <>
+          <div className={styles.legendDivider} />
+          <div className={styles.legendScroll}>
+            <div className={styles.legendGrid}>
+              {sortedSchedules.map(s => (
+                <div key={s.id} className={styles.legendItem} title={s.title}>
+                  <span className={styles.legendDot} style={{ backgroundColor: s.color || '#7c8cf8' }} />
+                  <span className={styles.legendText}>{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

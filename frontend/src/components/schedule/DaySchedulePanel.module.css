@@ -44,12 +44,16 @@
 
 .itemBody {
   flex: 1;
+  min-width: 0;
 }
 
 .itemTitle {
   font-size: 13px;
   font-weight: bold;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .itemTime {

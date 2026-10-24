@@ -39,7 +39,8 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
     future.setFullYear(future.getFullYear() + 1);
     const to = toDateStr(future);
     getSchedules(from, to)
-      .then(setSchedules)
+      // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
+      .then(data => setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data)))
       .catch(console.error);
   }, [refreshKey]);
 

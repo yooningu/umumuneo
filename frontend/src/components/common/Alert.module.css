@@ -1,0 +1,51 @@
+.wrapper {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #1f2937;
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+  animation: alertIn .18s ease;
+  white-space: nowrap;
+}
+
+.close {
+  border: none;
+  background: none;
+  color: #fff;
+  opacity: .7;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.close:hover {
+  opacity: 1;
+}
+
+@keyframes alertIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

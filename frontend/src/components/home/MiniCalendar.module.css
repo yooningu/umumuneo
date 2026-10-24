@@ -1,14 +1,19 @@
 .container {
-  padding: 16px;
-  background-color: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12PX 16px;
+  background-color: var(--white);
+  border-bottom: 1px solid var(--gray4)
 }
 
 .header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .navButton {
@@ -16,7 +21,7 @@
   background: none;
   cursor: pointer;
   font-size: 16px;
-  color: #888;
+  color: var(--gray2);
 }
 
 .title {
@@ -25,6 +30,7 @@
 }
 
 .weekdayRow {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   margin-bottom: 4px;
@@ -33,11 +39,12 @@
 .weekdayCell {
   text-align: center;
   font-size: 12px;
-  color: #aaa;
+  color: var(--gray2);
   padding: 2px 0;
 }
 
 .daysGrid {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
@@ -48,15 +55,29 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
   padding: 2px 0 4px;
   cursor: pointer;
   border-radius: 6px;
   box-sizing: border-box;
+  height: 48px;
 }
 
-.dayCell.selected {
-  outline: 1px solid #7c8cf8;
-  outline-offset: -1px;
+.dayCell.today {
+  background-color: rgba(79, 187, 188, 0.15);
+}
+
+.dayCell.selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--sub);
+  border-radius: 6px;
+  pointer-events: none;
+  /* 일정 바가 칸 밖으로 살짝 번져나가도(bleed) 테두리가 항상 그 위에 보이도록 */
+  z-index: 2;
+  /* 테두리 선 양옆(바깥쪽/안쪽)에 흰색 1px씩 둘러서 테두리가 또렷하게 분리되어 보이도록 */
+  box-shadow: 0 0 0 1px var(--white), inset 0 0 0 1px var(--white);
 }
 
 .dayNumber {
@@ -67,29 +88,38 @@
   width: 22px;
   height: 22px;
   font-size: 12px;
+  line-height: 1;
   border-radius: 50%;
-  color: #333;
+  color: var(--gray1);
   font-weight: normal;
   background-color: transparent;
 }
 
+.dayNumber.saturday {
+  color: var(--blue);
+}
+
+.dayNumber.sunday {
+  color: var(--red);
+}
+
 .dayNumber.holiday {
-  color: #e5484d;
+  color: var(--red);
 }
 
 .dayNumber.today {
-  background-color: #7c8cf8;
-  color: #fff;
+  color: var(--sub);
   font-weight: bold;
 }
 
 .bell {
   position: absolute;
-  top: -4px;
+  top: 50%;
   right: -7px;
+  transform: translateY(-50%);
   font-size: 12px;
   line-height: 1;
-  color: var(--brand);
+  color: var(--yellow);
 }
 
 .dotsRow {
@@ -127,4 +157,57 @@
   top: 0;
   bottom: 0;
   /* left/right는 시작·종료 칸을 중간에서 끊기 위해 인라인 스타일로 지정됨 */
+}
+
+.legendDivider {
+  flex-shrink: 0;
+  height: 1px;
+  background-color: var(--gray4);
+  margin: 12px 0 8px;
+}
+
+.legendScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* 구형 Edge/IE */
+}
+
+.legendScroll::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari/Edge */
+}
+
+.legendGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 12px;
+  align-content: start;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.legendDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendText {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--gray1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

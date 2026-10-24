@@ -19,7 +19,7 @@ const MAX_DOTS = 3;
 // 여기선 그 달을 그려서 보여주는 역할만 한다.
 export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -45,7 +45,7 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
   // 공휴일(빨간날)
   useEffect(() => {
     getHolidays(year, month + 1)
-      .then(list => setHolidayDates(new Set(list.map(h => h.date))))
+      .then(list => setHolidays(new Map(list.map(h => [h.date, h.name]))))
       .catch(console.error);
   }, [year, month]);
 
@@ -77,10 +77,13 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
           const date = new Date(year, month, day, 0, 0, 0, 0);
           const isToday = date.toDateString() === today.toDateString();
           const isSelected = date.toDateString() === selectedDate.toDateString();
-          const isHoliday = holidayDates.has(toDateStr(date));
+          const holidayName = holidays.get(toDateStr(date));
+          const dow = date.getDay();
           const numberClassName = [
             styles.dayNumber,
-            isHoliday ? styles.holiday : '',
+            dow === 6 ? styles.saturday : '',
+            dow === 0 ? styles.sunday : '',
+            holidayName ? styles.holiday : '',
             isToday ? styles.today : '',
           ].join(' ').trim();
           return (
@@ -88,10 +91,12 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
               key={i}
               onClick={() => onDateSelect(date)}
               className={`${styles.dayCell} ${isSelected ? styles.selected : ''}`}
+              title={holidayName}
             >
               <span className={numberClassName}>
                 {day}
               </span>
+              {holidayName && <div className={styles.holidayLabel}>{holidayName}</div>}
               <div className={styles.dotsRow}>
                 {(dotsByDay.get(day) ?? []).map((c, idx) => (
                   <span key={idx} className={styles.dot} style={{ backgroundColor: c }} />

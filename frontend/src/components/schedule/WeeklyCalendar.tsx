@@ -5,6 +5,7 @@ import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
+import Tooltip from '../common/Tooltip';
 import styles from './WeeklyCalendar.module.css';
 
 interface Props {
@@ -90,22 +91,47 @@ function getOverlapMargins(index: number, total: number): { left: number; right:
 
 export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
+  const [expandedAlldayDays, setExpandedAlldayDays] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const dateRangeKeyRef = useRef(''); // 직전에 조회한 날짜 구간 - 바뀐 경우에만 목록을 즉시 비움
+
+  const toggleAlldayExpand = (dateStr: string) => {
+    setExpandedAlldayDays(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) next.delete(dateStr);
+      else next.add(dateStr);
+      return next;
+    });
+  };
   const today = new Date();
 
   // 달력 주 단위가 아니라, 선택한 날짜를 가운데 두고 그만큼(7/5/3일)만 보여줌
   const visibleDates = getCenteredDates(selectedDate, visibleCount);
 
   useEffect(() => {
+    let cancelled = false;
     const from = toDateStr(visibleDates[0]);
     const to = toDateStr(visibleDates[visibleDates.length - 1]);
+    const dateRangeKey = `${from}_${to}`;
+    // 날짜/보이는 기간이 바뀐 경우에만 즉시 비워서, 새 일정이 올 때까지 이전 날짜의 일정이
+    // 잠깐 비쳐 보이지 않게 함 (챗봇 응답 뒤 같은 기간을 다시 조회할 때는 비우지 않음 - 아래에서
+    // 실제로 내용이 달라졌을 때만 갱신해서, 바뀐 게 없으면 화면이 깜빡이지 않게 함)
+    if (dateRangeKeyRef.current !== dateRangeKey) {
+      setSchedules([]);
+    }
+    dateRangeKeyRef.current = dateRangeKey;
     getSchedules(from, to)
-      .then(setSchedules)
+      .then(data => {
+        if (cancelled) return;
+        setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data));
+      })
       .catch(console.error);
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, refreshKey, visibleCount]);
 
@@ -116,7 +142,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
       const [y, mo] = m.split('-').map(Number);
       return getHolidays(y, mo);
     }))
-      .then(results => setHolidayDates(new Set(results.flat().map(h => h.date))))
+      .then(results => setHolidays(new Map(results.flat().map(h => [h.date, h.name]))))
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, visibleCount]);
@@ -140,11 +166,22 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
     onVisibleCountChange?.(visibleCount);
   }, [visibleCount, onVisibleCountChange]);
 
+  // 시간표를 열었을 때 현재 시각이 화면 가운데쯤 보이도록 스크롤 (시간 1분 = 1px)
+  useEffect(() => {
+    const el = gridScrollRef.current;
+    if (!el) return;
+    const current = new Date();
+    const currentMinutes = current.getHours() * 60 + current.getMinutes();
+    el.scrollTop = Math.max(0, currentMinutes - el.clientHeight / 2);
+  }, []);
+
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const nowLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const todayVisibleIndex = visibleDates.findIndex(d => d.toDateString() === today.toDateString());
   const todayInView = todayVisibleIndex !== -1;
+  // 보이는 날짜들은 selectedDate를 가운데 두고 계산되므로, 선택한 날짜 칸(가운데 열)을 강조하기 위한 인덱스
+  const selectedVisibleIndex = visibleDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
 
   return (
     <div className={styles.container} ref={containerRef}>
@@ -153,14 +190,21 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
         <div className={styles.timeColSpacer} />
         {visibleDates.map((date, i) => {
           const isToday = date.toDateString() === today.toDateString();
-          const isHoliday = holidayDates.has(toDateStr(date));
+          const isHoliday = holidays.has(toDateStr(date));
+          const dow = date.getDay();
           const numberClassName = [
             styles.dayNumber,
+            dow === 6 ? styles.saturday : '',
+            dow === 0 ? styles.sunday : '',
             isHoliday ? styles.holiday : '',
             isToday ? styles.today : '',
           ].join(' ').trim();
+          const headerClassName = [
+            styles.dayHeaderCell,
+            i === selectedVisibleIndex ? styles.selectedCol : '',
+          ].join(' ').trim();
           return (
-            <div key={i} onClick={() => onDateSelect(date)} className={styles.dayHeaderCell}>
+            <div key={i} onClick={() => onDateSelect(date)} className={headerClassName}>
               <div className={styles.dayLabel}>{DAY_LABELS[mondayBasedDow(date)]}</div>
               <div className={numberClassName}>
                 {date.getDate()}
@@ -179,10 +223,21 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             (s.type === 'ALLDAY' || s.type === 'PERIOD') &&
             s.startDate <= dateStr && (s.endDate ?? s.startDate) >= dateStr
           );
-          const visible = allday.slice(0, MAX_ALLDAY_VISIBLE);
-          const hiddenCount = allday.length - visible.length;
+          const isExpanded = expandedAlldayDays.has(dateStr);
+          const hasOverflow = allday.length > MAX_ALLDAY_VISIBLE;
+          const visible = isExpanded ? allday : allday.slice(0, MAX_ALLDAY_VISIBLE);
+          const hidden = isExpanded ? [] : allday.slice(MAX_ALLDAY_VISIBLE);
+          const holidayName = holidays.get(dateStr);
+          const alldayCellClassName = [
+            styles.alldayCell,
+            i === selectedVisibleIndex ? styles.selectedCol : '',
+          ].join(' ').trim();
           return (
-            <div key={i} className={styles.alldayCell}>
+            <div key={i} className={alldayCellClassName}>
+              {/* 공휴일은 실제 일정이 아니라 공휴일 API에서만 받아온 값 - 그냥 보여주기용 뱃지 */}
+              {holidayName && (
+                <div className={styles.holidayBadge}>{holidayName}</div>
+              )}
               {visible.map(s => (
                 <div
                   key={s.id}
@@ -193,8 +248,29 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                   {s.title}
                 </div>
               ))}
-              {hiddenCount > 0 && (
-                <div className={styles.alldayMore}>···</div>
+              {hidden.length > 0 && (
+                <Tooltip content={hidden.map(s => s.title).join('\n')}>
+                  <div
+                    className={styles.alldayMore}
+                    onClick={() => toggleAlldayExpand(dateStr)}
+                  >
+                    {hidden.map(s => (
+                      <span
+                        key={s.id}
+                        className={styles.alldayMoreDot}
+                        style={{ backgroundColor: s.color || '#7c8cf8' }}
+                      />
+                    ))}
+                  </div>
+                </Tooltip>
+              )}
+              {isExpanded && hasOverflow && (
+                <div
+                  className={styles.alldayCollapse}
+                  onClick={() => toggleAlldayExpand(dateStr)}
+                >
+                  줄이기
+                </div>
               )}
             </div>
           );
@@ -202,7 +278,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
       </div>
 
       {/* 시간 그리드 */}
-      <div className={styles.gridScroll}>
+      <div className={styles.gridScroll} ref={gridScrollRef}>
         <div className={styles.gridRow}>
           {/* 시간 컬럼 */}
           <div className={styles.timeCol}>
@@ -240,8 +316,12 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                 return { schedule: s, startMin: sh * 60 + sm };
               });
 
+            const dayColClassName = [
+              styles.dayCol,
+              i === selectedVisibleIndex ? styles.selectedCol : '',
+            ].join(' ').trim();
             return (
-              <div key={i} className={styles.dayCol}>
+              <div key={i} className={dayColClassName}>
                 {HOURS.map(h => (
                   <div key={h} className={styles.hourLine} />
                 ))}

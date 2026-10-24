@@ -1,0 +1,288 @@
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--white);
+  border-top: 1px solid var(--gray4);
+}
+
+.dragOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.empty {
+  color: #bbb;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.messageRow {
+  margin-bottom: 6px;
+}
+
+.messageRowUser {
+  text-align: right;
+}
+
+.messageRowAssistant {
+  text-align: left;
+}
+
+.bubble {
+  display: inline-block;
+  max-width: 85%;
+  padding: 6px 10px;
+  font-size: 14px;
+  word-break: break-word;
+  text-align: left;
+}
+
+/* 마크다운(react-markdown)이 렌더링한 요소들을 좁은 채팅 버블 안에 맞게 다듬는다.
+   기본 브라우저 스타일(큰 제목, 문단/목록 여백)을 쓰면 버블 안에서 너무 커 보임 */
+.bubble :global(p) {
+  margin: 0 0 4px;
+}
+
+.bubble :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.bubble :global(h1),
+.bubble :global(h2),
+.bubble :global(h3),
+.bubble :global(h4) {
+  margin: 4px 0;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.bubble :global(ul),
+.bubble :global(ol) {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.bubble :global(li) {
+  margin: 2px 0;
+}
+
+.bubble :global(code) {
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.95em;
+}
+
+.bubble :global(pre) {
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  margin: 4px 0;
+}
+
+.bubble :global(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.bubble :global(a) {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.bubble :global(blockquote) {
+  margin: 4px 0;
+  padding-left: 8px;
+  border-left: 2px solid rgba(0, 0, 0, 0.2);
+  opacity: 0.85;
+}
+
+.bubbleUser {
+  border-radius: 12px 12px 2px 12px;
+  background-color: #7c8cf8;
+  color: var(--white);
+}
+
+.bubbleAssistant {
+  border-radius: 12px 12px 12px 2px;
+  background-color: var(--gray5);
+  color: #333;
+}
+
+.attachRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px 0;
+}
+
+.attachChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 140px;
+  padding: 3px 6px;
+  background-color: var(--gray5);
+  border-radius: 10px;
+  font-size: 11px;
+  color: #555;
+}
+
+.attachThumb {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.attachName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.messageImages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+  justify-content: flex-end;
+}
+
+.messageRowAssistant .messageImages {
+  justify-content: flex-start;
+}
+
+.messageImage {
+  max-width: 180px;
+  max-height: 180px;
+  border-radius: 10px;
+  object-fit: cover;
+  cursor: zoom-in;
+}
+
+.attachRemove {
+  border: none;
+  background: none;
+  color: #999;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 0;
+  font-size: 11px;
+  color: #7c8cf8;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #7c8cf8;
+  animation: statusPulse 1s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--gray5);
+  border-radius: 999px;
+  gap: 8px;
+  height: 52px;
+  margin: 16px;
+  background-color: var(--gray5);
+}
+
+.iconButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background-color: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconButton:hover {
+  background-color: var(--gray4);
+}
+
+.iconButtonActive {
+  background-color: #ff6b6b;
+  border-color: #ff6b6b;
+  color: var(--white);
+}
+
+.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background-color: transparent;
+}
+
+.sendButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #7c8cf8;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sendButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

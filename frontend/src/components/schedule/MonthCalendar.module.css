@@ -58,8 +58,27 @@
   color: #333;
 }
 
+.saturday {
+  color: #3b82f6;
+}
+
+.sunday {
+  color: #e5484d;
+}
+
 .holiday {
   color: #e5484d;
+}
+
+/* 공휴일 이름 - 실제 일정이 아니라 공휴일 API에서만 받아오는 표시용 (DB에 저장 안 됨) */
+.holidayLabel {
+  margin-top: 2px;
+  max-width: 100%;
+  font-size: 10px;
+  color: #e5484d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .today {

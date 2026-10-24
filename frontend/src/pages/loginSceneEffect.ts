@@ -1,7 +1,7 @@
 // 로그인 배경의 "scene" 캔버스 효과 (네트워크 선/패킷/터미널/16진수/글리치)
 // frontend/ex/script.js를 그대로 옮기되, 전역 IIFE 대신 React 컴포넌트에서 mount/unmount에 맞춰
 // 시작/정리할 수 있도록 함수로 감쌈. 로직/수치는 원본과 동일함.
-import type { CONFIG as LoginGalaxyConfig } from './loginGalaxyConfig';
+import type { CONFIG as LoginGalaxyConfig } from './LoginBackground';
 
 export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGalaxyConfig): () => void {
   const ctx = canvas.getContext('2d', { alpha: false })!;

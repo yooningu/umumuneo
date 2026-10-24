@@ -9,7 +9,17 @@
   --gray5: #f6f7fb;
 
   --brand: #FFA500;
-  --survey: #6b9caa;
+  --sub: #4fbbbc;
+
+  --green: #9fd269;
+  --green2: #8CC052;
+  --blue: #5E9BEB;
+  --blue2: #4B89DC;
+  --red: #FB6E52;
+  --red2: #E95A3C;
+  --yellow: #FFB85C;
+  --yellow2: #FFA734;
+
 }
 
 /* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */

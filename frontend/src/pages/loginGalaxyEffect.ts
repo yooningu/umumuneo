@@ -2,7 +2,7 @@
 // frontend/ex/index.html 안의 <script> 블록을 그대로 옮기되, 함수로 감싸서
 // React 컴포넌트의 mount/unmount에 맞춰 시작/정리할 수 있게 함. 로직/수치는 원본과 동일함.
 // (관련 id를 가진 .stage/.galaxy/.shape/#scanlines/#vignette/.title 엘리먼트가 이미 DOM에 있어야 함)
-import type { CONFIG as LoginGalaxyConfig } from './loginGalaxyConfig';
+import type { CONFIG as LoginGalaxyConfig } from './LoginBackground';
 
 export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
   let cancelled = false;
@@ -24,18 +24,11 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
   if (!CONFIG.background.scanlines && scanlinesEl) scanlinesEl.style.display = 'none';
   if (!CONFIG.background.vignette && vignetteEl) vignetteEl.style.display = 'none';
 
-  // 상단 글자
+  // 상단 글자 (스타일은 LoginBackground.css에 고정값으로 정의됨, 여기선 내용/표시여부만)
   const TITLE = CONFIG.title;
   const titleEl = document.getElementById('title')!;
   if (TITLE && TITLE.enabled) {
     titleEl.textContent = TITLE.text;
-    titleEl.style.setProperty('--title-color', TITLE.color);
-    titleEl.style.setProperty('--title-size', TITLE.size + 'px');
-    titleEl.style.setProperty('--title-weight', String(TITLE.weight));
-    titleEl.style.setProperty('--title-spacing', TITLE.letterSpacing + 'px');
-    titleEl.style.setProperty('--title-top', TITLE.top + '%');
-    titleEl.style.setProperty('--title-glow', TITLE.glowColor);
-    titleEl.style.setProperty('--title-fade', TITLE.fadeSeconds + 's');
   } else {
     titleEl.style.display = 'none';
   }
@@ -45,12 +38,6 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
   if (subtitleEl) {
     if (TITLE && TITLE.enabled && TITLE.subtitle) {
       subtitleEl.textContent = TITLE.subtitle;
-      subtitleEl.style.setProperty('--title-top', TITLE.top + '%');
-      subtitleEl.style.setProperty('--subtitle-color', TITLE.subtitleColor);
-      subtitleEl.style.setProperty('--subtitle-size', TITLE.subtitleSize + 'px');
-      subtitleEl.style.setProperty('--subtitle-weight', String(TITLE.subtitleWeight));
-      subtitleEl.style.setProperty('--subtitle-spacing', TITLE.subtitleLetterSpacing + 'px');
-      subtitleEl.style.setProperty('--title-fade', TITLE.fadeSeconds + 's');
     } else {
       subtitleEl.style.display = 'none';
     }

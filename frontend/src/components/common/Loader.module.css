@@ -1,0 +1,67 @@
+.loader {
+  position: relative;
+  display: inline-block;
+  color: #7c8cf8;
+  /* 전체가 계속 회전 (점들의 중앙 수렴/확산과 같은 주기로 돌아서 한 번 돌 때마다 모였다 퍼짐) */
+  animation: loaderSpin 1.6s linear infinite;
+}
+
+.spoke {
+  position: absolute;
+  inset: 0;
+}
+
+/* 점 3개를 120도씩 떨어뜨려 정삼각형 꼭짓점 방향으로 배치 */
+.spoke:nth-child(1) {
+  transform: rotate(0deg);
+}
+
+.spoke:nth-child(2) {
+  transform: rotate(120deg);
+}
+
+.spoke:nth-child(3) {
+  transform: rotate(240deg);
+}
+
+.dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20%;
+  height: 20%;
+  margin: -10% 0 0 -10%;
+  border-radius: 50%;
+  background-color: currentColor;
+  /* 중심에서 바깥(꼭짓점)으로 - 회전은 .spoke가 고정값으로 담당하고, 여긴 반지름만 애니메이션해서
+     점 크기가 줄어들지 않고 위치만 모였다 퍼지게 함 */
+  animation: loaderPulse 1.6s infinite;
+}
+
+@keyframes loaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loaderPulse {
+  0% {
+    transform: translateY(-140%);
+    animation-timing-function: ease-in;
+  }
+
+  40% {
+    transform: translateY(0);
+    animation-timing-function: linear;
+  }
+
+  /* 0.3s / 1.6s 주기 = 18.75% 만큼 중앙에서 멈춤 */
+  58.75% {
+    transform: translateY(0);
+    animation-timing-function: ease-out;
+  }
+
+  100% {
+    transform: translateY(-140%);
+  }
+}

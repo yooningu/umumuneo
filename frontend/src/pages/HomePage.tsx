@@ -2,7 +2,7 @@ import { useState } from 'react';
 import WeeklyCalendar from '../components/schedule/WeeklyCalendar';
 import MiniCalendar from '../components/home/MiniCalendar';
 import ScheduleList from '../components/schedule/ScheduleList';
-import ChatWidget from '../components/chat/ChatWidget';
+import ChatWidget from '../components/home/ChatWidget';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {

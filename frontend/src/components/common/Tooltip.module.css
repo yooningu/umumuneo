@@ -1,0 +1,55 @@
+.wrapper {
+  /* 감싸는 트리거(children)의 기존 레이아웃을 바꾸지 않도록, 위치 기준점 역할만 함.
+     너비를 100%로 채우되, 내부 트리거가 원래 차지하던 자리에서 가운데에 오도록 함 */
+  position: relative;
+  /* inline-flex(인라인 레벨)는 블록 흐름 안에서 줄 높이(line-height)만큼 여분 공백이 생기므로
+     처음부터 블록 레벨인 flex를 사용 (grid/flex 컨테이너 안에서는 어차피 자동으로 블록화되어 동일하게 동작함) */
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%) translateY(4px);
+  background-color: #1f2937;
+  color: #fff;
+  font-size: 11px;
+  font-weight: normal;
+  line-height: 1.5;
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+  z-index: 50;
+  max-width: 220px;
+  text-align: left;
+}
+
+.line {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1f2937;
+}
+
+.wrapper:hover .bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
