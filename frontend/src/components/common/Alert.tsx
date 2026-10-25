@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { IoClose } from "react-icons/io5";
 import styles from './Alert.module.css';
 
 interface Props {
@@ -23,7 +24,7 @@ export default function Alert({ message, onClose, duration = 3000 }: Props) {
     <div className={styles.wrapper} role="alert">
       <div className={styles.toast}>
         <span className={styles.text}>{message}</span>
-        <button className={styles.close} onClick={onClose} aria-label="닫기">×</button>
+        <button className={styles.close} onClick={onClose} aria-label="닫기"><IoClose /></button>
       </div>
     </div>
   );

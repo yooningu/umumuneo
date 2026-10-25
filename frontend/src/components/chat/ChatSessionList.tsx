@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { IoClose } from "react-icons/io5";
 import { getSessions, deleteSession } from '../../api/chat';
 import type { ChatSession } from '../../types';
 import styles from './ChatSessionList.module.css';
@@ -57,7 +58,7 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
               <div className={styles.itemTitle}>{s.title || '새 대화'}</div>
               <div className={styles.itemMeta}>
                 <span>{formatRelative(s.lastActiveAt)}</span>
-                <button className={styles.deleteBtn} onClick={e => handleDelete(e, s.id)}>×</button>
+                <button className={styles.deleteBtn} onClick={e => handleDelete(e, s.id)}><IoClose /></button>
               </div>
             </div>
           ))

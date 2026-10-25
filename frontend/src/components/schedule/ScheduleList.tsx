@@ -26,6 +26,11 @@ function formatDateLabel(dateStr: string): string {
   return `${m}월 ${d}일 (${DAY_LABELS[date.getDay()]})`;
 }
 
+function formatShortDate(dateStr: string): string {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${m}월 ${d}일`;
+}
+
 export default function ScheduleList({ selectedDate, refreshKey, onScheduleChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
@@ -85,6 +90,11 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
                   {s.startTime && (
                     <div className={styles.itemTime}>
                       {s.startTime.slice(0, 5)}{s.endTime ? ` - ${s.endTime.slice(0, 5)}` : ''}
+                    </div>
+                  )}
+                  {s.type === 'PERIOD' && s.endDate && (
+                    <div className={styles.itemTime}>
+                      {formatShortDate(s.startDate)} ~ {formatShortDate(s.endDate)}
                     </div>
                   )}
                 </div>

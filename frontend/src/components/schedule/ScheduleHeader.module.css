@@ -3,30 +3,39 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  height: 48px;
 }
 
 .left {
   display: flex;
   align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 28px;
 }
 
-.title {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--gray1);
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .navCircle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   border: 1px solid var(--gray3);
-  background: #fff;
+  background: var(--white);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-l);
   line-height: 1;
   color: var(--gray2);
 }
@@ -36,18 +45,22 @@
 }
 
 .rangeLabel {
-  font-size: 14px;
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-medium);
   color: var(--gray2);
   white-space: nowrap;
 }
 
 .todayBtn {
+  height: 40px;
+  width: 72px;
   padding: 6px 12px;
   border: 1px solid var(--gray3);
   border-radius: 8px;
-  background: #fff;
+  background: var(--white);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-medium);
   color: var(--gray1);
 }
 
@@ -57,36 +70,41 @@
 
 .viewToggle {
   display: flex;
-  border: 1px solid var(--gray3);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  padding: 4px;
+  background-color: var(--gray5);
+  border: 1px solid var(--gray3);
+  height: 48px;
 }
 
 .toggleBtn {
   padding: 6px 12px;
   border: none;
-  background: #fff;
+  border-radius: 10px;
+  width: 80px;
+  background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-regular);
   color: var(--gray2);
 }
 
 .toggleBtnActive {
-  background-color: #7c8cf8;
-  color: #fff;
+  background-color: var(--brand);
+  color: var(--white);
+  font-weight: var(--font-weight-semibold);
 }
 
 .addBtn {
+  height: 40px;
+  width: 100px;
   padding: 8px 16px;
   border: none;
-  border-radius: 8px;
-  background-color: #7c8cf8;
-  color: #fff;
-  font-size: 13px;
-  font-weight: bold;
+  border-radius: 10px;
+  background-color: var(--brand);
+  color: var(--white);
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
-}
-
-.addBtn:hover {
-  background-color: #6b7ae8;
 }

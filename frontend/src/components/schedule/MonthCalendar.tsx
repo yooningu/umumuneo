@@ -68,7 +68,16 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
     <div className={styles.container}>
       <div className={styles.weekdayRow}>
         {DAY_LABELS.map(d => (
-          <div key={d} className={styles.weekdayCell}>{d}</div>
+          <div
+            key={d}
+            className={[
+              styles.weekdayCell,
+              d === '토' ? styles.saturday : '',
+              d === '일' ? styles.sunday : '',
+            ].join(' ').trim()}
+          >
+            {d}
+          </div>
         ))}
       </div>
       <div className={styles.daysGrid}>

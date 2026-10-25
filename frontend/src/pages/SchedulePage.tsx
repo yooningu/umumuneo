@@ -4,6 +4,8 @@ import MonthCalendar from '../components/schedule/MonthCalendar';
 import ScheduleList from '../components/schedule/ScheduleList';
 import DaySchedulePanel from '../components/schedule/DaySchedulePanel';
 import ScheduleHeader, { type ScheduleViewMode } from '../components/schedule/ScheduleHeader';
+import AddScheduleModal from '../components/schedule/AddScheduleModal';
+import { toDateStr } from '../utils/date';
 import styles from './SchedulePage.module.css';
 
 // WeeklyCalendar는 폭에 따라 7/5/3일만 보여주는 반응형이라(달력 주 단위 고정이 아님),
@@ -27,6 +29,7 @@ export default function SchedulePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [dayPanelOpen, setDayPanelOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(7);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const bump = () => setRefreshKey(k => k + 1);
 
@@ -59,7 +62,7 @@ export default function SchedulePage() {
   };
 
   const handleAdd = () => {
-    setDayPanelOpen(true);
+    setAddModalOpen(true);
   };
 
   const rangeLabel = viewMode === 'scheduler'
@@ -105,6 +108,14 @@ export default function SchedulePage() {
           )}
         </div>
       </div>
+
+      {addModalOpen && (
+        <AddScheduleModal
+          defaultDate={toDateStr(selectedDate)}
+          onCancel={() => setAddModalOpen(false)}
+          onSaved={() => { bump(); setAddModalOpen(false); }}
+        />
+      )}
     </div>
   );
 }

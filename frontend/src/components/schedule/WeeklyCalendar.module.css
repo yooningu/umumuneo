@@ -20,6 +20,8 @@
 
 .dayHeaderCell {
   flex: 1;
+  box-sizing: border-box;
+  height: 88px;
   text-align: center;
   padding: 8px 0;
   cursor: pointer;
@@ -28,13 +30,21 @@
 }
 
 .dayLabel {
-  font-size: 11px;
+  font-size: var(--font-s);
   color: var(--gray2);
 }
 
+.dayLabel.saturday {
+  color: var(--blue);
+}
+
+.dayLabel.sunday {
+  color: var(--red);
+}
+
 .dayNumber {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-bold);
   width: 36px;
   height: 36px;
   line-height: 36px;
@@ -56,8 +66,13 @@
   color: var(--red);
 }
 
-.dayNumber.today {
-  color: var(--sub);
+/* 공휴일 이름 - 실제 일정이 아니라 공휴일 API에서만 받아오는 표시용 (DB에 저장 안 됨) */
+.holidayLabel {
+  font-size: var(--font-s);
+  color: var(--red);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .alldayRow {
@@ -69,7 +84,7 @@
 .alldayLabel {
   width: 50px;
   min-width: 50px;
-  font-size: 10px;
+  font-size: var(--font-s);
   color: var(--gray2);
   padding: 4px;
   text-align: right;
@@ -85,7 +100,7 @@
 
 .alldayBadge {
   color: var(--white);
-  font-size: 11px;
+  font-size: var(--font-s);
   border-radius: 3px;
   padding: 1px 4px;
   margin-bottom: 1px;
@@ -96,17 +111,6 @@
 }
 
 /* 공휴일 이름 뱃지 - 실제 일정이 아니라 공휴일 API에서만 받아오는 표시용 (DB에 저장 안 됨) */
-.holidayBadge {
-  color: var(--red);
-  font-size: 11px;
-  font-weight: bold;
-  padding: 1px 4px;
-  margin-bottom: 1px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .alldayMore {
   display: flex;
   align-items: center;
@@ -124,15 +128,15 @@
 }
 
 .alldayCollapse {
-  color: #888;
-  font-size: 10px;
+  color: var(--gray3);
+  font-size: var(--font-s);
   text-align: center;
   padding: 2px 0 1px;
   cursor: pointer;
 }
 
 .alldayCollapse:hover {
-  color: #555;
+  color: var(--gray2);
   text-decoration: underline;
 }
 
@@ -166,14 +170,14 @@
 }
 
 .hourCell {
-  height: 60px;
+  height: var(--hour-height);
   border-bottom: 1px solid var(--gray5);
   padding-right: 6px;
   text-align: right;
 }
 
 .hourLabel {
-  font-size: 10px;
+  font-size: var(--font-s);
   color: var(--gray2);
   position: relative;
   top: -7px;
@@ -187,7 +191,7 @@
 }
 
 .hourLine {
-  height: 60px;
+  height: var(--hour-height);
   border-bottom: 1px solid var(--gray5);
 }
 
@@ -205,8 +209,8 @@
   position: absolute;
   transform: translate(-50%, -50%);
   color: var(--brand);
-  font-size: 11px;
-  font-weight: bold;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
   -webkit-text-stroke: 3px var(--white);
   paint-order: stroke fill;
@@ -222,8 +226,8 @@
   transform: translateY(-50%);
   box-sizing: border-box;
   color: var(--white);
-  font-size: 10px;
-  font-weight: bold;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-bold);
   padding: 2px 6px;
   text-align: center;
   white-space: nowrap;
@@ -238,7 +242,7 @@
   border-radius: 4px;
   padding: 2px 4px;
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--font-s);
   color: var(--white);
   z-index: 3;
   cursor: pointer;
@@ -247,7 +251,7 @@
 }
 
 .scheduleTitle {
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

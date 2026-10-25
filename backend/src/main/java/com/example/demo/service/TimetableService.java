@@ -38,37 +38,16 @@ public class TimetableService {
             throw new RuntimeException("종료 시간은 시작 시간보다 늦어야 합니다.");
         }
 
-        // 겹침 검증
-        List<Timetable> conflicts = timetableRepository.findConflicting(
-                userId,
-                request.getDayOfWeek(),
-                request.getStartTime(),
-                request.getEndTime(),
-                "none" // 새 등록이라 제외할 ID 없음
-        );
-
-        if (!conflicts.isEmpty()) {
-            Timetable conflict = conflicts.get(0);
-            throw new RuntimeException(
-                    dayOfWeekToKorean(request.getDayOfWeek()) + "요일 " +
-                    conflict.getStartTime() + "~" + conflict.getEndTime() +
-                    " 시간대에 이미 등록된 시간표가 있습니다."
-            );
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
         Timetable timetable = new Timetable();
         timetable.setUser(user);
         timetable.setTitle(request.getTitle());
-        timetable.setDescription(request.getDescription());
         timetable.setColor(colorUtil.nextColor(user));
         timetable.setDayOfWeek(request.getDayOfWeek());
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());
-        timetable.setValidFrom(request.getValidFrom());
-        timetable.setValidUntil(request.getValidUntil());
 
         timetableRepository.save(timetable);
     }
@@ -83,31 +62,10 @@ public class TimetableService {
             throw new RuntimeException("종료 시간은 시작 시간보다 늦어야 합니다.");
         }
 
-        // 겹침 검증 (자기 자신 제외)
-        List<Timetable> conflicts = timetableRepository.findConflicting(
-                userId,
-                request.getDayOfWeek(),
-                request.getStartTime(),
-                request.getEndTime(),
-                timetableId
-        );
-
-        if (!conflicts.isEmpty()) {
-            Timetable conflict = conflicts.get(0);
-            throw new RuntimeException(
-                    dayOfWeekToKorean(request.getDayOfWeek()) + "요일 " +
-                    conflict.getStartTime() + "~" + conflict.getEndTime() +
-                    " 시간대에 이미 등록된 시간표가 있습니다."
-            );
-        }
-
         timetable.setTitle(request.getTitle());
-        timetable.setDescription(request.getDescription());
         timetable.setDayOfWeek(request.getDayOfWeek());
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());
-        timetable.setValidFrom(request.getValidFrom());
-        timetable.setValidUntil(request.getValidUntil());
 
         timetableRepository.save(timetable);
     }
@@ -127,18 +85,5 @@ public class TimetableService {
             throw new RuntimeException("해당 시간표에 대한 권한이 없습니다.");
         }
         return timetable;
-    }
-
-    private String dayOfWeekToKorean(int day) {
-        return switch (day) {
-            case 0 -> "일";
-            case 1 -> "월";
-            case 2 -> "화";
-            case 3 -> "수";
-            case 4 -> "목";
-            case 5 -> "금";
-            case 6 -> "토";
-            default -> "";
-        };
     }
 }

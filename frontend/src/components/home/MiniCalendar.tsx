@@ -6,6 +6,7 @@ import { toDateStr } from '../../utils/date';
 import styles from './MiniCalendar.module.css';
 import Tooltip from '../common/Tooltip';
 import { PiAlarmFill } from "react-icons/pi";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
 
 interface Props {
   selectedDate: Date;
@@ -152,11 +153,11 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
     <div className={styles.container}>
       {/* 헤더 */}
       <div className={styles.header}>
-        <button onClick={prevMonth} className={styles.navButton}>‹</button>
+        <button onClick={prevMonth} className={styles.navButton}><FaChevronLeft /></button>
         <span className={styles.title}>
           {year}년 {String(month + 1).padStart(2, '0')}월
         </span>
-        <button onClick={nextMonth} className={styles.navButton}>›</button>
+        <button onClick={nextMonth} className={styles.navButton}><FaChevronRight /></button>
       </div>
 
       {/* 요일 헤더 */}

@@ -2,19 +2,19 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #fff;
+  background-color: var(--white);
 }
 
 .weekdayRow {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--gray4);
 }
 
 .weekdayCell {
   text-align: center;
-  font-size: 12px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray3);
   padding: 8px 0;
 }
 
@@ -27,8 +27,8 @@
 
 .dayCell,
 .emptyCell {
-  border-right: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid var(--gray5);
+  border-bottom: 1px solid var(--gray5);
   padding: 6px;
   box-sizing: border-box;
 }
@@ -41,11 +41,11 @@
 }
 
 .dayCell:hover {
-  background-color: #fafafa;
+  background-color: var(--gray5);
 }
 
 .selected {
-  background-color: #eef0ff;
+  background-color: var(--gray4);
 }
 
 .dayNumber {
@@ -54,37 +54,37 @@
   line-height: 24px;
   text-align: center;
   border-radius: 50%;
-  font-size: 13px;
-  color: #333;
+  font-size: var(--font-s);
+  color: var(--gray1);
 }
 
 .saturday {
-  color: #3b82f6;
+  color: var(--blue);
 }
 
 .sunday {
-  color: #e5484d;
+  color: var(--red);
 }
 
 .holiday {
-  color: #e5484d;
+  color: var(--red);
 }
 
 /* 공휴일 이름 - 실제 일정이 아니라 공휴일 API에서만 받아오는 표시용 (DB에 저장 안 됨) */
 .holidayLabel {
   margin-top: 2px;
   max-width: 100%;
-  font-size: 10px;
-  color: #e5484d;
+  font-size: var(--font-s);
+  color: var(--red);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .today {
-  background-color: #7c8cf8;
-  color: #fff;
-  font-weight: bold;
+  background-color: var(--blue);
+  color: var(--white);
+  font-weight: var(--font-weight-bold);
 }
 
 .dotsRow {

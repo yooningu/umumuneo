@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { IoClose } from "react-icons/io5";
 import type { Schedule } from '../../types';
 import { deleteSchedule } from '../../api/schedule';
 import styles from './ScheduleModal.module.css';
@@ -8,14 +9,6 @@ interface Props {
   onClose: () => void;
   onEdit: () => void;
   onChanged: () => void;
-}
-
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 function formatDateRow(s: Schedule): string {
@@ -38,7 +31,6 @@ export default function ScheduleDetailModal({ schedule, onClose, onEdit, onChang
 
   const handleDelete = async () => {
     if (deleting) return;
-    if (!window.confirm('이 일정을 삭제할까요?')) return;
     setDeleting(true);
     try {
       await deleteSchedule(schedule.id);
@@ -61,7 +53,7 @@ export default function ScheduleDetailModal({ schedule, onClose, onEdit, onChang
             {schedule.title}
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
-            <CloseIcon />
+            <IoClose />
           </button>
         </div>
 

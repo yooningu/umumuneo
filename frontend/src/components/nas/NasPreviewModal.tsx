@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { IoClose } from "react-icons/io5";
 import { getPreviewBlobUrl } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasPreviewModal.module.css';
@@ -32,7 +33,7 @@ export default function NasPreviewModal({ file, onClose }: Props) {
       <div className={styles.card} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
           <span className={styles.title}>{file.name}</span>
-          <button className={styles.closeBtn} onClick={onClose}>×</button>
+          <button className={styles.closeBtn} onClick={onClose}><IoClose /></button>
         </div>
         <div className={styles.body}>
           {!url ? (

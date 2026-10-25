@@ -17,9 +17,21 @@
   --blue2: #4B89DC;
   --red: #FB6E52;
   --red2: #E95A3C;
-  --yellow: #FFB85C;
-  --yellow2: #FFA734;
+  --yellow: #ffce55;
+  --yellow2: #f6bb41;
 
+  /* 폰트 크기 단계: s(작음) ~ xl(큼) */
+  --font-s: 12px;
+  --font-m: 14px;
+  --font-l: 18px;
+  --font-xl: 24px;
+
+  /* 폰트 두께 단계: light(300) ~ bold(700), 600은 semibold */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 }
 
 /* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */
@@ -32,6 +44,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  font-family: "Noto Sans KR", sans-serif;
+  font-weight: var(--font-weight-regular);
 }
 
 #root {

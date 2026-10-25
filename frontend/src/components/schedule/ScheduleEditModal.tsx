@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { IoClose } from "react-icons/io5";
 import type { Schedule, ScheduleType, RepeatRule } from '../../types';
 import { updateSchedule, deleteSchedule } from '../../api/schedule';
 import styles from './ScheduleModal.module.css';
@@ -69,7 +70,6 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
 
   const handleDelete = async () => {
     if (deleting) return;
-    if (!window.confirm('이 일정을 삭제할까요?')) return;
     setDeleting(true);
     try {
       await deleteSchedule(schedule.id);
@@ -82,27 +82,29 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
 
   return (
     <div className={styles.overlay} onClick={onCancel}>
-      <div className={styles.card} onClick={e => e.stopPropagation()}>
-        <div className={styles.header}>
+      <div className={`${styles.card} ${styles.cardEdit}`} onClick={e => e.stopPropagation()}>
+        <div className={`${styles.header} ${styles.headerEdit}`}>
           <div className={styles.headerTitle}>일정 수정</div>
-          <button className={styles.closeBtn} onClick={onCancel}>×</button>
+          <button className={styles.closeBtn} onClick={onCancel}><IoClose /></button>
         </div>
 
         <div className={styles.formGroup}>
           <span className={styles.label}>제목</span>
           <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} />
         </div>
-
-        <div className={styles.typeRow}>
-          {TYPE_OPTIONS.map(opt => (
-            <button
-              key={opt.type}
-              className={`${styles.typeBtn} ${type === opt.type ? styles.typeBtnActive : ''}`}
-              onClick={() => setType(opt.type)}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className={styles.formGroup}>
+          <span className={styles.label}>유형</span>
+          <div className={styles.typeRow}>
+            {TYPE_OPTIONS.map(opt => (
+              <button
+                key={opt.type}
+                className={`${styles.typeBtn} ${type === opt.type ? styles.typeBtnActive : ''}`}
+                onClick={() => setType(opt.type)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className={styles.formGroup}>
@@ -167,12 +169,12 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
           </div>
         )}
 
-        <div className={styles.footer}>
-          <button className={`${styles.footerBtn} ${styles.deleteBtn}`} onClick={handleDelete} disabled={deleting}>삭제</button>
-          <div className={styles.footerBtnDivider} />
-          <button className={styles.footerBtn} onClick={onCancel}>취소</button>
-          <div className={styles.footerBtnDivider} />
-          <button className={`${styles.footerBtn} ${styles.primaryBtn}`} onClick={handleSave} disabled={saving}>저장</button>
+        <div className={styles.editFooter}>
+          <button className={`${styles.pillBtn} ${styles.pillBtnDelete}`} onClick={handleDelete} disabled={deleting}>삭제</button>
+          <div className={styles.footerRight}>
+            <button className={styles.pillBtn} onClick={onCancel}>취소</button>
+            <button className={`${styles.pillBtn} ${styles.pillBtnPrimary}`} onClick={handleSave} disabled={saving}>저장</button>
+          </div>
         </div>
       </div>
     </div>

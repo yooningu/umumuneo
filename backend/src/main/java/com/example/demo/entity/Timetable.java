@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
@@ -29,9 +28,6 @@ public class Timetable {
     @Column(length = 200, nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
     @Column(length = 7, nullable = false)
     private String color;
 
@@ -43,12 +39,6 @@ public class Timetable {
 
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
-
-    @Column(name = "valid_from", nullable = false)
-    private LocalDate validFrom;
-
-    @Column(name = "valid_until")
-    private LocalDate validUntil;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -13,9 +13,14 @@
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
-  background-color: #fff;
+  background-color: var(--white);
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* 수정 모달은 입력 폼(2열 배치 등)이 들어가서 보기 전용 모달보다 좀 더 넓게 */
+.cardEdit {
+  width: 520px;
 }
 
 .header {
@@ -23,40 +28,75 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  gap: 12px;
+}
+
+.headerEdit {
+  padding: 16px 16px 28px 16px;
 }
 
 .headerTitle {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
+  font-size: var(--font-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
 }
 
 .closeBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  border: none;
-  background: none;
-  color: #888;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--gray3);
+  color: var(--gray3);
+  font-size: 20px;
   cursor: pointer;
   padding: 0;
+  background-color: transparent;
 }
 
 .closeBtn:hover {
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--gray5);
+  color: var(--gray1);
+}
+
+/* 헤더에 타이틀 대신 들어가는 일정/시간표 전환 토글 (추가 모달 전용) */
+.modeToggle {
+  display: flex;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 3px;
+  gap: 2px;
+  background-color: var(--gray5);
+}
+
+.modeToggleBtn {
+  flex: 1;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-regular);
+  color: var(--gray2);
+  white-space: nowrap;
+}
+
+.modeToggleBtnActive {
+  background-color: var(--white);
+  color: var(--gray1);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .dot {
@@ -68,7 +108,7 @@
 
 .divider {
   height: 1px;
-  background-color: #e0e0e0;
+  background-color: var(--gray4);
   margin: 0 16px;
 }
 
@@ -83,13 +123,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: #555;
+  font-size: var(--font-m);
+  color: var(--gray2);
 }
 
 .footer {
   display: flex;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--gray4);
 }
 
 .footerBtn {
@@ -98,8 +138,8 @@
   text-align: center;
   background: none;
   border: none;
-  font-size: 14px;
-  color: #333;
+  font-size: var(--font-m);
+  color: var(--gray1);
   cursor: pointer;
 }
 
@@ -110,72 +150,114 @@
 
 .footerBtnDivider {
   width: 1px;
-  background-color: #e0e0e0;
+  background-color: var(--gray4);
 }
 
 .deleteBtn {
-  color: #e74c3c;
+  color: var(--red2);
 }
 
 .primaryBtn {
-  color: #7c8cf8;
-  font-weight: bold;
+  color: var(--sub);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 수정/추가 모달 전용 하단 바 - 왼쪽엔 삭제(수정일 때만), 오른쪽엔 취소+저장 */
+.editFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-top: 1px solid var(--gray4);
+}
+
+.footerRight {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.pillBtn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--gray4);
+  background-color: var(--white);
+  font-size: var(--font-m);
+  color: var(--gray1);
+  cursor: pointer;
+}
+
+.pillBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pillBtnDelete {
+  color: var(--red2);
+  border-color: var(--red2);
+}
+
+.pillBtnPrimary {
+  background-color: var(--sub);
+  border-color: var(--sub);
+  color: var(--white);
+  font-weight: var(--font-weight-bold);
 }
 
 /* 토글 스위치 */
 .toggle {
   position: relative;
-  width: 40px;
-  height: 22px;
+  width: 60px;
+  height: 32px;
   min-width: 40px;
-  border-radius: 11px;
-  background-color: #ccc;
+  border-radius: 999px;
+  background-color: var(--gray4);
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: background-color 0.15s;
+  transition: background-color 0.25s ease;
 }
 
 .toggleOn {
-  background-color: #7c8cf8;
+  background-color: var(--yellow);
 }
 
 .toggleKnob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--white);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .toggleOnKnob {
-  transform: translateX(18px);
+  transform: translateX(28px);
 }
 
 /* 수정 폼 */
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0 16px 16px;
+  gap: 8px;
+  padding: 0 16px 16px 16px;
 }
 
 .label {
-  font-size: 12px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray2);
 }
 
 .input,
 .textarea {
-  border: 1px solid #ddd;
+  border: 1px solid var(--gray4);
   border-radius: 8px;
   padding: 8px 10px;
-  font-size: 14px;
-  color: #333;
+  font-size: var(--font-m);
+  color: var(--gray1);
   width: 100%;
   box-sizing: border-box;
   font-family: inherit;
@@ -191,7 +273,7 @@
   gap: 8px;
 }
 
-.row2 > * {
+.row2>* {
   flex: 1;
   min-width: 0;
 }
@@ -199,33 +281,32 @@
 .typeRow {
   display: flex;
   gap: 8px;
-  padding: 0 16px 16px;
   flex-wrap: wrap;
 }
 
 .typeBtn {
   padding: 8px 14px;
   border-radius: 20px;
-  border: 1px solid #ddd;
-  background-color: #fff;
-  font-size: 13px;
-  color: #555;
+  border: 1px solid var(--gray4);
+  background-color: var(--white);
+  font-size: var(--font-s);
+  color: var(--gray2);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .typeBtnActive {
-  border-color: #7c8cf8;
-  background-color: #eef0ff;
-  color: #7c8cf8;
-  font-weight: bold;
+  border-color: var(--blue);
+  background-color: var(--gray4);
+  color: var(--blue);
+  font-weight: var(--font-weight-bold);
 }
 
 .notifRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 16px;
+  padding: 0 16px 16px 16px;
 }
 
 .offsetInput {

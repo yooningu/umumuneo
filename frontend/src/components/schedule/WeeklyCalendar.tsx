@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { getSchedules } from '../../api/schedule';
 import { getHolidays } from '../../api/holiday';
 import type { Schedule } from '../../types';
@@ -41,6 +41,11 @@ const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 const MAX_ALLDAY_VISIBLE = 2;
 const TIME_COL_WIDTH = 50;
 const MIN_DAY_COL_WIDTH = 120; // 요일 칸 하나의 최소 너비 (CSS의 min-width와 맞춰야 함)
+
+// 시간 한 칸(1시간)의 높이(px) - 이 값 하나만 바꾸면 그리드 칸 높이(CSS 변수로 전달)와
+// 일정 블록/현재시각 선의 위치 계산(분 단위를 px로 환산)이 전부 같이 따라감
+const HOUR_HEIGHT = 100;
+const PX_PER_MINUTE = HOUR_HEIGHT / 60;
 
 // 사용 가능한 너비에 맞춰 한 번에 보여줄 요일 수를 정한다 (7 -> 5 -> 3)
 function calcVisibleCount(availableWidth: number): number {
@@ -166,13 +171,13 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
     onVisibleCountChange?.(visibleCount);
   }, [visibleCount, onVisibleCountChange]);
 
-  // 시간표를 열었을 때 현재 시각이 화면 가운데쯤 보이도록 스크롤 (시간 1분 = 1px)
+  // 시간표를 열었을 때 현재 시각이 화면 가운데쯤 보이도록 스크롤
   useEffect(() => {
     const el = gridScrollRef.current;
     if (!el) return;
     const current = new Date();
     const currentMinutes = current.getHours() * 60 + current.getMinutes();
-    el.scrollTop = Math.max(0, currentMinutes - el.clientHeight / 2);
+    el.scrollTop = Math.max(0, currentMinutes * PX_PER_MINUTE - el.clientHeight / 2);
   }, []);
 
   const now = new Date();
@@ -184,31 +189,40 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const selectedVisibleIndex = visibleDates.findIndex(d => d.toDateString() === selectedDate.toDateString());
 
   return (
-    <div className={styles.container} ref={containerRef}>
+    <div
+      className={styles.container}
+      ref={containerRef}
+      style={{ '--hour-height': `${HOUR_HEIGHT}px` } as CSSProperties}
+    >
       {/* 헤더: 요일 */}
       <div className={styles.headerRow}>
         <div className={styles.timeColSpacer} />
         {visibleDates.map((date, i) => {
-          const isToday = date.toDateString() === today.toDateString();
-          const isHoliday = holidays.has(toDateStr(date));
+          const holidayName = holidays.get(toDateStr(date));
           const dow = date.getDay();
           const numberClassName = [
             styles.dayNumber,
             dow === 6 ? styles.saturday : '',
             dow === 0 ? styles.sunday : '',
-            isHoliday ? styles.holiday : '',
-            isToday ? styles.today : '',
+            holidayName ? styles.holiday : '',
           ].join(' ').trim();
           const headerClassName = [
             styles.dayHeaderCell,
             i === selectedVisibleIndex ? styles.selectedCol : '',
           ].join(' ').trim();
+          const labelClassName = [
+            styles.dayLabel,
+            dow === 6 ? styles.saturday : '',
+            dow === 0 ? styles.sunday : '',
+          ].join(' ').trim();
           return (
             <div key={i} onClick={() => onDateSelect(date)} className={headerClassName}>
-              <div className={styles.dayLabel}>{DAY_LABELS[mondayBasedDow(date)]}</div>
+              <div className={labelClassName}>{DAY_LABELS[mondayBasedDow(date)]}</div>
               <div className={numberClassName}>
                 {date.getDate()}
               </div>
+              {/* 공휴일은 실제 일정이 아니라 공휴일 API에서만 받아온 값 - 그냥 보여주기용 */}
+              {holidayName && <div className={styles.holidayLabel}>{holidayName}</div>}
             </div>
           );
         })}
@@ -227,17 +241,12 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
           const hasOverflow = allday.length > MAX_ALLDAY_VISIBLE;
           const visible = isExpanded ? allday : allday.slice(0, MAX_ALLDAY_VISIBLE);
           const hidden = isExpanded ? [] : allday.slice(MAX_ALLDAY_VISIBLE);
-          const holidayName = holidays.get(dateStr);
           const alldayCellClassName = [
             styles.alldayCell,
             i === selectedVisibleIndex ? styles.selectedCol : '',
           ].join(' ').trim();
           return (
             <div key={i} className={alldayCellClassName}>
-              {/* 공휴일은 실제 일정이 아니라 공휴일 API에서만 받아온 값 - 그냥 보여주기용 뱃지 */}
-              {holidayName && (
-                <div className={styles.holidayBadge}>{holidayName}</div>
-              )}
               {visible.map(s => (
                 <div
                   key={s.id}
@@ -332,8 +341,8 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                     key={s.id}
                     className={styles.scheduleBlock}
                     style={{
-                      top: startMin,
-                      height: Math.max(endMin - startMin, 20),
+                      top: startMin * PX_PER_MINUTE,
+                      height: Math.max((endMin - startMin) * PX_PER_MINUTE, 20),
                       left: 2 + left,
                       right: 2 + right,
                       backgroundColor: s.color || '#7c8cf8',
@@ -349,7 +358,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                   <div
                     key={s.id}
                     className={styles.momentBadge}
-                    style={{ top: startMin, backgroundColor: s.color || '#7c8cf8' }}
+                    style={{ top: startMin * PX_PER_MINUTE, backgroundColor: s.color || '#7c8cf8' }}
                     onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
                   >
                     {s.title}
@@ -361,7 +370,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
 
           {/* 현재 시간 선: 시간표 전체 너비에 걸쳐 표시 */}
           {todayInView && (
-            <div className={styles.nowLine} style={{ top: nowMinutes }} />
+            <div className={styles.nowLine} style={{ top: nowMinutes * PX_PER_MINUTE }} />
           )}
 
           {/* 오늘 칸 위치에 현재 시각 배지 표시 */}
@@ -369,7 +378,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             <div
               className={styles.nowBadge}
               style={{
-                top: nowMinutes,
+                top: nowMinutes * PX_PER_MINUTE,
                 left: `calc(${TIME_COL_WIDTH}px + (100% - ${TIME_COL_WIDTH}px) * ${(todayVisibleIndex + 0.5) / visibleCount})`,
               }}
             >

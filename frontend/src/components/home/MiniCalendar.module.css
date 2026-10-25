@@ -17,16 +17,19 @@
 }
 
 .navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--font-m);
   color: var(--gray2);
 }
 
 .title {
-  font-weight: bold;
-  font-size: 15px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-m);
 }
 
 .weekdayRow {
@@ -38,7 +41,7 @@
 
 .weekdayCell {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: var(--gray2);
   padding: 2px 0;
 }
@@ -87,11 +90,11 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  font-size: 12px;
+  font-size: var(--font-s);
   line-height: 1;
   border-radius: 50%;
   color: var(--gray1);
-  font-weight: normal;
+  font-weight: var(--font-weight-regular);
   background-color: transparent;
 }
 
@@ -109,7 +112,7 @@
 
 .dayNumber.today {
   color: var(--sub);
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 .bell {
@@ -117,7 +120,7 @@
   top: 50%;
   right: -7px;
   transform: translateY(-50%);
-  font-size: 12px;
+  font-size: var(--font-s);
   line-height: 1;
   color: var(--yellow);
 }
@@ -205,7 +208,7 @@
 .legendText {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: var(--gray1);
   white-space: nowrap;
   overflow: hidden;

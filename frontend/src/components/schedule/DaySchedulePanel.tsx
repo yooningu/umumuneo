@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSchedules, createSchedule } from '../../api/schedule';
+import { getSchedules } from '../../api/schedule';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
@@ -19,13 +19,11 @@ function formatDateLabel(date: Date): string {
 }
 
 // 특정 하루를 콕 집어서 그 날의 일정만 보여주는 패널 (캘린더에서 날짜 클릭했을 때 사용).
-// "다가오는 일정" 전체를 보여주는 ScheduleList와는 달리 딱 하루치 + 그 자리에서 바로 추가하는 입력창이 있음.
+// "다가오는 일정" 전체를 보여주는 ScheduleList와는 달리 딱 하루치만 보여줌.
 export default function DaySchedulePanel({ date, refreshKey, onScheduleChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const [newTitle, setNewTitle] = useState('');
-  const [adding, setAdding] = useState(false);
 
   const dateStr = toDateStr(date);
 
@@ -34,19 +32,6 @@ export default function DaySchedulePanel({ date, refreshKey, onScheduleChange }:
       .then(setSchedules)
       .catch(console.error);
   }, [dateStr, refreshKey]);
-
-  const handleAdd = async () => {
-    if (!newTitle.trim() || adding) return;
-    setAdding(true);
-    try {
-      await createSchedule({ type: 'ALLDAY', title: newTitle.trim(), startDate: dateStr });
-      setNewTitle('');
-      onScheduleChange?.();
-    } catch (e) {
-      console.error(e);
-    }
-    setAdding(false);
-  };
 
   const sorted = [...schedules].sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
 
@@ -76,17 +61,6 @@ export default function DaySchedulePanel({ date, refreshKey, onScheduleChange }:
             </div>
           ))
         )}
-      </div>
-
-      <div className={styles.addRow}>
-        <input
-          className={styles.addInput}
-          placeholder="이 날에 일정 추가하기"
-          value={newTitle}
-          onChange={e => setNewTitle(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-          disabled={adding}
-        />
       </div>
 
       {selectedSchedule && modalMode === 'view' && (

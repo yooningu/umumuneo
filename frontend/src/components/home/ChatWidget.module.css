@@ -5,18 +5,18 @@
   height: 100%;
   background-color: var(--white);
   border-top: 1px solid var(--gray4);
+  padding: 16px;
 }
 
 .dragOverlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--white);
-  font-size: 14px;
-  font-weight: bold;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-bold);
   z-index: 10;
   pointer-events: none;
 }
@@ -24,12 +24,11 @@
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px;
 }
 
 .empty {
-  color: #bbb;
-  font-size: 12px;
+  color: var(--gray2);
+  font-size: var(--font-s);
   text-align: center;
   margin-top: 16px;
 }
@@ -50,7 +49,7 @@
   display: inline-block;
   max-width: 85%;
   padding: 6px 10px;
-  font-size: 14px;
+  font-size: var(--font-m);
   word-break: break-word;
   text-align: left;
 }
@@ -71,7 +70,7 @@
 .bubble :global(h4) {
   margin: 4px 0;
   font-size: 1.1em;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .bubble :global(ul),
@@ -85,14 +84,12 @@
 }
 
 .bubble :global(code) {
-  background-color: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
   padding: 1px 4px;
   font-size: 0.95em;
 }
 
 .bubble :global(pre) {
-  background-color: rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   padding: 6px 8px;
   overflow-x: auto;
@@ -118,24 +115,43 @@
 
 .bubbleUser {
   border-radius: 12px 12px 2px 12px;
-  background-color: #7c8cf8;
+  background-color: var(--sub);
   color: var(--white);
 }
 
 .bubbleAssistant {
   border-radius: 12px 12px 12px 2px;
   background-color: var(--gray5);
-  color: #333;
+  color: var(--gray1);
 }
 
 .attachRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 8px 0;
+  gap: 8px;
+  padding: 8px 0px;
 }
 
 .attachChip {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.attachImageChip {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.attachThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachFileChip {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -143,16 +159,27 @@
   padding: 3px 6px;
   background-color: var(--gray5);
   border-radius: 10px;
-  font-size: 11px;
-  color: #555;
+  font-size: var(--font-s);
+  color: var(--gray2);
 }
 
-.attachThumb {
-  width: 20px;
-  height: 20px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
+.attachRemoveOverlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--white);
+  font-size: var(--font-s);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .attachName {
@@ -182,10 +209,13 @@
 }
 
 .attachRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
-  color: #999;
-  font-size: 13px;
+  color: var(--gray2);
+  font-size: var(--font-m);
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -197,15 +227,15 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px 0;
-  font-size: 11px;
-  color: #7c8cf8;
+  font-size: var(--font-s);
+  color: var(--sub);
 }
 
 .statusDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #7c8cf8;
+  background-color: var(--sub);
   animation: statusPulse 1s ease-in-out infinite;
 }
 
@@ -231,7 +261,6 @@
   border-radius: 999px;
   gap: 8px;
   height: 52px;
-  margin: 16px;
   background-color: var(--gray5);
 }
 
@@ -241,9 +270,9 @@
   border-radius: 10px;
   border: none;
   background-color: transparent;
-  color: #888;
+  color: var(--gray3);
   cursor: pointer;
-  font-size: 20px;
+  font-size: var(--font-l);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -255,8 +284,8 @@
 }
 
 .iconButtonActive {
-  background-color: #ff6b6b;
-  border-color: #ff6b6b;
+  background-color: var(--brand);
+  border-color: var(--brand);
   color: var(--white);
 }
 
@@ -264,7 +293,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: var(--font-m);
   background-color: transparent;
 }
 
@@ -272,11 +301,11 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #7c8cf8;
+  background-color: var(--sub);
   border: none;
-  color: var(--white);
+  color: var(--gray5);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-l);
   display: flex;
   align-items: center;
   justify-content: center;

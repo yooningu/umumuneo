@@ -8,7 +8,9 @@ import Alert from '../common/Alert';
 import Loader from '../common/Loader';
 import styles from './ChatWidget.module.css';
 import { RiMic2Fill } from "react-icons/ri";
-import { FaPlus } from "react-icons/fa6";
+import { FaChevronRight } from "react-icons/fa6";
+import { FaPlus } from "react-icons/fa";
+import { IoClose } from "react-icons/io5";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -426,13 +428,18 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
       {pendingFiles.length > 0 && (
         <div className={styles.attachRow}>
           {pendingFiles.map((f, i) => (
-            <div key={i} className={styles.attachChip}>
-              {pendingPreviews[i] && (
+            pendingPreviews[i] ? (
+              // 이미지는 썸네일이 칩 전체를 꽉 채우고, x 버튼은 이미지 위 우측 상단에 떠 있음
+              <div key={i} className={`${styles.attachChip} ${styles.attachImageChip}`}>
                 <img src={pendingPreviews[i]!} alt={f.name} className={styles.attachThumb} />
-              )}
-              <span className={styles.attachName}>{f.name}</span>
-              <button className={styles.attachRemove} onClick={() => removeFile(i)}>×</button>
-            </div>
+                <button className={styles.attachRemoveOverlay} onClick={() => removeFile(i)}><IoClose /></button>
+              </div>
+            ) : (
+              <div key={i} className={`${styles.attachChip} ${styles.attachFileChip}`}>
+                <span className={styles.attachName}>{f.name}</span>
+                <button className={styles.attachRemove} onClick={() => removeFile(i)}><IoClose /></button>
+              </div>
+            )
           ))}
         </div>
       )}
@@ -462,12 +469,12 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
           onPaste={onPasteInput}
-          placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
+          placeholder="어떤 도움을 드릴까요?"
           className={styles.input}
         />
         {!isWhisperRecording && (input.trim() || pendingFiles.length > 0) ? (
           <button onClick={send} disabled={loading || uploading} className={styles.sendButton}>
-            ›
+            <FaChevronRight />
           </button>
         ) : (
           <button

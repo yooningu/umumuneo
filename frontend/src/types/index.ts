@@ -49,24 +49,18 @@ export interface ScheduleRequest {
 export interface Timetable {
   id: string;
   title: string;
-  description: string | null;
   color: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  validFrom: string;
-  validUntil: string | null;
   createdAt: string;
   updatedAt: string;
 }
 export interface TimetableRequest {
   title: string;
-  description?: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
-  validFrom: string;
-  validUntil?: string;
 }
 export interface Notification {
   id: string;
