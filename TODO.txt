@@ -1,0 +1,11 @@
+백엔드/프론트 공용 할 일 목록
+- 처리 완료한 항목은 지워서 항상 "아직 안 한 일"만 남도록 유지할 것
+
+[백엔드] 미니 PC DB에서 아래 SQL 실행 필요 (timetable 테이블 컬럼 정리)
+Timetable 엔티티에서 description/valid_from/valid_until 필드를 지웠는데,
+DB엔 아직 컬럼이 남아있고 valid_from이 NOT NULL이라 INSERT 시 500 에러 발생 중.
+
+ALTER TABLE timetable
+  DROP COLUMN description,
+  DROP COLUMN valid_from,
+  DROP COLUMN valid_until;

@@ -32,6 +32,7 @@
 .dayLabel {
   font-size: var(--font-s);
   color: var(--gray2);
+  font-weight: var(--font-weight-semibold);
 }
 
 .dayLabel.saturday {
