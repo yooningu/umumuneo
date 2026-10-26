@@ -6,7 +6,6 @@ import com.example.demo.entity.Timetable;
 import com.example.demo.entity.User;
 import com.example.demo.repository.TimetableRepository;
 import com.example.demo.repository.UserRepository;
-import com.example.demo.util.ColorUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +18,6 @@ public class TimetableService {
 
     private final TimetableRepository timetableRepository;
     private final UserRepository userRepository;
-    private final ColorUtil colorUtil;
 
     // 시간표 전체 조회
     @Transactional(readOnly = true)
@@ -44,7 +42,7 @@ public class TimetableService {
         Timetable timetable = new Timetable();
         timetable.setUser(user);
         timetable.setTitle(request.getTitle());
-        timetable.setColor(colorUtil.nextColor(user));
+        timetable.setColor(request.getColor());
         timetable.setDayOfWeek(request.getDayOfWeek());
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());
@@ -63,6 +61,7 @@ public class TimetableService {
         }
 
         timetable.setTitle(request.getTitle());
+        timetable.setColor(request.getColor());
         timetable.setDayOfWeek(request.getDayOfWeek());
         timetable.setStartTime(request.getStartTime());
         timetable.setEndTime(request.getEndTime());

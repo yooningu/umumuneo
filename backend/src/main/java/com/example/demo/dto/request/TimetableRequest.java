@@ -14,6 +14,9 @@ public class TimetableRequest {
     @NotBlank(message = "제목은 필수입니다.")
     private String title;
 
+    @NotBlank(message = "색상은 필수입니다.")
+    private String color; // 프론트에서 10가지 중 고른 색
+
     @NotNull(message = "요일은 필수입니다.")
     @Min(value = 0, message = "요일은 0(일)~6(토) 사이여야 합니다.")
     @Max(value = 6, message = "요일은 0(일)~6(토) 사이여야 합니다.")

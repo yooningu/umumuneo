@@ -14,12 +14,12 @@ public class ColorUtil {
     private final UserRepository userRepository;
 
     private static final List<String> COLORS = List.of(
-            "#FF0073", "#FF6B81", "#FF7F50", "#FFA502", "#ECCC68",
-            "#2ED573", "#1E90FF", "#5352ED", "#A55EEA", "#FF6348",
-            "#4071C3", "#22355E", "#F368E0", "#FF9FF3", "#FECA57",
-            "#48DBFB", "#FF9F43", "#EE5A24", "#009432", "#0652DD",
-            "#9980FA", "#C4E538", "#FDA7DF", "#D980FA", "#1289A7",
-            "#B53471", "#6F1E51", "#C20007", "#006266", "#1B1464"
+            "#006266", "#009432", "#0652DD", "#1289A7", "#1B1464",
+            "#1E90FF", "#22355E", "#2ED573", "#4071C3", "#48DBFB",
+            "#5352ED", "#6F1E51", "#9980FA", "#A55EEA", "#B53471",
+            "#C20007", "#C4E538", "#D980FA", "#E36A00", "#EE5A24",
+            "#F368E0", "#FDA7DF", "#FF0073", "#FF4343", "#FF6B81",
+            "#FF9F43", "#FF9FF3"
     );
 
     // 다음 색상 반환 (순서대로 순환)

@@ -29,6 +29,13 @@ const REPEAT_OPTIONS: { value: RepeatRule | null; label: string }[] = [
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']; // 백엔드 dayOfWeek: 0(일)~6(토)
 
+// 시간표 전용 색상 8가지 - 일정(Schedule)은 서버가 자동으로 배정하는 색을 쓰고,
+// 시간표는 이 중에서 직접 고르게 해서 서로 다른 색 체계를 쓰게 함
+export const TIMETABLE_COLORS = [
+  '#53D8D1', '#5EE0CB', '#5FC6D0', '#9FECF5',
+  '#FDB487', '#FDBA63', '#FDDBAE', '#FFEAA0',
+];
+
 // 타입별로 어떤 날짜/시간 입력을 보여줄지 (일정 모드)
 function showEndDate(type: ScheduleType) { return type === 'PERIOD'; }
 function showStartTime(type: ScheduleType) { return type === 'TIMED' || type === 'MOMENT'; }
@@ -53,6 +60,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
 
   // 시간표 모드 전용 상태
   const [selectedDays, setSelectedDays] = useState<number[]>([new Date().getDay()]);
+  const [color, setColor] = useState(TIMETABLE_COLORS[0]);
 
   // 일정/시간표 공통으로 쓰는 시간 입력
   const [startTime, setStartTime] = useState('');
@@ -86,6 +94,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
         // 요일마다 시간표를 하나씩 만든다 (백엔드 한 행당 요일 하나)
         await Promise.all(selectedDays.map(dayOfWeek => createTimetable({
           title: title.trim(),
+          color,
           dayOfWeek,
           startTime: `${startTime}:00`,
           endTime: `${endTime}:00`,
@@ -224,6 +233,21 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
               <div className={styles.row2}>
                 <input type="time" step={300} className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
                 <input type="time" step={300} className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <span className={styles.label}>색상</span>
+              <div className={styles.colorRow}>
+                {TIMETABLE_COLORS.map(c => (
+                  <button
+                    key={c}
+                    className={`${styles.colorSwatch} ${color === c ? styles.colorSwatchActive : ''}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setColor(c)}
+                    aria-label={c}
+                  />
+                ))}
               </div>
             </div>
           </>

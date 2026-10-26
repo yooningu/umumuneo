@@ -58,6 +58,7 @@ export interface Timetable {
 }
 export interface TimetableRequest {
   title: string;
+  color: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;

@@ -61,12 +61,12 @@ export default function ScheduleDetailModal({ schedule, onClose, onEdit, onChang
 
         <div className={styles.body}>
           <div className={styles.infoRow}>
-            <span className={styles.dot} style={{ backgroundColor: schedule.color || '#7c8cf8' }} />
+            <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
             {formatDateRow(schedule)}
           </div>
           {timeRow && (
             <div className={styles.infoRow}>
-              <span className={styles.dot} style={{ backgroundColor: schedule.color || '#7c8cf8' }} />
+              <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
               {timeRow}
             </div>
           )}

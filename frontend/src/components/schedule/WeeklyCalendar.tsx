@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { getSchedules } from '../../api/schedule';
 import { getHolidays } from '../../api/holiday';
-import type { Schedule } from '../../types';
+import { getTimetables } from '../../api/timetable';
+import type { Schedule, Timetable } from '../../types';
 import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
+import TimetableDetailModal from './TimetableDetailModal';
+import TimetableEditModal from './TimetableEditModal';
 import Tooltip from '../common/Tooltip';
 import styles from './WeeklyCalendar.module.css';
 
@@ -96,10 +99,13 @@ function getOverlapMargins(index: number, total: number): { left: number; right:
 
 export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
+  const [selectedTimetable, setSelectedTimetable] = useState<Timetable | null>(null);
+  const [timetableModalMode, setTimetableModalMode] = useState<'view' | 'edit'>('view');
   const [expandedAlldayDays, setExpandedAlldayDays] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -151,6 +157,13 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, visibleCount]);
+
+  // 시간표 - 날짜 범위가 없는 매주 반복 데이터라 전체를 한 번만(+새로고침 시) 조회해서 요일로 걸러 씀
+  useEffect(() => {
+    getTimetables()
+      .then(data => setTimetables(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data)))
+      .catch(console.error);
+  }, [refreshKey]);
 
   // 컨테이너 너비에 따라 보여줄 요일 수를 갱신
   useEffect(() => {
@@ -325,12 +338,37 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                 return { schedule: s, startMin: sh * 60 + sm };
               });
 
+            // 시간표: 날짜가 아니라 요일(dayOfWeek)로 매칭되는, 매주 반복되는 배경 블록
+            const dayTimetables = timetables
+              .filter(t => t.dayOfWeek === date.getDay())
+              .map(t => {
+                const [sh, sm] = t.startTime.slice(0, 5).split(':').map(Number);
+                const [eh, em] = t.endTime.slice(0, 5).split(':').map(Number);
+                return { timetable: t, startMin: sh * 60 + sm, endMin: eh * 60 + em };
+              });
+
             const dayColClassName = [
               styles.dayCol,
               i === selectedVisibleIndex ? styles.selectedCol : '',
             ].join(' ').trim();
             return (
               <div key={i} className={dayColClassName}>
+                {/* 시간표 배경 블록 */}
+                {dayTimetables.map(({ timetable: t, startMin, endMin }) => (
+                  <div
+                    key={t.id}
+                    className={styles.timetableBlock}
+                    style={{
+                      top: startMin * PX_PER_MINUTE,
+                      height: (endMin - startMin) * PX_PER_MINUTE,
+                      backgroundColor: t.color,
+                    }}
+                    onClick={() => { setSelectedTimetable(t); setTimetableModalMode('view'); }}
+                  >
+                    <span className={styles.timetableTitle}>{t.title}</span>
+                  </div>
+                ))}
+
                 {HOURS.map(h => (
                   <div key={h} className={styles.hourLine} />
                 ))}
@@ -402,6 +440,23 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
           onCancel={() => setModalMode('view')}
           onSaved={() => { onScheduleChange?.(); setSelectedSchedule(null); }}
           onDeleted={() => { onScheduleChange?.(); setSelectedSchedule(null); }}
+        />
+      )}
+
+      {selectedTimetable && timetableModalMode === 'view' && (
+        <TimetableDetailModal
+          timetable={selectedTimetable}
+          onClose={() => setSelectedTimetable(null)}
+          onEdit={() => setTimetableModalMode('edit')}
+          onChanged={() => onScheduleChange?.()}
+        />
+      )}
+      {selectedTimetable && timetableModalMode === 'edit' && (
+        <TimetableEditModal
+          timetable={selectedTimetable}
+          onCancel={() => setTimetableModalMode('view')}
+          onSaved={() => { onScheduleChange?.(); setSelectedTimetable(null); }}
+          onDeleted={() => { onScheduleChange?.(); setSelectedTimetable(null); }}
         />
       )}
     </div>

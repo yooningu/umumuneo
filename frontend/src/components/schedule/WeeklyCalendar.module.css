@@ -188,12 +188,40 @@
   flex: 1;
   border-left: 1px solid var(--gray4);
   position: relative;
+  /* z-index를 줘야 이 칸이 독립된 쌓임 맥락(stacking context)을 만들어서,
+     자식의 음수 z-index(.timetableBlock)가 칸 밖(페이지 전체) 기준이 아니라
+     이 칸 안에서만 가장 뒤로 가게 됨 */
+  z-index: 0;
   min-width: 120px;
 }
 
 .hourLine {
   height: var(--hour-height);
   border-bottom: 1px solid var(--gray5);
+}
+
+/* 시간표(매주 반복) 배경 블록 - 각지고(둥근 모서리 없음).
+   시간 구분선(.hourLine)보다는 위에 둬서 하나의 시간표가 선에 잘려 여러 조각으로 보이지 않게 하고,
+   실제 일정 블록(.scheduleBlock 등)보다는 아래에 둠 */
+.timetableBlock {
+  position: absolute;
+  left: -1px;
+  right: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--white);
+  padding: 4px 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.timetableTitle {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nowLine {
@@ -241,14 +269,16 @@
 .scheduleBlock {
   position: absolute;
   border-radius: 4px;
+  border: 1px solid var(--white);
+  box-sizing: border-box;
   padding: 2px 4px;
   overflow: hidden;
   font-size: var(--font-s);
   color: var(--white);
   z-index: 3;
   cursor: pointer;
-  margin-left: 8px;
-  margin-right: 8px;
+  margin-left: 12px;
+  margin-right: 12px;
 }
 
 .scheduleTitle {
