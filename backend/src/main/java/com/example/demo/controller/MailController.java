@@ -2,22 +2,13 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.response.InboundEmailDetailResponse;
 import com.example.demo.dto.response.InboundEmailResponse;
-import com.example.demo.entity.FileEntity;
-import com.example.demo.service.FileService;
 import com.example.demo.service.InboundEmailService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 // 로그인한 유저 본인이 받은 메일(umumuneo.com으로 온 것) 조회용.
@@ -47,44 +38,6 @@ public class MailController {
         return ResponseEntity.ok(inboundEmailService.getEmailDetail(userId, id));
     }
 
-    // GET /api/v1/emails/{id}/attachments/{attachmentId}/download - 항상 다운로드
-    @GetMapping("/{id}/attachments/{attachmentId}/download")
-    public ResponseEntity<Resource> downloadAttachment(
-            @AuthenticationPrincipal String userId,
-            @PathVariable String id,
-            @PathVariable String attachmentId
-    ) throws IOException {
-        FileService.ShareableFile file = inboundEmailService.getOwnedAttachment(userId, id, attachmentId);
-        String encodedName = URLEncoder.encode(file.filename(), StandardCharsets.UTF_8);
-        MediaType mediaType = file.mimeType() != null
-                ? MediaType.parseMediaType(file.mimeType())
-                : MediaType.APPLICATION_OCTET_STREAM;
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
-                .contentType(mediaType)
-                .body(file.resource());
-    }
-
-    // GET /api/v1/emails/{id}/attachments/{attachmentId}/view - 이미지/영상/PDF 브라우저 미리보기용
-    @GetMapping("/{id}/attachments/{attachmentId}/view")
-    public ResponseEntity<Resource> viewAttachment(
-            @AuthenticationPrincipal String userId,
-            @PathVariable String id,
-            @PathVariable String attachmentId
-    ) throws IOException {
-        FileService.ShareableFile file = inboundEmailService.getOwnedAttachment(userId, id, attachmentId);
-        if (!FileEntity.isPreviewable(file.mimeType())) {
-            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
-        }
-        String encodedName = URLEncoder.encode(file.filename(), StandardCharsets.UTF_8);
-        MediaType mediaType = file.mimeType() != null
-                ? MediaType.parseMediaType(file.mimeType())
-                : MediaType.APPLICATION_OCTET_STREAM;
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedName + "\"")
-                .contentType(mediaType)
-                .body(file.resource());
-    }
+    // 첨부파일 다운로드/미리보기는 이제 실제로 NAS 파일(FileEntity)이라서 여기 따로 안 만들고
+    // 기존 /api/v1/files/{id}/download, /api/v1/files/{id}/view 를 그대로 쓴다 (FileController).
 }

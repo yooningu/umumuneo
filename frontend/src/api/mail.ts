@@ -11,27 +11,6 @@ export const getMailDetail = async (id: string): Promise<MailDetail> => {
   return res.data;
 };
 
-export const downloadMailAttachment = async (
-  mailId: string,
-  attachmentId: string,
-  filename: string
-): Promise<void> => {
-  const res = await client.get(`/emails/${mailId}/attachments/${attachmentId}/download`, {
-    responseType: 'blob',
-  });
-  const url = window.URL.createObjectURL(res.data);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  window.URL.revokeObjectURL(url);
-};
-
-// 이미지/영상/PDF 미리보기용 - 인증 헤더가 필요해서 <img src="..."> 로 바로 못 쓰고,
-// blob으로 받아서 object URL을 만들어야 함. 사용하는 쪽에서 다 쓰고 나면 revokeObjectURL 호출 필요.
-export const getMailAttachmentPreviewUrl = async (mailId: string, attachmentId: string): Promise<string> => {
-  const res = await client.get(`/emails/${mailId}/attachments/${attachmentId}/view`, {
-    responseType: 'blob',
-  });
-  return window.URL.createObjectURL(res.data);
-};
+// 메일 첨부파일은 이제 실제로 NAS 파일(FileEntity)이라서 다운로드/미리보기는
+// api/file.ts의 downloadFile/getPreviewBlobUrl을 attachment.id로 그대로 쓰면 된다
+// (예전엔 /emails/{mailId}/attachments/{attachmentId}/... 전용 엔드포인트가 따로 있었음).

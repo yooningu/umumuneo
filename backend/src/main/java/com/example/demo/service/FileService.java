@@ -40,13 +40,18 @@ public class FileService {
 
     // 파일 목록 조회
     @Transactional(readOnly = true)
-    public List<FileResponse> getFiles(String userId, String parentId, Boolean isFavorite, String search) {
+    public List<FileResponse> getFiles(String userId, String parentId, Boolean isFavorite, String search, String source) {
         List<FileEntity> files;
 
         if (search != null && !search.isEmpty()) {
             files = fileRepository.findByUserIdAndNameContaining(userId, search);
         } else if (Boolean.TRUE.equals(isFavorite)) {
             files = fileRepository.findByUserIdAndIsFavoriteTrue(userId);
+        } else if (source != null && !source.isBlank()) {
+            FileEntity.FileSource src = FileEntity.FileSource.valueOf(source.toUpperCase());
+            files = src == FileEntity.FileSource.UPLOAD
+                    ? fileRepository.findUploadSourceByUserId(userId, src)
+                    : fileRepository.findByUserIdAndSourceOrderByCreatedAtDesc(userId, src);
         } else if (parentId != null) {
             files = fileRepository.findByUserIdAndParentId(userId, parentId);
         } else {
@@ -57,8 +62,9 @@ public class FileService {
     }
 
     // 파일 업로드 (업로드된 파일들의 메타데이터 반환 - id로 나중에 공개 링크 생성 등에 사용)
+    // source: 누가 올린 건지(NAS 직접 업로드/챗봇 첨부 등) - null이면 기본값(UPLOAD)
     @Transactional
-    public List<FileResponse> uploadFiles(String userId, MultipartFile[] files, String parentId) throws IOException {
+    public List<FileResponse> uploadFiles(String userId, MultipartFile[] files, String parentId, String source) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
@@ -67,6 +73,9 @@ public class FileService {
             parent = fileRepository.findById(parentId)
                     .orElseThrow(() -> new RuntimeException("폴더를 찾을 수 없습니다."));
         }
+        FileEntity.FileSource fileSource = source != null && !source.isBlank()
+                ? FileEntity.FileSource.valueOf(source.toUpperCase())
+                : FileEntity.FileSource.UPLOAD;
 
         // 유저별 업로드 디렉토리 생성
         Path userDir = Paths.get(uploadDir, userId);
@@ -92,12 +101,41 @@ public class FileService {
             fileEntity.setMimeType(file.getContentType());
             fileEntity.setExtension(extension.isEmpty() ? null : extension);
             fileEntity.setIsFavorite(false);
+            fileEntity.setSource(fileSource);
 
             fileRepository.save(fileEntity);
             uploaded.add(new FileResponse(fileEntity));
         }
 
         return uploaded;
+    }
+
+    // 이메일로 받은 첨부파일 저장 (InboundEmailService에서 호출). base64로 받은 원본 바이트를
+    // 일반 업로드와 똑같은 디스크 경로/파일 테이블에 저장하되 source=EMAIL + 어느 메일인지 연결해둔다.
+    @Transactional
+    public FileEntity saveEmailAttachment(User user, com.example.demo.entity.InboundEmail email,
+                                           String filename, String contentType, byte[] data) throws IOException {
+        Path userDir = Paths.get(uploadDir, user.getId());
+        Files.createDirectories(userDir);
+
+        String extension = getExtension(filename);
+        String storedName = UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+        Path targetPath = userDir.resolve(storedName);
+        Files.write(targetPath, data);
+
+        FileEntity fileEntity = new FileEntity();
+        fileEntity.setUser(user);
+        fileEntity.setName(filename);
+        fileEntity.setStoragePath(targetPath.toString());
+        fileEntity.setIsDirectory(false);
+        fileEntity.setSizeBytes((long) data.length);
+        fileEntity.setMimeType(contentType);
+        fileEntity.setExtension(extension.isEmpty() ? null : extension);
+        fileEntity.setIsFavorite(false);
+        fileEntity.setSource(FileEntity.FileSource.EMAIL);
+        fileEntity.setEmail(email);
+
+        return fileRepository.save(fileEntity);
     }
 
     // 폴더 생성

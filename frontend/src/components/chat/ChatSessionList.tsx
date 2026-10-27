@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { IoClose } from "react-icons/io5";
+import { FaPlus } from "react-icons/fa";
 import { getSessions, deleteSession } from '../../api/chat';
 import type { ChatSession } from '../../types';
 import styles from './ChatSessionList.module.css';
@@ -27,7 +28,6 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
-    console.log('[ChatSessionList] fetching sessions, refreshKey =', refreshKey);
     getSessions().then(setSessions).catch(console.error);
   }, [refreshKey]);
 
@@ -45,7 +45,10 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
 
   return (
     <div className={styles.container}>
-      <button className={styles.newBtn} onClick={() => onSelect(null)}>+ 새 대화</button>
+      <button className={styles.newBtn} onClick={() => onSelect(null)}>
+        <FaPlus />
+        새 대화
+      </button>
       <div className={styles.list}>
         {sessions.length === 0 ? (
           <div className={styles.empty}>대화 기록이 없습니다</div>
@@ -57,9 +60,9 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
               onClick={() => onSelect(s.id)}
             >
               <div className={styles.itemTitle}>{s.title || '새 대화'}</div>
-              <div className={styles.itemMeta}>
-                <span>{formatRelative(s.lastActiveAt)}</span>
-                <button className={styles.deleteBtn} onClick={e => handleDelete(e, s.id)}><IoClose /></button>
+              <div className={styles.itemRight}>
+                <span className={styles.itemTime}>{formatRelative(s.lastActiveAt)}</span>
+                <button className={styles.deleteBtn} onClick={e => handleDelete(e, s.id)}><IoClose size={20} /></button>
               </div>
             </div>
           ))

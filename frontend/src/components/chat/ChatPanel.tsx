@@ -2,9 +2,19 @@ import { useState, useRef, useEffect, type DragEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { sendMessage, getMessages } from '../../api/chat';
-import { uploadFiles } from '../../api/file';
+import { uploadFiles, getFileBlob, getPreviewBlobUrl } from '../../api/file';
 import { transcribeAudio } from '../../api/stt';
+import Loader from '../common/Loader';
+import AttachMenu from '../common/AttachMenu';
+import NasFilePickerModal from '../common/NasFilePickerModal';
+import NasThumbnail from '../nas/NasThumbnail';
+import type { FileItem } from '../../types';
 import styles from './ChatPanel.module.css';
+import { RiMic2Fill } from "react-icons/ri";
+import { FaChevronRight } from "react-icons/fa6";
+import { IoClose } from "react-icons/io5";
+import { LiaUserSecretSolid } from "react-icons/lia";
+import { FaPlus } from "react-icons/fa";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,7 +31,7 @@ interface Props {
 // 이미지 파일을 캔버스에 다시 그려서 PNG base64로 변환한다.
 // webp/gif/bmp 등은 Ollama vision 모델이 못 읽는 경우가 있어(400 에러) 항상 PNG로 통일해서 보낸다.
 // (브라우저는 <img>/canvas로 대부분의 이미지 포맷을 디코딩할 수 있으므로 이 방식이 가장 안전함)
-function imageFileToPngBase64(file: File): Promise<string> {
+function imageFileToPngBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -71,6 +81,9 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<(string | null)[]>([]); // pendingFiles와 순서 맞춘 미리보기 URL (이미지가 아니면 null)
+  const [nasFiles, setNasFiles] = useState<FileItem[]>([]); // "NAS에서 추가"로 고른, 이미 NAS에 올라가 있는 파일들 (따로 업로드할 필요 없음)
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showNasPicker, setShowNasPicker] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isWhisperRecording, setIsWhisperRecording] = useState(false);
@@ -134,6 +147,10 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const removeNasFile = (index: number) => {
+    setNasFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   // 클립보드에 이미지를 복사한 상태에서 입력창에 Ctrl+V 하면 파일 첨부한 것처럼 추가한다
   const onPasteInput = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -191,7 +208,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
     silenceRafRef.current = null;
     if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     maxDurationTimerRef.current = null;
-    audioContextRef.current?.close().catch(() => {});
+    audioContextRef.current?.close().catch(() => { });
     audioContextRef.current = null;
   };
 
@@ -281,45 +298,61 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
   };
 
   const send = async () => {
-    if ((!input.trim() && pendingFiles.length === 0) || loading || uploading) return;
+    if ((!input.trim() && pendingFiles.length === 0 && nasFiles.length === 0) || loading || uploading) return;
     const filesToSend = pendingFiles;
-    const hadAttachment = filesToSend.length > 0;
+    const nasToSend = nasFiles;
+    const hadAttachment = filesToSend.length > 0 || nasToSend.length > 0;
     const imageFiles = filesToSend.filter(f => f.type.startsWith('image/'));
     const audioFiles = filesToSend.filter(f => f.type.startsWith('audio/'));
     const otherFiles = filesToSend.filter(f => !imageFiles.includes(f) && !audioFiles.includes(f));
+    // NAS에서 고른 파일은 이미 업로드되어 있으니(uploadFiles 호출 불필요), 이미지인지만 구분한다
+    const nasImageFiles = nasToSend.filter(f => (f.mimeType ?? '').startsWith('image/'));
+    const nasOtherFiles = nasToSend.filter(f => !nasImageFiles.includes(f));
     let content = input.trim();
     setInput('');
     setPendingFiles([]);
+    setNasFiles([]);
 
     let images: string[] = [];
     let audio: string[] = [];
     let sendableFiles: { name: string; fileId: string; isImage: boolean }[] = [];
+    let nasImagePreviewUrls: string[] = [];
 
-    if (filesToSend.length > 0) {
+    if (filesToSend.length > 0 || nasToSend.length > 0) {
       setUploading(true);
       try {
         // NAS에 원본 저장 + 이미지는 base64로 vision 모델에 전달.
         // 음성 파일은 여기서 변환하지 않고 base64 그대로 보내서 백엔드가 STT까지 처리하게 한다.
-        const [uploaded, base64Images, base64Audio] = await Promise.all([
-          uploadFiles(filesToSend),
+        // NAS에서 고른 파일은 이미 NAS에 있으니 업로드 대신 getFileBlob/getPreviewBlobUrl로 바로 가져온다.
+        const [uploaded, base64Images, base64Audio, base64NasImages, nasPreviewUrls] = await Promise.all([
+          // 시크릿 모드에서는 로컬 파일을 NAS에 업로드하지 않는다 - 대화 내용은 기록이 안 남는데
+          // 첨부파일만 NAS에 영구적으로 남으면 시크릿 모드 취지에 어긋남. 이미지는 업로드 없이도
+          // base64로 바로 vision 모델에 보내지니 분석 자체는 그대로 된다.
+          filesToSend.length > 0 && !secretMode ? uploadFiles(filesToSend, undefined, 'CHATBOT') : Promise.resolve([]),
           Promise.all(imageFiles.map(imageFileToPngBase64)),
           Promise.all(audioFiles.map(fileToBase64)),
+          Promise.all(nasImageFiles.map(f => getFileBlob(f.id).then(imageFileToPngBase64))),
+          Promise.all(nasImageFiles.map(f => getPreviewBlobUrl(f.id))),
         ]);
-        images = base64Images;
+        images = [...base64Images, ...base64NasImages];
         audio = base64Audio;
+        nasImagePreviewUrls = nasPreviewUrls;
 
         // 이미지/기타 파일은 NAS에 업로드된 파일 ID를 같이 보내서, "나에게 보내기" 때 공개 링크로 전달할 수 있게 함
         const idByName = new Map(uploaded.map(f => [f.name, f.id]));
-        sendableFiles = [...imageFiles, ...otherFiles]
+        const localSendable = [...imageFiles, ...otherFiles]
           .map(f => ({ name: f.name, fileId: idByName.get(f.name) ?? '', isImage: imageFiles.includes(f) }))
           .filter(f => f.fileId);
+        // NAS 파일은 이미 fileId(NAS 파일 id)가 있으니 그대로 씀
+        const nasSendable = nasToSend.map(f => ({ name: f.name, fileId: f.id, isImage: nasImageFiles.includes(f) }));
+        sendableFiles = [...localSendable, ...nasSendable];
 
         // 이미지가 아닌 파일(문서/음성)은 미리보기를 그릴 수 없으니 파일명만 텍스트로 남긴다.
         // 이미지는 아래에서 실제 썸네일로 채팅 기록에 표시한다.
-        const attachedText = [...otherFiles, ...audioFiles].map(f => `📎 ${f.name}`).join('\n');
+        const attachedText = [...otherFiles, ...audioFiles, ...nasOtherFiles].map(f => `📎 ${f.name}`).join('\n');
         content = [content, attachedText].filter(Boolean).join('\n\n');
         // 백엔드가 content를 필수값으로 요구해서, 텍스트 없이 이미지만 보내는 경우 기본 문구를 채운다
-        if (!content && imageFiles.length > 0) {
+        if (!content && (imageFiles.length > 0 || nasImageFiles.length > 0)) {
           content = '(텍스트 없이 사진만 첨부함)';
         }
       } catch (e) {
@@ -330,10 +363,10 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
     }
     // 텍스트 없이 이미지만 보내는 경우도 있으니(예: 붙여넣기 후 바로 전송), 텍스트가 없어도
     // 이미지가 있으면 그냥 진행한다. 정말 아무것도 없을 때만(텍스트도 첨부도 없음) 막는다.
-    if (!content && imageFiles.length === 0) return;
+    if (!content && imageFiles.length === 0 && nasImageFiles.length === 0) return;
 
     // 방금 보낸 이미지를 채팅 기록에도 그대로 보여주기 위한 미리보기 URL (서버 왕복 없이 로컬 파일에서 바로 생성)
-    const imagePreviewUrls = imageFiles.map(f => URL.createObjectURL(f));
+    const imagePreviewUrls = [...imageFiles.map(f => URL.createObjectURL(f)), ...nasImagePreviewUrls];
     sentImageUrlsRef.current.push(...imagePreviewUrls);
 
     setMessages(prev => [
@@ -359,7 +392,6 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       },
       (newSessionId) => {
         const isNewSession = !sessionId;
-        console.log('[ChatPanel] onDone', { newSessionId, sessionIdAtSendTime: sessionId, isNewSession });
         setSessionId(newSessionId);
         setLoading(false);
         onScheduleChange?.();
@@ -397,106 +429,152 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
         </div>
       )}
 
-      {/* 시크릿 모드 안내 - 켜져있는 동안은 대화가 DB에 저장되지 않고 서버 메모리에만 잠깐 남는다 */}
-      {secretMode && (
-        <div className={styles.statusRow}>
-          <span>🕶️ 시크릿 모드 - 이 대화는 저장되지 않아요</span>
-        </div>
-      )}
-
-      {/* 메시지 영역 */}
-      <div className={styles.messages} ref={messagesRef}>
-        {loadingHistory ? (
-          <div className={styles.empty}>대화 불러오는 중...</div>
-        ) : messages.length === 0 && (
-          <div className={styles.empty}>
-            {secretMode ? '시크릿 대화를 시작해보세요' : '일정을 추가하거나 질문해보세요'}
-          </div>
+      {/* 상단 바 - 대화 영역과 분리된 별도 바. 시크릿 모드일 땐 가운데에 표시되고,
+          대화가 아직 시작 안 된 경우에만 우측에 시크릿 모드 전환 아이콘이 뜬다
+          (대화가 시작된 뒤에는 중간에 모드를 바꿀 수 없으니 아이콘을 숨김) */}
+      <div className={styles.topBar}>
+        {secretMode && (
+          <span className={styles.secretModeLabel}>
+            시크릿 모드
+          </span>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant}`}>
-            {m.images && m.images.length > 0 && (
-              <div className={styles.messageImages}>
-                {m.images.map((url, j) => (
-                  <img key={j} src={url} alt="첨부 이미지" className={styles.messageImage} />
-                ))}
-              </div>
-            )}
-            {(m.content || (loading && i === messages.length - 1)) && (
-              <div className={`${styles.bubble} ${m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}`}>
-                {m.content ? (
-                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{m.content}</ReactMarkdown>
-                ) : (
-                  loading && i === messages.length - 1 ? '...' : ''
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        {messages.length === 0 && (
+          <button
+            className={`${styles.secretToggle} ${secretMode ? styles.secretToggleActive : ''}`}
+            onClick={toggleSecretMode}
+            title="시크릿 모드 (대화를 저장하지 않음)"
+          >
+            <LiaUserSecretSolid />
+          </button>
+        )}
       </div>
 
-      {/* 첨부 예정 파일 목록 */}
-      {pendingFiles.length > 0 && (
-        <div className={styles.attachRow}>
-          {pendingFiles.map((f, i) => (
-            <div key={i} className={styles.attachChip}>
-              {pendingPreviews[i] && (
-                <img src={pendingPreviews[i]!} alt={f.name} className={styles.attachThumb} />
+      {/* 메시지 영역 + 입력창을 같이 감싸는 영역 - 대화가 아직 없으면 가운데로, 시작되면 아래로 */}
+      <div className={`${styles.body} ${!loadingHistory && messages.length === 0 ? styles.bodyCentered : ''}`.trim()}>
+        {/* 메시지 영역 */}
+        <div className={styles.messages} ref={messagesRef}>
+          {loadingHistory ? (
+            <div className={styles.empty}>대화 불러오는 중...</div>
+          ) : messages.length === 0 && (
+            <div className={styles.empty}>
+              {secretMode ? '시크릿 대화를 시작해보세요' : '일정을 추가하거나 질문해보세요'}
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant}`}>
+              {m.images && m.images.length > 0 && (
+                <div className={styles.messageImages}>
+                  {m.images.map((url, j) => (
+                    <img key={j} src={url} alt="첨부 이미지" className={styles.messageImage} />
+                  ))}
+                </div>
               )}
-              <span className={styles.attachName}>{f.name}</span>
-              <button className={styles.attachRemove} onClick={() => removeFile(i)}>×</button>
+              {(m.content || (loading && i === messages.length - 1)) && (
+                <div className={`${styles.bubble} ${m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}`}>
+                  {m.content ? (
+                    <ReactMarkdown remarkPlugins={[remarkBreaks]}>{m.content}</ReactMarkdown>
+                  ) : (
+                    loading && i === messages.length - 1 ? '...' : ''
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
-      )}
 
-      {/* 음성 인식 중 상태 표시 (STT 변환에 시간이 걸려서 그동안 뭐가 진행 중인지 알려줌) */}
-      {transcribing && (
-        <div className={styles.statusRow}>
-          <span className={styles.statusDot} />
-          <span>음성을 텍스트로 변환하는 중...</span>
+        {/* 첨부 예정 파일 목록 - 로컬에서 고른 파일 + NAS에서 고른 파일 둘 다 */}
+        {(pendingFiles.length > 0 || nasFiles.length > 0) && (
+          <div className={styles.attachRow}>
+            {pendingFiles.map((f, i) => (
+              pendingPreviews[i] ? (
+                // 이미지는 썸네일이 칩 전체를 꽉 채우고, x 버튼은 이미지 위 우측 상단에 떠 있음
+                <div key={i} className={`${styles.attachChip} ${styles.attachImageChip}`}>
+                  <img src={pendingPreviews[i]!} alt={f.name} className={styles.attachThumb} />
+                  <button className={styles.attachRemoveOverlay} onClick={() => removeFile(i)}><IoClose /></button>
+                </div>
+              ) : (
+                <div key={i} className={`${styles.attachChip} ${styles.attachFileChip}`}>
+                  <span className={styles.attachName}>{f.name}</span>
+                  <button className={styles.attachRemove} onClick={() => removeFile(i)}><IoClose /></button>
+                </div>
+              )
+            ))}
+            {nasFiles.map((f, i) => (
+              (f.mimeType ?? '').startsWith('image/') ? (
+                <div key={f.id} className={`${styles.attachChip} ${styles.attachImageChip}`}>
+                  <NasThumbnail file={f} fallback="🖼️" />
+                  <button className={styles.attachRemoveOverlay} onClick={() => removeNasFile(i)}><IoClose /></button>
+                </div>
+              ) : (
+                <div key={f.id} className={`${styles.attachChip} ${styles.attachFileChip}`}>
+                  <span className={styles.attachName}>{f.name}</span>
+                  <button className={styles.attachRemove} onClick={() => removeNasFile(i)}><IoClose /></button>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
+        {/* 음성 인식 중 상태 표시 (STT 변환에 시간이 걸려서 그동안 뭐가 진행 중인지 알려줌) */}
+        {transcribing && (
+          <div className={styles.statusRow}>
+            <span className={styles.statusDot} />
+            <span>음성을 텍스트로 변환하는 중...</span>
+          </div>
+        )}
+
+        {/* 입력창 */}
+        <div className={styles.inputRow}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
+          />
+          <div className={styles.attachWrap}>
+            <button className={styles.iconButton} onClick={() => setShowAttachMenu(v => !v)} title="파일 첨부">
+              <FaPlus />
+            </button>
+            {showAttachMenu && (
+              <AttachMenu
+                onLocalFile={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }}
+                onNasFile={() => { setShowAttachMenu(false); setShowNasPicker(true); }}
+                onClose={() => setShowAttachMenu(false)}
+              />
+            )}
+          </div>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send()}
+            onPaste={onPasteInput}
+            placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
+            className={styles.input}
+          />
+          {!isWhisperRecording && (input.trim() || pendingFiles.length > 0 || nasFiles.length > 0) ? (
+            <button onClick={send} disabled={loading || uploading} className={styles.sendButton}>
+              <FaChevronRight />
+            </button>
+          ) : (
+            <button
+              className={`${styles.iconButton} ${isWhisperRecording ? styles.iconButtonActive : ''}`}
+              onClick={toggleWhisperVoice}
+              disabled={transcribing}
+              title="음성 입력 (로컬 Whisper STT, 언어 자동 감지)"
+            >
+              {transcribing ? <Loader size={14} /> : <RiMic2Fill />}
+            </button>
+          )}
         </div>
-      )}
-
-      {/* 입력창 */}
-      <div className={styles.inputRow}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          hidden
-          onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
-        />
-        <button className={styles.iconButton} onClick={() => fileInputRef.current?.click()} title="파일 첨부">
-          +
-        </button>
-        <button
-          className={`${styles.iconButton} ${secretMode ? styles.iconButtonActive : ''}`}
-          onClick={toggleSecretMode}
-          title="시크릿 모드 (대화를 저장하지 않음)"
-        >
-          🕶️
-        </button>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          onPaste={onPasteInput}
-          placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
-          className={styles.input}
-        />
-        <button
-          className={`${styles.iconButton} ${isWhisperRecording ? styles.iconButtonActive : ''}`}
-          onClick={toggleWhisperVoice}
-          disabled={transcribing}
-          title="음성 입력 (로컬 Whisper STT, 언어 자동 감지)"
-        >
-          {transcribing ? '⏳' : '🎤'}
-        </button>
-        <button onClick={send} disabled={loading || uploading} className={styles.sendButton}>
-          ›
-        </button>
       </div>
+
+      {showNasPicker && (
+        <NasFilePickerModal
+          onSelect={(file) => { setNasFiles(prev => [...prev, file]); setShowNasPicker(false); }}
+          onClose={() => setShowNasPicker(false)}
+        />
+      )}
     </div>
   );
 }

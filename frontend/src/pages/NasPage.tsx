@@ -5,6 +5,8 @@ import NasSidebar from '../components/nas/NasSidebar';
 import type { NasTypeFilter } from '../types';
 import styles from './NasPage.module.css';
 
+type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
+
 // 나스(파일) 페이지: 위쪽 툴바(타입 필터/검색/상위폴더) + 메인 파일 그리드 + 오른쪽 즐겨찾기·용량 사이드바.
 // 폴더 이동은 폴더 스택(folderStack)으로 관리해서 "상위 폴더로" 버튼이 한 단계씩 뒤로 가게 한다.
 export default function NasPage() {
@@ -12,11 +14,21 @@ export default function NasPage() {
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<NasTypeFilter>('ALL');
+  const [sourceFilter, setSourceFilter] = useState<FileSource | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const bump = () => setRefreshKey(k => k + 1);
 
+  // 사이드바에서 이메일/챗봇/업로드를 고르면 폴더 구조와 무관한 평면 목록을 보여준다
+  const selectSource = (source: FileSource | null) => {
+    setSourceFilter(source);
+    setSearch('');
+    setFolderStack([]);
+    setParentId(null);
+  };
+
   const openFolder = (id: string, name: string) => {
+    setSourceFilter(null);
     setFolderStack(prev => [...prev, { id, name }]);
     setParentId(id);
     setSearch('');
@@ -47,13 +59,19 @@ export default function NasPage() {
             parentId={parentId}
             search={search}
             typeFilter={typeFilter}
+            sourceFilter={sourceFilter}
             refreshKey={refreshKey}
             onOpenFolder={openFolder}
             onChanged={bump}
           />
         </div>
         <div className={styles.sidePane}>
-          <NasSidebar refreshKey={refreshKey} onOpenFolder={openFolder} />
+          <NasSidebar
+            refreshKey={refreshKey}
+            onOpenFolder={openFolder}
+            sourceFilter={sourceFilter}
+            onSelectSource={selectSource}
+          />
         </div>
       </div>
     </div>

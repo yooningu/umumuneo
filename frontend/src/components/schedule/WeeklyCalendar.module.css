@@ -149,15 +149,16 @@
 .gridScroll {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* 구형 Edge/IE */
+  /* 스크롤바가 생기든 안 생기든 항상 12px을 예약해둬서, 헤더/종일 행과 요일 칸 너비가
+     어긋나지 않게 한다 (스크롤바 너비만큼은 .scrollbarSpacer로 맞춰줌) */
+  scrollbar-gutter: stable;
 }
 
-.gridScroll::-webkit-scrollbar {
-  display: none;
-  /* Chrome/Safari/Edge */
+/* 헤더/종일 행에는 스크롤바가 없어서, .gridScroll이 예약해둔 스크롤바 너비(12px)만큼
+   오른쪽에 같은 너비의 빈 칸을 둬서 요일 칸 세로선이 어긋나지 않게 맞춘다 */
+.scrollbarSpacer {
+  width: 12px;
+  min-width: 12px;
 }
 
 .gridRow {

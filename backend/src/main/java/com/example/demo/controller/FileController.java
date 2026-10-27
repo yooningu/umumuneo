@@ -36,9 +36,10 @@ public class FileController {
             @AuthenticationPrincipal String userId,
             @RequestParam(required = false) String parentId,
             @RequestParam(required = false) Boolean isFavorite,
-            @RequestParam(required = false) String search
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String source
     ) {
-        return ResponseEntity.ok(fileService.getFiles(userId, parentId, isFavorite, search));
+        return ResponseEntity.ok(fileService.getFiles(userId, parentId, isFavorite, search, source));
     }
 
     // POST /api/v1/files/upload
@@ -46,9 +47,10 @@ public class FileController {
     public ResponseEntity<List<FileResponse>> uploadFiles(
             @AuthenticationPrincipal String userId,
             @RequestParam("file") MultipartFile[] files,
-            @RequestParam(required = false) String parentId
+            @RequestParam(required = false) String parentId,
+            @RequestParam(required = false) String source
     ) throws IOException {
-        return ResponseEntity.status(201).body(fileService.uploadFiles(userId, files, parentId));
+        return ResponseEntity.status(201).body(fileService.uploadFiles(userId, files, parentId, source));
     }
 
     // POST /api/v1/files/directory

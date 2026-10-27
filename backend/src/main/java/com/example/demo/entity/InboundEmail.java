@@ -47,8 +47,10 @@ public class InboundEmail {
     @Column(name = "received_at", updatable = false)
     private LocalDateTime receivedAt;
 
-    @OneToMany(mappedBy = "inboundEmail", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<EmailAttachment> attachments = new ArrayList<>();
+    // 첨부파일은 이제 NAS가 쓰는 FileEntity(files 테이블)에 source=EMAIL로 같이 저장됨
+    // (예전엔 별도 EmailAttachment 테이블/디스크 경로를 썼지만 NAS 저장소로 합침)
+    @OneToMany(mappedBy = "email", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FileEntity> attachments = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

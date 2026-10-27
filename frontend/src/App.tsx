@@ -49,7 +49,53 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+// 스크롤 영역에 마우스가 올라가 있을 때만 스크롤바가 보이게 하는 전역 처리.
+// 순수 CSS :hover로는 webkit 스크롤바 썸이 "스크롤 막대 자체"에 마우스가 올라갔을 때만
+// 반응하고 컨테이너 전체(내용물) 위에서는 안 먹는 경우가 있어서, 실제로 마우스가 올라간
+// 요소에서 가장 가까운 스크롤 가능한 조상을 찾아 scroll-hover 클래스를 직접 붙여준다.
+function useGlobalScrollbarHover() {
+  useEffect(() => {
+    let current: Element | null = null;
+
+    const findScrollable = (start: Element | null): Element | null => {
+      let el = start;
+      while (el && el !== document.body && el !== document.documentElement) {
+        const style = getComputedStyle(el);
+        const overflowY = style.overflowY;
+        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+          return el;
+        }
+        el = el.parentElement;
+      }
+      return null;
+    };
+
+    const onMove = (e: MouseEvent) => {
+      const next = findScrollable(e.target as Element | null);
+      if (next === current) return;
+      current?.classList.remove('scroll-hover');
+      current = next;
+      current?.classList.add('scroll-hover');
+    };
+
+    const onLeave = () => {
+      current?.classList.remove('scroll-hover');
+      current = null;
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseleave', onLeave);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      current?.classList.remove('scroll-hover');
+    };
+  }, []);
+}
+
 export default function App() {
+  useGlobalScrollbarHover();
+
   return (
     <BrowserRouter>
       <Routes>

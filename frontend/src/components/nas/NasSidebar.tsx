@@ -3,9 +3,19 @@ import { getFiles, downloadFile } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasSidebar.module.css';
 
+type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
+
+const CATEGORIES: { source: FileSource; label: string; icon: string }[] = [
+  { source: 'EMAIL', label: '이메일', icon: '📧' },
+  { source: 'CHATBOT', label: '챗봇', icon: '🤖' },
+  { source: 'UPLOAD', label: '업로드', icon: '📥' },
+];
+
 interface Props {
   refreshKey: number;
   onOpenFolder: (id: string, name: string) => void;
+  sourceFilter: FileSource | null;
+  onSelectSource: (source: FileSource | null) => void;
 }
 
 // 저장용량 쪽은 백엔드에 별도 쿼터 개념이 없어서 표시용으로 최상위 폴더 파일 크기 합만 대략 계산함
@@ -16,7 +26,7 @@ function formatGB(bytes: number): string {
   return (bytes / 1024 / 1024 / 1024).toFixed(1);
 }
 
-export default function NasSidebar({ refreshKey, onOpenFolder }: Props) {
+export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onSelectSource }: Props) {
   const [favorites, setFavorites] = useState<FileItem[]>([]);
   const [usedBytes, setUsedBytes] = useState(0);
 
@@ -47,6 +57,19 @@ export default function NasSidebar({ refreshKey, onOpenFolder }: Props) {
             </div>
           ))
         )}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>분류</div>
+        {CATEGORIES.map(c => (
+          <div
+            key={c.source}
+            className={`${styles.favItem} ${sourceFilter === c.source ? styles.favItemActive : ''}`.trim()}
+            onClick={() => onSelectSource(sourceFilter === c.source ? null : c.source)}
+          >
+            {c.icon} {c.label}
+          </div>
+        ))}
       </div>
 
       <div className={styles.section}>

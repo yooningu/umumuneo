@@ -20,11 +20,6 @@
 .column {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.column::-webkit-scrollbar {
-  display: none;
 }
 
 .item {

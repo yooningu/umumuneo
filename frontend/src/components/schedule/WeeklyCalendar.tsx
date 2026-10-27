@@ -239,6 +239,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             </div>
           );
         })}
+        <div className={styles.scrollbarSpacer} />
       </div>
 
       {/* 종일 일정 행 */}
@@ -297,6 +298,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             </div>
           );
         })}
+        <div className={styles.scrollbarSpacer} />
       </div>
 
       {/* 시간 그리드 */}

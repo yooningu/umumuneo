@@ -2,10 +2,14 @@ import { useState, useRef, useEffect, type DragEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { sendMessage, getMessages } from '../../api/chat';
-import { uploadFiles } from '../../api/file';
+import { uploadFiles, getFileBlob, getPreviewBlobUrl } from '../../api/file';
 import { transcribeAudio } from '../../api/stt';
 import Alert from '../common/Alert';
 import Loader from '../common/Loader';
+import AttachMenu from '../common/AttachMenu';
+import NasFilePickerModal from '../common/NasFilePickerModal';
+import NasThumbnail from '../nas/NasThumbnail';
+import type { FileItem } from '../../types';
 import styles from './ChatWidget.module.css';
 import { RiMic2Fill } from "react-icons/ri";
 import { FaChevronRight } from "react-icons/fa6";
@@ -27,7 +31,7 @@ interface Props {
 // 이미지 파일을 캔버스에 다시 그려서 PNG base64로 변환한다.
 // webp/gif/bmp 등은 Ollama vision 모델이 못 읽는 경우가 있어(400 에러) 항상 PNG로 통일해서 보낸다.
 // (브라우저는 <img>/canvas로 대부분의 이미지 포맷을 디코딩할 수 있으므로 이 방식이 가장 안전함)
-function imageFileToPngBase64(file: File): Promise<string> {
+function imageFileToPngBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -76,6 +80,9 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<(string | null)[]>([]); // pendingFiles와 순서 맞춘 미리보기 URL (이미지가 아니면 null)
+  const [nasFiles, setNasFiles] = useState<FileItem[]>([]); // "NAS에서 추가"로 고른, 이미 NAS에 올라가 있는 파일들 (따로 업로드할 필요 없음)
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showNasPicker, setShowNasPicker] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isWhisperRecording, setIsWhisperRecording] = useState(false);
@@ -137,6 +144,10 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
 
   const removeFile = (index: number) => {
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNasFile = (index: number) => {
+    setNasFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // 클립보드에 이미지를 복사한 상태에서 입력창에 Ctrl+V 하면 파일 첨부한 것처럼 추가한다
@@ -278,45 +289,62 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
   };
 
   const send = async () => {
-    if ((!input.trim() && pendingFiles.length === 0) || loading || uploading) return;
+    if ((!input.trim() && pendingFiles.length === 0 && nasFiles.length === 0) || loading || uploading) return;
     const filesToSend = pendingFiles;
-    const hadAttachment = filesToSend.length > 0;
+    const nasToSend = nasFiles;
+    const hadAttachment = filesToSend.length > 0 || nasToSend.length > 0;
     const imageFiles = filesToSend.filter(f => f.type.startsWith('image/'));
     const audioFiles = filesToSend.filter(f => f.type.startsWith('audio/'));
     const otherFiles = filesToSend.filter(f => !imageFiles.includes(f) && !audioFiles.includes(f));
+    // NAS에서 고른 파일은 이미 업로드되어 있으니(uploadFiles 호출 불필요), 이미지인지만 구분한다
+    const nasImageFiles = nasToSend.filter(f => (f.mimeType ?? '').startsWith('image/'));
+    const nasOtherFiles = nasToSend.filter(f => !nasImageFiles.includes(f));
     let content = input.trim();
     setInput('');
     setPendingFiles([]);
+    setNasFiles([]);
 
     let images: string[] = [];
     let audio: string[] = [];
     let sendableFiles: { name: string; fileId: string; isImage: boolean }[] = [];
+    let nasImagePreviewUrls: string[] = [];
 
-    if (filesToSend.length > 0) {
+    if (filesToSend.length > 0 || nasToSend.length > 0) {
       setUploading(true);
       try {
         // NAS에 원본 저장 + 이미지는 base64로 vision 모델에 전달.
         // 음성 파일은 여기서 변환하지 않고 base64 그대로 보내서 백엔드가 STT까지 처리하게 한다.
-        const [uploaded, base64Images, base64Audio] = await Promise.all([
-          uploadFiles(filesToSend),
+        // NAS에서 고른 파일은 이미 NAS에 있으니 업로드 대신 getFileBlob/getPreviewBlobUrl로 바로 가져온다.
+        const [uploaded, base64Images, base64Audio, base64NasImages, nasPreviewUrls] = await Promise.all([
+          // 시크릿 모드에서는 로컬 파일을 NAS에 업로드하지 않는다 - 대화 내용은 기록이 안 남는데
+          // 첨부파일만 NAS에 영구적으로 남으면 시크릿 모드 취지에 어긋남. 이미지는 업로드 없이도
+          // base64로 바로 vision 모델에 보내지니 분석 자체는 그대로 된다.
+          // (홈 화면 챗봇은 항상 secretMode=true라서, 여기서 업로드 자체가 늘 스킵됨)
+          filesToSend.length > 0 && !secretMode ? uploadFiles(filesToSend, undefined, 'CHATBOT') : Promise.resolve([]),
           Promise.all(imageFiles.map(imageFileToPngBase64)),
           Promise.all(audioFiles.map(fileToBase64)),
+          Promise.all(nasImageFiles.map(f => getFileBlob(f.id).then(imageFileToPngBase64))),
+          Promise.all(nasImageFiles.map(f => getPreviewBlobUrl(f.id))),
         ]);
-        images = base64Images;
+        images = [...base64Images, ...base64NasImages];
         audio = base64Audio;
+        nasImagePreviewUrls = nasPreviewUrls;
 
         // 이미지/기타 파일은 NAS에 업로드된 파일 ID를 같이 보내서, "나에게 보내기" 때 공개 링크로 전달할 수 있게 함
         const idByName = new Map(uploaded.map(f => [f.name, f.id]));
-        sendableFiles = [...imageFiles, ...otherFiles]
+        const localSendable = [...imageFiles, ...otherFiles]
           .map(f => ({ name: f.name, fileId: idByName.get(f.name) ?? '', isImage: imageFiles.includes(f) }))
           .filter(f => f.fileId);
+        // NAS 파일은 이미 fileId(NAS 파일 id)가 있으니 그대로 씀
+        const nasSendable = nasToSend.map(f => ({ name: f.name, fileId: f.id, isImage: nasImageFiles.includes(f) }));
+        sendableFiles = [...localSendable, ...nasSendable];
 
         // 이미지가 아닌 파일(문서/음성)은 미리보기를 그릴 수 없으니 파일명만 텍스트로 남긴다.
         // 이미지는 아래에서 실제 썸네일로 채팅 기록에 표시한다.
-        const attachedText = [...otherFiles, ...audioFiles].map(f => `📎 ${f.name}`).join('\n');
+        const attachedText = [...otherFiles, ...audioFiles, ...nasOtherFiles].map(f => `📎 ${f.name}`).join('\n');
         content = [content, attachedText].filter(Boolean).join('\n\n');
         // 백엔드가 content를 필수값으로 요구해서, 텍스트 없이 이미지만 보내는 경우 기본 문구를 채운다
-        if (!content && imageFiles.length > 0) {
+        if (!content && (imageFiles.length > 0 || nasImageFiles.length > 0)) {
           content = '(텍스트 없이 사진만 첨부함)';
         }
       } catch (e) {
@@ -327,10 +355,10 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
     }
     // 텍스트 없이 이미지만 보내는 경우도 있으니(예: 붙여넣기 후 바로 전송), 텍스트가 없어도
     // 이미지가 있으면 그냥 진행한다. 정말 아무것도 없을 때만(텍스트도 첨부도 없음) 막는다.
-    if (!content && imageFiles.length === 0) return;
+    if (!content && imageFiles.length === 0 && nasImageFiles.length === 0) return;
 
     // 방금 보낸 이미지를 채팅 기록에도 그대로 보여주기 위한 미리보기 URL (서버 왕복 없이 로컬 파일에서 바로 생성)
-    const imagePreviewUrls = imageFiles.map(f => URL.createObjectURL(f));
+    const imagePreviewUrls = [...imageFiles.map(f => URL.createObjectURL(f)), ...nasImagePreviewUrls];
     sentImageUrlsRef.current.push(...imagePreviewUrls);
 
     setMessages(prev => [
@@ -424,8 +452,8 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
         ))}
       </div>
 
-      {/* 첨부 예정 파일 목록 */}
-      {pendingFiles.length > 0 && (
+      {/* 첨부 예정 파일 목록 - 로컬에서 고른 파일 + NAS에서 고른 파일 둘 다 */}
+      {(pendingFiles.length > 0 || nasFiles.length > 0) && (
         <div className={styles.attachRow}>
           {pendingFiles.map((f, i) => (
             pendingPreviews[i] ? (
@@ -438,6 +466,19 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
               <div key={i} className={`${styles.attachChip} ${styles.attachFileChip}`}>
                 <span className={styles.attachName}>{f.name}</span>
                 <button className={styles.attachRemove} onClick={() => removeFile(i)}><IoClose /></button>
+              </div>
+            )
+          ))}
+          {nasFiles.map((f, i) => (
+            (f.mimeType ?? '').startsWith('image/') ? (
+              <div key={f.id} className={`${styles.attachChip} ${styles.attachImageChip}`}>
+                <NasThumbnail file={f} fallback="🖼️" />
+                <button className={styles.attachRemoveOverlay} onClick={() => removeNasFile(i)}><IoClose /></button>
+              </div>
+            ) : (
+              <div key={f.id} className={`${styles.attachChip} ${styles.attachFileChip}`}>
+                <span className={styles.attachName}>{f.name}</span>
+                <button className={styles.attachRemove} onClick={() => removeNasFile(i)}><IoClose /></button>
               </div>
             )
           ))}
@@ -461,9 +502,18 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
           hidden
           onChange={e => { addFiles(e.target.files); e.target.value = ''; }}
         />
-        <button className={styles.iconButton} onClick={() => fileInputRef.current?.click()} title="파일 첨부">
-          <FaPlus />
-        </button>
+        <div className={styles.attachWrap}>
+          <button className={styles.iconButton} onClick={() => setShowAttachMenu(v => !v)} title="파일 첨부">
+            <FaPlus />
+          </button>
+          {showAttachMenu && (
+            <AttachMenu
+              onLocalFile={() => { setShowAttachMenu(false); fileInputRef.current?.click(); }}
+              onNasFile={() => { setShowAttachMenu(false); setShowNasPicker(true); }}
+              onClose={() => setShowAttachMenu(false)}
+            />
+          )}
+        </div>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -472,7 +522,7 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
           placeholder="어떤 도움을 드릴까요?"
           className={styles.input}
         />
-        {!isWhisperRecording && (input.trim() || pendingFiles.length > 0) ? (
+        {!isWhisperRecording && (input.trim() || pendingFiles.length > 0 || nasFiles.length > 0) ? (
           <button onClick={send} disabled={loading || uploading} className={styles.sendButton}>
             <FaChevronRight />
           </button>
@@ -487,6 +537,13 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
           </button>
         )}
       </div>
+
+      {showNasPicker && (
+        <NasFilePickerModal
+          onSelect={(file) => { setNasFiles(prev => [...prev, file]); setShowNasPicker(false); }}
+          onClose={() => setShowNasPicker(false)}
+        />
+      )}
     </div>
   );
 }

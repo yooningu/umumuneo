@@ -126,6 +126,7 @@ export interface FileItem {
   thumbnailUrl?: string;
   previewable: boolean; // true면 /files/{id}/view 로 브라우저에 바로 띄울 수 있음 (이미지/영상/PDF), false면 다운로드만 가능
   isFavorite: boolean;
+  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL' | null; // 어디서 들어온 파일인지 (NAS 사이드바 분류용)
   createdAt: string;
   updatedAt: string;
 }

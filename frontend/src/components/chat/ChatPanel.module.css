@@ -2,8 +2,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
   height: 100%;
   background-color: transparent;
+  width: 100%;
 }
 
 .dragOverlay {
@@ -20,21 +23,89 @@
   pointer-events: none;
 }
 
+/* 상단 바 - 대화 스크롤 영역과 분리된 고정 바. 시크릿 모드 표시/전환용 */
+.topBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  background-color: none;
+  top: 5px;
+}
+
+.secretModeLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray3);
+}
+
+.secretToggle {
+  position: absolute;
+  right: 0px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--gray3);
+  background-color: var(--white);
+  color: var(--gray3);
+  cursor: pointer;
+  font-size: var(--font-m);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+}
+
+.secretToggleActive {
+  background-color: var(--gray3);
+  border-color: transparent;
+  color: var(--gray5);
+}
+
+/* 메시지 영역 + 입력창을 묶는 바디 - 대화가 없으면 가운데, 시작되면 평소대로(입력창 하단 고정).
+   입력창은 두 상태 모두 항상 가로로 가운데(최대 480px)에 오도록 해서, 첫 메시지를 보냈을 때
+   입력창이 갑자기 좌우로 넓어지며 위치가 바뀌는 느낌이 없게 한다. 메시지 목록만 .messages에서
+   align-self:stretch로 다시 꽉 채운다. */
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.bodyCentered {
+  justify-content: center;
+}
+
+.bodyCentered .messages {
+  flex: none;
+  overflow: visible;
+}
+
 .messages {
+  align-self: stretch;
   flex: 1;
   overflow-y: auto;
   padding: 8px 12px;
 }
 
 .empty {
-  color: var(--gray3);
-  font-size: var(--font-s);
+  color: var(--gray2);
+  font-size: var(--font-xl);
   text-align: center;
-  margin-top: 16px;
+  padding: 16px;
+  font-weight: var(--font-weight-bold);
 }
 
 .messageRow {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .messageRowUser {
@@ -47,9 +118,9 @@
 
 .bubble {
   display: inline-block;
-  max-width: 85%;
-  padding: 6px 10px;
-  font-size: var(--font-s);
+  max-width: 65%;
+  padding: 16px;
+  font-size: var(--font-l);
   word-break: break-word;
   text-align: left;
 }
@@ -116,14 +187,16 @@
 }
 
 .bubbleUser {
-  border-radius: 12px 12px 2px 12px;
-  background-color: var(--blue);
-  color: var(--white);
+  border-radius: 99999px;
+  background-color: var(--gray4);
+  color: var(--gray1);
 }
 
 .bubbleAssistant {
-  border-radius: 12px 12px 12px 2px;
-  background-color: var(--gray5);
+  display: block;
+  max-width: 100%;
+  padding: 2px 0;
+  background-color: transparent;
   color: var(--gray1);
 }
 
@@ -135,23 +208,57 @@
 }
 
 .attachChip {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.attachImageChip {
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: var(--gray5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachFileChip {
   display: flex;
   align-items: center;
   gap: 4px;
   max-width: 140px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   background-color: var(--gray5);
   border-radius: 10px;
-  font-size: var(--font-s);
+  font-size: var(--font-m);
   color: var(--gray2);
 }
 
-.attachThumb {
-  width: 20px;
-  height: 20px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
+.attachRemoveOverlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--white);
+  font-size: var(--font-s);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .attachName {
@@ -173,8 +280,8 @@
 }
 
 .messageImage {
-  max-width: 180px;
-  max-height: 180px;
+  max-width: 480px;
+  max-height: 480px;
   border-radius: 10px;
   object-fit: cover;
   cursor: zoom-in;
@@ -196,7 +303,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px 0;
-  font-size: var(--font-s);
+  font-size: var(--font-m);
   color: var(--blue);
 }
 
@@ -225,51 +332,69 @@
 .inputRow {
   display: flex;
   align-items: center;
-  padding: 8px;
-  border-top: 1px solid var(--gray5);
-  gap: 6px;
+  width: 100%;
+  max-width: 480px;
+  margin: 8px 0;
+  padding: 8px 20px;
+  border-radius: 999px;
+  gap: 8px;
+  height: 64px;
+  background-color: var(--gray5);
+  max-width: 720px;
+
+
+}
+
+.attachWrap {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .iconButton {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--gray4);
-  background-color: var(--white);
-  color: var(--gray3);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background-color: transparent;
+  color: var(--gray2);
   cursor: pointer;
-  font-size: var(--font-m);
+  font-size: var(--font-xl);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 0;
+}
+
+.iconButton:hover {
+  background-color: var(--gray4);
 }
 
 .iconButtonActive {
-  background-color: var(--red);
-  border-color: var(--red);
+  background-color: var(--brand);
+  border-color: var(--brand);
   color: var(--white);
 }
 
 .input {
+  color: var(--gray2);
+  font-weight: var(--font-weight-medium);
   flex: 1;
-  border: 1px solid var(--gray4);
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: var(--font-s);
+  border: none;
   outline: none;
+  font-size: var(--font-l);
+  background-color: transparent;
 }
 
 .sendButton {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background-color: var(--blue);
+  background-color: var(--brand);
   border: none;
   color: var(--white);
   cursor: pointer;
-  font-size: var(--font-m);
+  font-size: var(--font-l);
   display: flex;
   align-items: center;
   justify-content: center;

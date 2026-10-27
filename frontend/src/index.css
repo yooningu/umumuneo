@@ -46,8 +46,31 @@ body {
   height: 100%;
   font-family: "Noto Sans KR", sans-serif;
   font-weight: var(--font-weight-regular);
+
 }
 
 #root {
   height: 100%;
+}
+
+/* 전역 스크롤바 커스텀 - 모든 스크롤 영역에 공통 적용(일정리스트/주간캘린더/미니캘린더/채팅 등 전부 포함).
+   평소엔 안 보이고, 그 영역에 마우스를 올렸을 때만 끝이 둥근 막대 하나만 나타난다.
+   scroll-hover 클래스는 App.tsx의 useGlobalScrollbarHover가 마우스 위치를 보고 직접 붙여준다 -
+   순수 :hover로는 스크롤 막대 자체 위에서만 반응하고 내용물 위에서는 안 먹는 경우가 있어서. */
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+
+.scroll-hover::-webkit-scrollbar-thumb {
+  background-color: var(--gray4);
 }

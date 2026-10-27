@@ -31,6 +31,22 @@ function formatShortDate(dateStr: string): string {
   return `${m}월 ${d}일`;
 }
 
+// 격주/매월/매년 반복 일정은 백엔드가 조회 기간(여기선 1년치) 안의 발생 횟수만큼 가상으로 펼쳐서
+// 내려주는데(같은 id, 날짜만 다름), 이 목록에서는 너무 많아지지 않도록 그 중 가장 가까운(이른) 발생
+// 1개만 남긴다. 반복 없는 일정은 그대로 둔다. 달력/시간표 쪽은 이 처리를 안 해서 전체 발생이 다 보임.
+function dedupeRepeating(list: Schedule[]): Schedule[] {
+  const nonRepeating = list.filter(s => !s.repeatRule);
+  const nearestById = new Map<string, Schedule>();
+  for (const s of list) {
+    if (!s.repeatRule) continue;
+    const existing = nearestById.get(s.id);
+    if (!existing || s.startDate < existing.startDate) {
+      nearestById.set(s.id, s);
+    }
+  }
+  return [...nonRepeating, ...nearestById.values()];
+}
+
 export default function ScheduleList({ selectedDate, refreshKey, onScheduleChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
@@ -44,8 +60,11 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
     future.setFullYear(future.getFullYear() + 1);
     const to = toDateStr(future);
     getSchedules(from, to)
-      // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
-      .then(data => setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data)))
+      .then(data => {
+        const deduped = dedupeRepeating(data);
+        // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
+        setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+      })
       .catch(console.error);
   }, [refreshKey]);
 

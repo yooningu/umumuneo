@@ -1,11 +1,11 @@
 백엔드/프론트 공용 할 일 목록
 - 처리 완료한 항목은 지워서 항상 "아직 안 한 일"만 남도록 유지할 것
 
-[백엔드] 미니 PC DB에서 아래 SQL 실행 필요 (timetable 테이블 컬럼 정리)
-Timetable 엔티티에서 description/valid_from/valid_until 필드를 지웠는데,
-DB엔 아직 컬럼이 남아있고 valid_from이 NOT NULL이라 INSERT 시 500 에러 발생 중.
+[백엔드] 미니 PC에서 아래 정리 필요 (이메일 첨부파일을 NAS files 테이블로 합침)
+예전엔 이메일 첨부파일을 email_attachments 테이블 + 별도 디스크 경로(uploads/email-attachments/)에
+따로 저장했는데, 이제 NAS가 쓰는 files 테이블(source=EMAIL)로 합쳐서 더 이상 안 씀.
+files 테이블의 새 컬럼(source, email_id)은 nullable이라 Hibernate가 배포 시 자동으로 추가함 -
+아래 두 가지만 직접 정리하면 됨.
 
-ALTER TABLE timetable
-  DROP COLUMN description,
-  DROP COLUMN valid_from,
-  DROP COLUMN valid_until;
+1. DB에서 실행: DROP TABLE email_attachments;
+2. 미니 PC 디스크에서 삭제: /workspace/uploads/email-attachments/ 폴더 통째로

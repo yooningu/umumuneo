@@ -6,25 +6,35 @@
 }
 
 .newBtn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
   margin: 12px;
-  padding: 10px;
+  padding: 0 12px;
   border: none;
   border-radius: 8px;
-  background-color: var(--blue);
-  color: var(--white);
+  background-color: var(--gray4);
+  color: var(--gray2);
   font-size: var(--font-s);
   font-weight: var(--font-weight-bold);
   cursor: pointer;
+  height: 40px;
+  box-sizing: border-box;
 }
 
 .newBtn:hover {
-  background-color: var(--blue2);
+  background-color: var(--gray3);
+  color: var(--white);
 }
 
 .list {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px 8px;
+  padding: 12px;
+  gap: 4px;
 }
 
 .empty {
@@ -35,10 +45,13 @@
 }
 
 .item {
-  padding: 10px 12px;
+  display: flex;
+  align-items: center;
   border-radius: 8px;
   cursor: pointer;
-  margin-bottom: 4px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
 .item:hover {
@@ -50,35 +63,63 @@
 }
 
 .itemTitle {
+  flex: 1;
+  min-width: 0;
   font-size: var(--font-s);
-  font-weight: var(--font-weight-medium);
-  color: var(--gray1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.itemMeta {
+/* 제목 오른쪽 자리 - 평소엔 "n분 전" 표시, 호버하면 그 자리에 삭제 x가 대신 뜸 */
+.itemRight {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 4px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.itemTime {
   font-size: var(--font-s);
   color: var(--gray3);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.item:hover .itemTime {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .deleteBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 20px;
   border: none;
   background: none;
   cursor: pointer;
   color: var(--gray3);
-  font-size: var(--font-m);
+  font-size: 20px;
   line-height: 1;
+  flex-shrink: 0;
+  opacity: 0;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.item:hover .deleteBtn {
+  opacity: 1;
 }
 
 .deleteBtn:hover {
-  color: var(--red2);
+  color: var(--red);
 }

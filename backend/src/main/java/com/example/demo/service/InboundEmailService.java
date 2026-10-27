@@ -4,33 +4,26 @@ import com.example.demo.dto.request.EmailAttachmentRequest;
 import com.example.demo.dto.request.InboundEmailRequest;
 import com.example.demo.dto.response.InboundEmailDetailResponse;
 import com.example.demo.dto.response.InboundEmailResponse;
-import com.example.demo.entity.EmailAttachment;
+import com.example.demo.entity.FileEntity;
 import com.example.demo.entity.InboundEmail;
 import com.example.demo.entity.User;
-import com.example.demo.repository.EmailAttachmentRepository;
 import com.example.demo.repository.InboundEmailRepository;
 import com.example.demo.repository.UserRepository;
-import com.example.demo.util.EmailAttachmentShareTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
 
 // umumuneo.com으로 온 메일을 받아서 DB에 저장하고, 받는 주소(별칭)로 유저를 찾아 그 유저에게만
 // 카카오톡 "나에게 보내기"로 즉시 알림을 보낸다 (첨부파일이 있으면 15분짜리 공개 링크도 같이 보냄).
 // (Cloudflare Email Routing이 메일을 받아서 Worker를 통해 이 서비스의 컨트롤러로 전달해줌)
+// 첨부파일 저장/다운로드/미리보기/공개링크는 전부 FileService(NAS가 쓰는 files 테이블)에 위임한다 -
+// 예전엔 이메일 첨부 전용 테이블/디스크 경로가 따로 있었지만, NAS 저장소로 합쳐서 NAS 화면에서도
+// "이메일" 분류로 바로 보이고 용량 계산 등에도 같이 잡히게 했다.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,16 +34,9 @@ public class InboundEmailService {
     private static final long MAX_ATTACHMENT_BYTES = 25L * 1024 * 1024; // 25MB
 
     private final InboundEmailRepository inboundEmailRepository;
-    private final EmailAttachmentRepository emailAttachmentRepository;
     private final UserRepository userRepository;
     private final KakaoNotificationService kakaoNotificationService;
-    private final EmailAttachmentShareTokenUtil emailAttachmentShareTokenUtil;
-
-    @Value("${file.upload-dir}")
-    private String uploadDir;
-
-    @Value("${app.public-base-url}")
-    private String publicBaseUrl;
+    private final FileService fileService;
 
     @Transactional
     public void receive(InboundEmailRequest request) {
@@ -69,7 +55,7 @@ public class InboundEmailService {
         email.setUser(recipient);
         inboundEmailRepository.save(email); // 여기서 email.getId()가 채워짐 (UuidGenerator)
 
-        List<EmailAttachment> savedAttachments = saveAttachments(email, request.getAttachments());
+        List<FileEntity> savedAttachments = saveAttachments(recipient, email, request.getAttachments());
 
         if (recipient == null) {
             log.warn("받는 주소({})와 매칭되는 유저가 없어 알림을 보내지 않음", request.getTo());
@@ -82,9 +68,9 @@ public class InboundEmailService {
                     ? request.getSubject() : "(제목 없음)";
             StringBuilder text = new StringBuilder("📧 새 메일 도착\n보낸사람: " + request.getFrom() + "\n제목: " + subject);
 
-            for (EmailAttachment attachment : savedAttachments) {
-                String publicUrl = buildAttachmentPublicUrl(attachment.getId());
-                text.append("\n📎 ").append(attachment.getFilename()).append("\n").append(publicUrl);
+            for (FileEntity attachment : savedAttachments) {
+                String publicUrl = fileService.generatePublicUrl(recipient.getId(), attachment.getId());
+                text.append("\n📎 ").append(attachment.getName()).append("\n").append(publicUrl);
             }
             if (!savedAttachments.isEmpty()) {
                 text.append("\n(링크는 15분 동안만 유효해요)");
@@ -96,27 +82,19 @@ public class InboundEmailService {
         }
     }
 
-    // 첨부파일들을 디스크에 저장하고 EmailAttachment로 기록
-    private List<EmailAttachment> saveAttachments(InboundEmail email, List<EmailAttachmentRequest> attachmentRequests) {
-        if (attachmentRequests == null || attachmentRequests.isEmpty()) {
+    // 첨부파일들을 NAS 저장소(FileService)에 저장한다. 받는 주소와 매칭되는 유저가 없으면(recipient=null)
+    // 첨부파일을 누구 소유로 저장할지 알 수 없으니 저장을 건너뜀(메일 본문/목록은 그대로 저장됨).
+    private List<FileEntity> saveAttachments(User recipient, InboundEmail email, List<EmailAttachmentRequest> attachmentRequests) {
+        if (recipient == null || attachmentRequests == null || attachmentRequests.isEmpty()) {
             return List.of();
         }
-
-        try {
-            Path emailDir = Paths.get(uploadDir, "email-attachments", email.getId());
-            Files.createDirectories(emailDir);
-
-            return attachmentRequests.stream()
-                    .map(req -> saveOneAttachment(email, emailDir, req))
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-        } catch (IOException e) {
-            log.error("첨부파일 저장 디렉토리 생성 실패", e);
-            return List.of();
-        }
+        return attachmentRequests.stream()
+                .map(req -> saveOneAttachment(recipient, email, req))
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
-    private EmailAttachment saveOneAttachment(InboundEmail email, Path emailDir, EmailAttachmentRequest req) {
+    private FileEntity saveOneAttachment(User recipient, InboundEmail email, EmailAttachmentRequest req) {
         if (req.getDataBase64() == null || req.getDataBase64().isBlank()) {
             return null;
         }
@@ -126,19 +104,8 @@ public class InboundEmailService {
                 log.warn("첨부파일 '{}' 용량 초과({})로 저장하지 않음", req.getFilename(), data.length);
                 return null;
             }
-
             String safeFilename = sanitizeFilename(req.getFilename());
-            String storedName = UUID.randomUUID() + "_" + safeFilename;
-            Path target = emailDir.resolve(storedName);
-            Files.write(target, data);
-
-            EmailAttachment attachment = new EmailAttachment();
-            attachment.setInboundEmail(email);
-            attachment.setFilename(safeFilename);
-            attachment.setContentType(req.getContentType());
-            attachment.setSizeBytes((long) data.length);
-            attachment.setStoragePath(target.toString());
-            return emailAttachmentRepository.save(attachment);
+            return fileService.saveEmailAttachment(recipient, email, safeFilename, req.getContentType(), data);
         } catch (IllegalArgumentException e) {
             log.warn("첨부파일 '{}' base64 디코딩 실패: {}", req.getFilename(), e.getMessage());
             return null;
@@ -153,13 +120,8 @@ public class InboundEmailService {
         if (filename == null || filename.isBlank()) {
             return "attachment";
         }
-        String name = Paths.get(filename).getFileName().toString();
+        String name = java.nio.file.Paths.get(filename).getFileName().toString();
         return name.replaceAll("[\\\\/:*?\"<>|]", "_");
-    }
-
-    private String buildAttachmentPublicUrl(String attachmentId) {
-        String token = emailAttachmentShareTokenUtil.generateToken(attachmentId);
-        return publicBaseUrl + "/public/email-attachments/" + token;
     }
 
     // 로그인한 유저 본인의 메일 목록 (최신순) - 본문 전체/첨부파일 전체를 안 불러오는 전용 쿼리 사용
@@ -175,34 +137,6 @@ public class InboundEmailService {
     public InboundEmailDetailResponse getEmailDetail(String userId, String emailId) {
         InboundEmail email = findOwnedEmail(userId, emailId);
         return new InboundEmailDetailResponse(email);
-    }
-
-    // 첨부파일 다운로드/미리보기 (로그인 유저, 본인 메일의 첨부파일만)
-    @Transactional(readOnly = true)
-    public FileService.ShareableFile getOwnedAttachment(String userId, String emailId, String attachmentId) throws MalformedURLException {
-        InboundEmail email = findOwnedEmail(userId, emailId);
-        EmailAttachment attachment = email.getAttachments().stream()
-                .filter(a -> a.getId().equals(attachmentId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("첨부파일을 찾을 수 없습니다."));
-        return toShareableFile(attachment);
-    }
-
-    // 공개 링크(토큰)를 통한 첨부파일 접근 - 토큰 검증은 호출부(PublicEmailAttachmentController)에서 이미 끝난 상태
-    @Transactional(readOnly = true)
-    public FileService.ShareableFile getAttachmentById(String attachmentId) throws MalformedURLException {
-        EmailAttachment attachment = emailAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new RuntimeException("첨부파일을 찾을 수 없습니다."));
-        return toShareableFile(attachment);
-    }
-
-    private FileService.ShareableFile toShareableFile(EmailAttachment attachment) throws MalformedURLException {
-        Path filePath = Paths.get(attachment.getStoragePath());
-        Resource resource = new UrlResource(filePath.toUri());
-        if (!resource.exists()) {
-            throw new RuntimeException("파일을 찾을 수 없습니다.");
-        }
-        return new FileService.ShareableFile(resource, attachment.getContentType(), attachment.getFilename());
     }
 
     private InboundEmail findOwnedEmail(String userId, String emailId) {

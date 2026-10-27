@@ -18,6 +18,7 @@ public class FileResponse {
     private final String thumbnailUrl;
     private final Boolean previewable; // true면 /{id}/view 로 브라우저에 바로 보여줄 수 있음 (이미지/영상/PDF)
     private final Boolean isFavorite;
+    private final String source;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -33,6 +34,7 @@ public class FileResponse {
         this.thumbnailUrl = file.getIsDirectory() ? null : file.getThumbnailPath();
         this.previewable = !file.getIsDirectory() && FileEntity.isPreviewable(file.getMimeType());
         this.isFavorite = file.getIsFavorite();
+        this.source = file.getSource() != null ? file.getSource().name() : null;
         this.createdAt = file.getCreatedAt();
         this.updatedAt = file.getUpdatedAt();
     }

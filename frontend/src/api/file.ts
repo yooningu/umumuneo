@@ -5,15 +5,21 @@ export const getFiles = async (params?: {
   parentId?: string;
   isFavorite?: boolean;
   search?: string;
+  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL';
 }): Promise<FileItem[]> => {
   const res = await client.get('/files', { params });
   return res.data;
 };
 
-export const uploadFiles = async (files: File[], parentId?: string): Promise<FileItem[]> => {
+export const uploadFiles = async (
+  files: File[],
+  parentId?: string,
+  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL'
+): Promise<FileItem[]> => {
   const formData = new FormData();
   files.forEach(f => formData.append('file', f));
   if (parentId) formData.append('parentId', parentId);
+  if (source) formData.append('source', source);
   const res = await client.post('/files/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -51,4 +57,11 @@ export const deleteFile = async (id: string): Promise<void> => {
 export const getPreviewBlobUrl = async (id: string): Promise<string> => {
   const res = await client.get(`/files/${id}/view`, { responseType: 'blob' });
   return window.URL.createObjectURL(res.data);
+};
+
+// NAS에 이미 올라가 있는 파일을 챗봇에 첨부할 때, vision 모델에 넘길 base64로 바로 변환하려고
+// object URL이 아니라 Blob 원본 그대로 받아옴
+export const getFileBlob = async (id: string): Promise<Blob> => {
+  const res = await client.get(`/files/${id}/view`, { responseType: 'blob' });
+  return res.data;
 };

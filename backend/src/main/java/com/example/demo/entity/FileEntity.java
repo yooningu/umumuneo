@@ -33,6 +33,21 @@ public class FileEntity {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FileEntity> children = new ArrayList<>();
 
+    // 이 파일이 어디서 들어왔는지 - NAS 사이드바에서 "이메일"/"챗봇"/"업로드"로 구분해서 보여주는 데 씀.
+    // nullable로 둔 이유: 이 필드가 생기기 전부터 있던 기존 파일들은 DB에 NULL로 남는데,
+    // NOT NULL로 선언하면 Hibernate ddl-auto=update가 컬럼을 추가하는 ALTER TABLE 자체가
+    // 기존 행 때문에 실패할 수 있음. 코드에서는 null을 UPLOAD와 동일하게 취급한다.
+    public enum FileSource { UPLOAD, CHATBOT, EMAIL }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", length = 20)
+    private FileSource source = FileSource.UPLOAD;
+
+    // source가 EMAIL일 때만 값이 있음 - 어떤 메일의 첨부파일인지
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "email_id")
+    private InboundEmail email;
+
     @Column(length = 255, nullable = false)
     private String name;
 

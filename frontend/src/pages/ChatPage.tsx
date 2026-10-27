@@ -33,7 +33,6 @@ export default function ChatPage() {
           key={panelKey}
           initialSessionId={activeSessionId}
           onSessionCreated={(sessionId) => {
-            console.log('[ChatPage] onSessionCreated', sessionId);
             setActiveSessionId(sessionId);
             setListRefreshKey(k => k + 1);
           }}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { getMails, getMailDetail, downloadMailAttachment, getMailAttachmentPreviewUrl } from '../api/mail';
+import { getMails, getMailDetail } from '../api/mail';
+import { downloadFile, getPreviewBlobUrl } from '../api/file';
 import type { MailItem, MailDetail, MailAttachment } from '../types';
 import styles from './MailPage.module.css';
 
@@ -20,18 +21,19 @@ function formatDate(iso: string): string {
 }
 
 // 첨부파일 하나: previewable이면 이미지를 fetch해서 인라인으로 보여주고, 아니면 다운로드 버튼만 노출
-function AttachmentRow({ mailId, attachment }: { mailId: string; attachment: MailAttachment }) {
+// (첨부파일은 이제 실제 NAS 파일이라 attachment.id가 곧 files 테이블의 id)
+function AttachmentRow({ attachment }: { attachment: MailAttachment }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const isImage = attachment.previewable && (attachment.contentType?.startsWith('image/') ?? false);
 
   useEffect(() => {
     if (!isImage) return;
     let objectUrl: string | null = null;
-    getMailAttachmentPreviewUrl(mailId, attachment.id)
+    getPreviewBlobUrl(attachment.id)
       .then(url => { objectUrl = url; setPreviewUrl(url); })
       .catch(() => setPreviewUrl(null));
     return () => { if (objectUrl) window.URL.revokeObjectURL(objectUrl); };
-  }, [mailId, attachment.id, isImage]);
+  }, [attachment.id, isImage]);
 
   return (
     <div className={styles.attachmentRow}>
@@ -44,7 +46,7 @@ function AttachmentRow({ mailId, attachment }: { mailId: string; attachment: Mai
       </div>
       <button
         className={styles.downloadButton}
-        onClick={() => downloadMailAttachment(mailId, attachment.id, attachment.filename)}
+        onClick={() => downloadFile(attachment.id, attachment.filename)}
       >
         다운로드
       </button>
@@ -153,7 +155,7 @@ export default function MailPage() {
                   첨부파일 {selected.attachments.length}개
                 </div>
                 {selected.attachments.map(att => (
-                  <AttachmentRow key={att.id} mailId={selected.id} attachment={att} />
+                  <AttachmentRow key={att.id} attachment={att} />
                 ))}
               </div>
             )}
