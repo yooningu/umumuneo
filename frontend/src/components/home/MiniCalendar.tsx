@@ -5,6 +5,7 @@ import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import styles from './MiniCalendar.module.css';
 import Tooltip from '../common/Tooltip';
+import DatePickerPopover from '../common/DatePickerPopover';
 import { PiAlarmFill } from "react-icons/pi";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
 
@@ -42,6 +43,7 @@ const MAX_PERIOD_BARS = 3;
 export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
+  const [pickerOpen, setPickerOpen] = useState(false);
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -154,16 +156,34 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
       {/* 헤더 */}
       <div className={styles.header}>
         <button onClick={prevMonth} className={styles.navButton}><FaChevronLeft /></button>
-        <span className={styles.title}>
-          {year}년 {String(month + 1).padStart(2, '0')}월
+        <span className={styles.titleWrap}>
+          <button className={styles.title} onClick={() => setPickerOpen(v => !v)}>
+            {year}년 {String(month + 1).padStart(2, '0')}월
+          </button>
+          {pickerOpen && (
+            <DatePickerPopover
+              value={selectedDate}
+              onSelect={onDateSelect}
+              onClose={() => setPickerOpen(false)}
+            />
+          )}
         </span>
         <button onClick={nextMonth} className={styles.navButton}><FaChevronRight /></button>
       </div>
 
       {/* 요일 헤더 */}
       <div className={styles.weekdayRow}>
-        {DAY_LABELS.map(d => (
-          <div key={d} className={styles.weekdayCell}>{d}</div>
+        {DAY_LABELS.map((d, i) => (
+          <div
+            key={d}
+            className={[
+              styles.weekdayCell,
+              i === 5 ? styles.saturday : '',
+              i === 6 ? styles.sunday : '',
+            ].join(' ').trim()}
+          >
+            {d}
+          </div>
         ))}
       </div>
 

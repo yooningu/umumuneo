@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { ScheduleType, RepeatRule } from '../../types';
 import { createSchedule } from '../../api/schedule';
-import { createTimetable } from '../../api/timetable';
+import { createTimetableGroup } from '../../api/timetable';
 import { toDateStr } from '../../utils/date';
+import TimeField from '../common/TimeField';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
@@ -91,14 +92,14 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
           repeatRule: repeatRule ?? undefined,
         });
       } else {
-        // 요일마다 시간표를 하나씩 만든다 (백엔드 한 행당 요일 하나)
-        await Promise.all(selectedDays.map(dayOfWeek => createTimetable({
+        // 선택한 요일들을 한 묶음으로 만든다 (같이 수정/삭제됨)
+        await createTimetableGroup({
           title: title.trim(),
           color,
-          dayOfWeek,
+          dayOfWeeks: selectedDays,
           startTime: `${startTime}:00`,
           endTime: `${endTime}:00`,
-        })));
+        });
       }
       onSaved();
     } catch (e) {
@@ -163,9 +164,9 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
               <div className={styles.formGroup}>
                 <span className={styles.label}>시간</span>
                 <div className={styles.row2}>
-                  <input type="time" step={300} className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
+                  <TimeField value={startTime} onChange={setStartTime} />
                   {showEndTime(type) && (
-                    <input type="time" step={300} className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+                    <TimeField value={endTime} onChange={setEndTime} />
                   )}
                 </div>
               </div>
@@ -231,8 +232,8 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
             <div className={styles.formGroup}>
               <span className={styles.label}>시간</span>
               <div className={styles.row2}>
-                <input type="time" step={300} className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
-                <input type="time" step={300} className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+                <TimeField value={startTime} onChange={setStartTime} />
+                <TimeField value={endTime} onChange={setEndTime} />
               </div>
             </div>
 

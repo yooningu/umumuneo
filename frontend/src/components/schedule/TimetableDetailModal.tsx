@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { IoClose } from "react-icons/io5";
 import type { Timetable } from '../../types';
-import { deleteTimetable } from '../../api/timetable';
+import { deleteTimetableGroup } from '../../api/timetable';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
-  timetable: Timetable;
+  timetables: Timetable[]; // 같은 묶음(요일만 다름, 나머지는 동일)
   onClose: () => void;
   onEdit: () => void;
   onChanged: () => void;
@@ -13,14 +13,19 @@ interface Props {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']; // 백엔드 dayOfWeek: 0(일)~6(토)
 
-export default function TimetableDetailModal({ timetable, onClose, onEdit, onChanged }: Props) {
+export default function TimetableDetailModal({ timetables, onClose, onEdit, onChanged }: Props) {
   const [deleting, setDeleting] = useState(false);
+  const first = timetables[0];
+  const dayLabel = [...timetables]
+    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    .map(t => DAY_LABELS[t.dayOfWeek])
+    .join(', ');
 
   const handleDelete = async () => {
     if (deleting) return;
     setDeleting(true);
     try {
-      await deleteTimetable(timetable.id);
+      await deleteTimetableGroup(first.groupId ?? first.id);
       onChanged();
       onClose();
     } catch (e) {
@@ -34,8 +39,8 @@ export default function TimetableDetailModal({ timetable, onClose, onEdit, onCha
       <div className={styles.card} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
           <div className={styles.headerTitle}>
-            <span className={styles.dot} style={{ backgroundColor: timetable.color }} />
-            {timetable.title}
+            <span className={styles.dot} style={{ backgroundColor: first.color }} />
+            {first.title}
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
             <IoClose />
@@ -47,11 +52,15 @@ export default function TimetableDetailModal({ timetable, onClose, onEdit, onCha
         <div className={styles.body}>
           <div className={styles.infoRow}>
             <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
-            매주 {DAY_LABELS[timetable.dayOfWeek]}요일
+            시간표
           </div>
           <div className={styles.infoRow}>
             <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
-            {timetable.startTime.slice(0, 5)} ~ {timetable.endTime.slice(0, 5)}
+            매주 {dayLabel}요일
+          </div>
+          <div className={styles.infoRow}>
+            <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
+            {first.startTime.slice(0, 5)} ~ {first.endTime.slice(0, 5)}
           </div>
         </div>
 

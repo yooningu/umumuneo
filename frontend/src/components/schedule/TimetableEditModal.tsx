@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { IoClose } from "react-icons/io5";
 import type { Timetable } from '../../types';
-import { updateTimetable, deleteTimetable } from '../../api/timetable';
+import { updateTimetableGroup, deleteTimetableGroup } from '../../api/timetable';
 import { TIMETABLE_COLORS } from './AddScheduleModal';
+import TimeField from '../common/TimeField';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
-  timetable: Timetable;
+  timetables: Timetable[]; // 같은 묶음(요일만 다름, 나머지는 동일)
   onCancel: () => void;
   onSaved: () => void;
   onDeleted: () => void;
@@ -14,23 +15,31 @@ interface Props {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']; // 백엔드 dayOfWeek: 0(일)~6(토)
 
-export default function TimetableEditModal({ timetable, onCancel, onSaved, onDeleted }: Props) {
-  const [title, setTitle] = useState(timetable.title);
-  const [color, setColor] = useState(timetable.color);
-  const [dayOfWeek, setDayOfWeek] = useState(timetable.dayOfWeek);
-  const [startTime, setStartTime] = useState(timetable.startTime.slice(0, 5));
-  const [endTime, setEndTime] = useState(timetable.endTime.slice(0, 5));
+export default function TimetableEditModal({ timetables, onCancel, onSaved, onDeleted }: Props) {
+  const first = timetables[0];
+  const groupKey = first.groupId ?? first.id;
+  const [title, setTitle] = useState(first.title);
+  const [color, setColor] = useState(first.color);
+  const [selectedDays, setSelectedDays] = useState<number[]>(timetables.map(t => t.dayOfWeek));
+  const [startTime, setStartTime] = useState(first.startTime.slice(0, 5));
+  const [endTime, setEndTime] = useState(first.endTime.slice(0, 5));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const toggleDay = (day: number) => {
+    setSelectedDays(prev => (
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    ));
+  };
+
   const handleSave = async () => {
-    if (!title.trim() || !startTime || !endTime || saving) return;
+    if (!title.trim() || !startTime || !endTime || selectedDays.length === 0 || saving) return;
     setSaving(true);
     try {
-      await updateTimetable(timetable.id, {
+      await updateTimetableGroup(groupKey, {
         title: title.trim(),
         color,
-        dayOfWeek,
+        dayOfWeeks: selectedDays,
         startTime: `${startTime}:00`,
         endTime: `${endTime}:00`,
       });
@@ -45,7 +54,7 @@ export default function TimetableEditModal({ timetable, onCancel, onSaved, onDel
     if (deleting) return;
     setDeleting(true);
     try {
-      await deleteTimetable(timetable.id);
+      await deleteTimetableGroup(groupKey);
       onDeleted();
     } catch (e) {
       console.error(e);
@@ -72,8 +81,8 @@ export default function TimetableEditModal({ timetable, onCancel, onSaved, onDel
             {DAY_LABELS.map((label, i) => (
               <button
                 key={label}
-                className={`${styles.typeBtn} ${dayOfWeek === i ? styles.typeBtnActive : ''}`}
-                onClick={() => setDayOfWeek(i)}
+                className={`${styles.typeBtn} ${selectedDays.includes(i) ? styles.typeBtnActive : ''}`}
+                onClick={() => toggleDay(i)}
               >
                 {label}
               </button>
@@ -84,8 +93,8 @@ export default function TimetableEditModal({ timetable, onCancel, onSaved, onDel
         <div className={styles.formGroup}>
           <span className={styles.label}>시간</span>
           <div className={styles.row2}>
-            <input type="time" step={300} className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
-            <input type="time" step={300} className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+            <TimeField value={startTime} onChange={setStartTime} />
+            <TimeField value={endTime} onChange={setEndTime} />
           </div>
         </div>
 

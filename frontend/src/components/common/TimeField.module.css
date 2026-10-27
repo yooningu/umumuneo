@@ -1,0 +1,21 @@
+.wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.trigger {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--gray4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: var(--font-m);
+  color: var(--gray1);
+  background-color: var(--white);
+  text-align: left;
+  cursor: pointer;
+}
+
+.placeholder {
+  color: var(--gray3);
+}

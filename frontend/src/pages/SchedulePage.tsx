@@ -75,6 +75,8 @@ export default function SchedulePage() {
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
         rangeLabel={rangeLabel}
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
         onPrev={handlePrev}
         onNext={handleNext}
         onToday={handleToday}

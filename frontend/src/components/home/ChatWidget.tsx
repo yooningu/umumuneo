@@ -400,7 +400,7 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
         {loadingHistory ? (
           <div className={styles.empty}>대화 불러오는 중...</div>
         ) : messages.length === 0 && (
-          <div className={styles.empty}>시크릿 대화를 시작해보세요</div>
+          <div className={styles.empty}>일정을 추가하거나 질문해보세요</div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant}`}>

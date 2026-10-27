@@ -25,6 +25,11 @@ public class Timetable {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // 여러 요일에 동시에 등록한 시간표를 하나로 묶는 키 (같은 묶음은 같이 수정/삭제됨).
+    // 예전에 요일별로 따로 만들어진 데이터는 null일 수 있음 - 그런 경우 자기 자신만 있는 묶음으로 취급
+    @Column(name = "group_id", length = 36)
+    private String groupId;
+
     @Column(length = 200, nullable = false)
     private String title;
 

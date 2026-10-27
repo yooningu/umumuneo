@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { IoClose } from "react-icons/io5";
-import type { Schedule } from '../../types';
+import type { Schedule, ScheduleType } from '../../types';
 import { deleteSchedule } from '../../api/schedule';
 import styles from './ScheduleModal.module.css';
 
@@ -10,6 +10,13 @@ interface Props {
   onEdit: () => void;
   onChanged: () => void;
 }
+
+const TYPE_LABELS: Record<ScheduleType, string> = {
+  TIMED: '시간 일정',
+  MOMENT: '시각 일정',
+  PERIOD: '기간 일정',
+  ALLDAY: '종일 일정',
+};
 
 function formatDateRow(s: Schedule): string {
   if (s.type === 'PERIOD') return `${s.startDate} ~ ${s.endDate ?? s.startDate}`;
@@ -62,6 +69,10 @@ export default function ScheduleDetailModal({ schedule, onClose, onEdit, onChang
         <div className={styles.body}>
           <div className={styles.infoRow}>
             <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
+            {TYPE_LABELS[schedule.type]}
+          </div>
+          <div className={styles.infoRow}>
+            <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
             {formatDateRow(schedule)}
           </div>
           {timeRow && (
@@ -71,7 +82,10 @@ export default function ScheduleDetailModal({ schedule, onClose, onEdit, onChang
             </div>
           )}
           {schedule.description && (
-            <div className={styles.infoRow}>{schedule.description}</div>
+            <div className={styles.infoRow}>
+              <span className={`${styles.dot} ${styles.dotSmall}`} style={{ backgroundColor: 'var(--gray2)' }} />
+              {schedule.description}
+            </div>
           )}
         </div>
 

@@ -107,7 +107,11 @@ public class ChatService {
     }
 
     // 메시지 전송 (SSE 스트리밍)
-    @Transactional
+    // 주의: 이 메서드는 @Transactional을 붙이면 안 됨 - 세션 생성/저장이 메서드 전체가 끝날 때까지
+    // 커밋이 안 되면, 메서드 안에서 띄우는 비동기 스레드(AI 호출)가 그 세션을 별도 트랜잭션으로
+    // 조회할 때 아직 안 보여서 "세션을 찾을 수 없습니다" 에러가 날 수 있음(점검 모드처럼 AI가
+    // 즉시 응답하면 100% 재현됨). 세션 조회/생성+유저 메시지 저장은 아래에서 별도 빈(ChatSaveService)의
+    // 독립된 트랜잭션으로 먼저 끝까지 커밋시켜서, 스레드가 시작되기 전에 항상 세션이 보이게 한다.
     public SseEmitter sendMessage(String userId, ChatRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
@@ -151,35 +155,13 @@ public class ChatService {
             userMessage.setTurnIndex(turnIndex);
             secretHistory.add(userMessage);
         } else {
-            if (request.getSessionId() != null) {
-                session = chatSessionRepository.findById(request.getSessionId())
-                        .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
-                if (!session.getUser().getId().equals(userId)) {
-                    throw new RuntimeException("해당 세션에 대한 권한이 없습니다.");
-                }
-            } else {
-                session = new ChatSession();
-                session.setUser(user);
-                session.setModelName(request.getModel());
-                chatSessionRepository.save(session);
-            }
-
-            // 이전 대화 내역 조회 (현재 메시지 저장 전 시점 기준)
-            history = chatMessageRepository.findBySessionIdOrderByTurnIndexAsc(session.getId());
-
-            // 유저 메시지 저장
-            turnIndex = chatMessageRepository.countBySessionId(session.getId());
-            ChatMessage userMessage = new ChatMessage();
-            userMessage.setSession(session);
-            userMessage.setRole(MessageRole.USER);
-            userMessage.setContent(request.getContent());
-            userMessage.setIsSummarized(false);
-            userMessage.setTurnIndex(turnIndex);
-            chatMessageRepository.save(userMessage);
-
-            // 세션 마지막 활동 시간 업데이트
-            session.setLastActiveAt(LocalDateTime.now());
-            chatSessionRepository.save(session);
+            // 세션 조회/생성 + 유저 메시지 저장을 별도 빈의 독립된 트랜잭션으로 묶어서 먼저 끝까지
+            // 커밋시킨다 (왜 그런지는 메서드 상단 주석 참고 - 비동기 스레드보다 반드시 먼저 끝나야 함).
+            ChatSaveService.SessionBootstrap bootstrap = chatSaveService.resolveSessionAndSaveUserMessage(
+                    user, request.getSessionId(), request.getModel(), request.getContent());
+            session = bootstrap.session();
+            history = bootstrap.history();
+            turnIndex = bootstrap.turnIndex();
         }
 
         // SSE 이미터 생성

@@ -359,6 +359,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       },
       (newSessionId) => {
         const isNewSession = !sessionId;
+        console.log('[ChatPanel] onDone', { newSessionId, sessionIdAtSendTime: sessionId, isNewSession });
         setSessionId(newSessionId);
         setLoading(false);
         onScheduleChange?.();

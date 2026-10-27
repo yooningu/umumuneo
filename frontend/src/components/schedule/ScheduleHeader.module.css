@@ -44,7 +44,14 @@
   background-color: var(--gray4);
 }
 
+.rangeLabelWrap {
+  position: relative;
+}
+
 .rangeLabel {
+  border: none;
+  background: none;
+  cursor: pointer;
   font-size: var(--font-l);
   font-weight: var(--font-weight-medium);
   color: var(--gray2);

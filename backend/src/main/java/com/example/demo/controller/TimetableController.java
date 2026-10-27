@@ -28,34 +28,34 @@ public class TimetableController {
         return ResponseEntity.ok(timetableService.getTimetables(userId));
     }
 
-    // POST /api/v1/timetable
+    // POST /api/v1/timetable - 요일을 여러 개 고르면 한 묶음(같은 groupId)으로 생성됨
     @PostMapping
-    public ResponseEntity<Void> createTimetable(
+    public ResponseEntity<Void> createTimetableGroup(
             @AuthenticationPrincipal String userId,
             @Valid @RequestBody TimetableRequest request
     ) {
-        timetableService.createTimetable(userId, request);
+        timetableService.createTimetableGroup(userId, request);
         return ResponseEntity.status(201).build();
     }
 
-    // PUT /api/v1/timetable/{id}
-    @PutMapping("/{id}")
-    public ResponseEntity<Void> updateTimetable(
+    // PUT /api/v1/timetable/group/{groupId} - 묶음 전체를 같이 수정
+    @PutMapping("/group/{groupId}")
+    public ResponseEntity<Void> updateTimetableGroup(
             @AuthenticationPrincipal String userId,
-            @PathVariable String id,
+            @PathVariable String groupId,
             @Valid @RequestBody TimetableRequest request
     ) {
-        timetableService.updateTimetable(userId, id, request);
+        timetableService.updateTimetableGroup(userId, groupId, request);
         return ResponseEntity.ok().build();
     }
 
-    // DELETE /api/v1/timetable/{id}
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTimetable(
+    // DELETE /api/v1/timetable/group/{groupId} - 묶음 전체를 같이 삭제
+    @DeleteMapping("/group/{groupId}")
+    public ResponseEntity<Void> deleteTimetableGroup(
             @AuthenticationPrincipal String userId,
-            @PathVariable String id
+            @PathVariable String groupId
     ) {
-        timetableService.deleteTimetable(userId, id);
+        timetableService.deleteTimetableGroup(userId, groupId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -10,6 +10,7 @@ import java.time.LocalTime;
 public class TimetableResponse {
 
     private final String id;
+    private final String groupId;
     private final String title;
     private final String color;
     private final Integer dayOfWeek;
@@ -20,6 +21,7 @@ public class TimetableResponse {
 
     public TimetableResponse(Timetable timetable) {
         this.id = timetable.getId();
+        this.groupId = timetable.getGroupId();
         this.title = timetable.getTitle();
         this.color = timetable.getColor();
         this.dayOfWeek = timetable.getDayOfWeek();

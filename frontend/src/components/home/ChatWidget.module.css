@@ -27,8 +27,9 @@
 }
 
 .empty {
-  color: var(--gray2);
-  font-size: var(--font-s);
+  color: var(--gray3);
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-medium);
   text-align: center;
   margin-top: 16px;
 }

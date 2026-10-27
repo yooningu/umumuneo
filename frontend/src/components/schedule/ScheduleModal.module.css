@@ -109,6 +109,8 @@
 .dotSmall {
   width: 8px;
   height: 8px;
+  /* infoRow 텍스트가 여러 줄이 돼도 점이 첫 줄 높이에 맞춰 위쪽에 오도록 */
+  margin-top: 6px;
 }
 
 .divider {
@@ -126,9 +128,10 @@
 
 .infoRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-size: var(--font-m);
+  line-height: 1.4;
   color: var(--gray2);
 }
 
@@ -159,7 +162,7 @@
 }
 
 .deleteBtn {
-  color: var(--red2);
+  color: var(--red);
 }
 
 .primaryBtn {
@@ -173,7 +176,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-top: 1px solid var(--gray4);
 }
 
 .footerRight {
@@ -198,13 +200,13 @@
 }
 
 .pillBtnDelete {
-  color: var(--red2);
-  border-color: var(--red2);
+  color: var(--red);
+  border-color: var(--red);
 }
 
 .pillBtnPrimary {
-  background-color: var(--sub);
-  border-color: var(--sub);
+  background-color: var(--blue);
+  border-color: var(--blue);
   color: var(--white);
   font-weight: var(--font-weight-bold);
 }

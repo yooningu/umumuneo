@@ -27,6 +27,7 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
+    console.log('[ChatSessionList] fetching sessions, refreshKey =', refreshKey);
     getSessions().then(setSessions).catch(console.error);
   }, [refreshKey]);
 

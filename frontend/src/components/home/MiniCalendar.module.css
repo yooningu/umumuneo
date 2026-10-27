@@ -27,9 +27,17 @@
   color: var(--gray2);
 }
 
+.titleWrap {
+  position: relative;
+}
+
 .title {
+  border: none;
+  background: none;
+  cursor: pointer;
   font-weight: var(--font-weight-bold);
   font-size: var(--font-m);
+  color: var(--gray1);
 }
 
 .weekdayRow {
@@ -44,6 +52,14 @@
   font-size: var(--font-s);
   color: var(--gray2);
   padding: 2px 0;
+}
+
+.weekdayCell.saturday {
+  color: var(--blue);
+}
+
+.weekdayCell.sunday {
+  color: var(--red);
 }
 
 .daysGrid {

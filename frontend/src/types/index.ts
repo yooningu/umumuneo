@@ -48,6 +48,7 @@ export interface ScheduleRequest {
 }
 export interface Timetable {
   id: string;
+  groupId: string | null; // 같은 묶음(여러 요일을 한 번에 등록한 것)은 값이 같음. 예전 데이터는 null일 수 있음
   title: string;
   color: string;
   dayOfWeek: number;
@@ -59,7 +60,7 @@ export interface Timetable {
 export interface TimetableRequest {
   title: string;
   color: string;
-  dayOfWeek: number;
+  dayOfWeeks: number[]; // 요일을 여러 개 선택하면 같은 묶음(groupId)으로 한꺼번에 생성/수정됨
   startTime: string;
   endTime: string;
 }

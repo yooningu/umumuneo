@@ -104,7 +104,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const [selectedTimetable, setSelectedTimetable] = useState<Timetable | null>(null);
+  const [selectedTimetableGroup, setSelectedTimetableGroup] = useState<Timetable[] | null>(null);
   const [timetableModalMode, setTimetableModalMode] = useState<'view' | 'edit'>('view');
   const [expandedAlldayDays, setExpandedAlldayDays] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -363,7 +363,11 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                       height: (endMin - startMin) * PX_PER_MINUTE,
                       backgroundColor: t.color,
                     }}
-                    onClick={() => { setSelectedTimetable(t); setTimetableModalMode('view'); }}
+                    onClick={() => {
+                      const key = t.groupId ?? t.id;
+                      setSelectedTimetableGroup(timetables.filter(x => (x.groupId ?? x.id) === key));
+                      setTimetableModalMode('view');
+                    }}
                   >
                     <span className={styles.timetableTitle}>{t.title}</span>
                   </div>
@@ -443,20 +447,20 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
         />
       )}
 
-      {selectedTimetable && timetableModalMode === 'view' && (
+      {selectedTimetableGroup && timetableModalMode === 'view' && (
         <TimetableDetailModal
-          timetable={selectedTimetable}
-          onClose={() => setSelectedTimetable(null)}
+          timetables={selectedTimetableGroup}
+          onClose={() => setSelectedTimetableGroup(null)}
           onEdit={() => setTimetableModalMode('edit')}
           onChanged={() => onScheduleChange?.()}
         />
       )}
-      {selectedTimetable && timetableModalMode === 'edit' && (
+      {selectedTimetableGroup && timetableModalMode === 'edit' && (
         <TimetableEditModal
-          timetable={selectedTimetable}
+          timetables={selectedTimetableGroup}
           onCancel={() => setTimetableModalMode('view')}
-          onSaved={() => { onScheduleChange?.(); setSelectedTimetable(null); }}
-          onDeleted={() => { onScheduleChange?.(); setSelectedTimetable(null); }}
+          onSaved={() => { onScheduleChange?.(); setSelectedTimetableGroup(null); }}
+          onDeleted={() => { onScheduleChange?.(); setSelectedTimetableGroup(null); }}
         />
       )}
     </div>

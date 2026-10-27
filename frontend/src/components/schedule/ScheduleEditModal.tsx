@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IoClose } from "react-icons/io5";
 import type { Schedule, ScheduleType, RepeatRule } from '../../types';
 import { updateSchedule, deleteSchedule } from '../../api/schedule';
+import TimeField from '../common/TimeField';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
@@ -121,9 +122,9 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
           <div className={styles.formGroup}>
             <span className={styles.label}>시간</span>
             <div className={styles.row2}>
-              <input type="time" step={300} className={styles.input} value={startTime} onChange={e => setStartTime(e.target.value)} />
+              <TimeField value={startTime} onChange={setStartTime} />
               {showEndTime(type) && (
-                <input type="time" step={300} className={styles.input} value={endTime} onChange={e => setEndTime(e.target.value)} />
+                <TimeField value={endTime} onChange={setEndTime} />
               )}
             </div>
           </div>
