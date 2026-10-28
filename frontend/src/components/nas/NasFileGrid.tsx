@@ -85,11 +85,11 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
 
   useEffect(() => {
     setSelected(new Set());
+    // 분류(sourceFilter)가 걸려있어도 폴더 구조는 그대로 유지 - 루트/폴더 안을 평소처럼
+    // 탐색하되 그 출처가 아닌 항목만 안 보이게 함 (전부 평면으로 쏟아내지 않음)
     const params = search.trim()
       ? { search: search.trim() }
-      : sourceFilter
-        ? { source: sourceFilter }
-        : { parentId: parentId ?? undefined };
+      : { parentId: parentId ?? undefined, source: sourceFilter ?? undefined };
     getFiles(params).then(setFiles).catch(console.error);
   }, [parentId, search, sourceFilter, refreshKey]);
 

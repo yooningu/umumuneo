@@ -5,10 +5,12 @@ import styles from './NasSidebar.module.css';
 
 type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
 
-const CATEGORIES: { source: FileSource; label: string; icon: string }[] = [
+// null(전체)은 분류 필터를 끄고 평소처럼 전부 보여주는 상태
+const CATEGORIES: { source: FileSource | null; label: string; icon: string }[] = [
+  { source: null, label: '전체', icon: '🗂️' },
+  { source: 'UPLOAD', label: '업로드', icon: '📥' },
   { source: 'EMAIL', label: '이메일', icon: '📧' },
   { source: 'CHATBOT', label: '챗봇', icon: '🤖' },
-  { source: 'UPLOAD', label: '업로드', icon: '📥' },
 ];
 
 interface Props {
@@ -67,9 +69,9 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
         <div className={styles.sectionTitle}>분류</div>
         {CATEGORIES.map(c => (
           <div
-            key={c.source}
+            key={c.source ?? 'ALL'}
             className={`${styles.favItem} ${sourceFilter === c.source ? styles.favItemActive : ''}`.trim()}
-            onClick={() => onSelectSource(sourceFilter === c.source ? null : c.source)}
+            onClick={() => onSelectSource(c.source)}
           >
             {c.icon} {c.label}
           </div>

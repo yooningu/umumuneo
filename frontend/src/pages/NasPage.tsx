@@ -19,7 +19,8 @@ export default function NasPage() {
 
   const bump = () => setRefreshKey(k => k + 1);
 
-  // 사이드바에서 이메일/챗봇/업로드를 고르면 폴더 구조와 무관한 평면 목록을 보여준다
+  // 사이드바에서 분류(전체/업로드/이메일/챗봇)를 고르면 그 출처로 걸러서 루트부터 다시 보여준다.
+  // 폴더 구조는 그대로 유지되고(평면으로 안 쏟아짐), 그 안을 탐색하는 동안에도 필터가 계속 적용된다.
   const selectSource = (source: FileSource | null) => {
     setSourceFilter(source);
     setSearch('');
@@ -28,7 +29,7 @@ export default function NasPage() {
   };
 
   const openFolder = (id: string, name: string) => {
-    setSourceFilter(null);
+    // sourceFilter는 그대로 유지 - 분류를 보던 중 폴더에 들어가도 같은 분류 안에서 탐색되게
     setFolderStack(prev => [...prev, { id, name }]);
     setParentId(id);
     setSearch('');

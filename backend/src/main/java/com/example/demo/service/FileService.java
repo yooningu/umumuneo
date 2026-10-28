@@ -55,10 +55,19 @@ public class FileService {
         } else if (Boolean.TRUE.equals(isFavorite)) {
             files = fileRepository.findByUserIdAndIsFavoriteTrue(userId);
         } else if (source != null && !source.isBlank()) {
+            // 출처로 걸러도 폴더 구조는 그대로 유지 - 루트/폴더 안을 평소처럼 탐색하되 그 출처가
+            // 아닌 항목만 안 보이게 함 (전부 평면으로 쏟아내지 않음)
             FileEntity.FileSource src = FileEntity.FileSource.valueOf(source.toUpperCase());
-            files = src == FileEntity.FileSource.UPLOAD
-                    ? fileRepository.findUploadSourceByUserId(userId, src)
-                    : fileRepository.findByUserIdAndSourceOrderByCreatedAtDesc(userId, src);
+            boolean treatNullAsThis = src == FileEntity.FileSource.UPLOAD;
+            if (parentId != null) {
+                files = treatNullAsThis
+                        ? fileRepository.findByUserIdAndParentIdAndSourceOrNull(userId, parentId, src)
+                        : fileRepository.findByUserIdAndParentIdAndSource(userId, parentId, src);
+            } else {
+                files = treatNullAsThis
+                        ? fileRepository.findByUserIdAndParentIsNullAndSourceOrNull(userId, src)
+                        : fileRepository.findByUserIdAndParentIsNullAndSource(userId, src);
+            }
         } else if (parentId != null) {
             files = fileRepository.findByUserIdAndParentId(userId, parentId);
         } else {
