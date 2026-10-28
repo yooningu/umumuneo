@@ -43,6 +43,16 @@ export default function NasPage() {
     });
   };
 
+  // 경로(breadcrumb)에서 중간 폴더를 클릭하면 그 폴더까지만 남기고 그 자리로 이동
+  const goToFolderIndex = (index: number) => {
+    setFolderStack(prev => {
+      const next = prev.slice(0, index + 1);
+      setParentId(next.length > 0 ? next[next.length - 1].id : null);
+      return next;
+    });
+    setSearch('');
+  };
+
   return (
     <div className={styles.container}>
       <NasToolbar
@@ -69,8 +79,12 @@ export default function NasPage() {
             search={search}
             typeFilter={typeFilter}
             sourceFilter={sourceFilter}
+            folderStack={folderStack}
             refreshKey={refreshKey}
             onOpenFolder={openFolder}
+            onNavigateRoot={() => selectSource(null)}
+            onNavigateSource={() => selectSource(sourceFilter)}
+            onNavigateFolder={goToFolderIndex}
             onChanged={bump}
           />
         </div>

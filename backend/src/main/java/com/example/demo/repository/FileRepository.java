@@ -41,4 +41,9 @@ public interface FileRepository extends JpaRepository<FileEntity, String> {
             "AND (f.source IS NULL OR f.source = :source)")
     List<FileEntity> findByUserIdAndParentIsNullAndSourceOrNull(
             @Param("userId") String userId, @Param("source") FileEntity.FileSource source);
+
+    // 사이드바 "사용중" 용량 표시용 - 폴더 구조와 무관하게 유저의 모든 파일(폴더 제외) 크기 합계.
+    // getFiles()는 폴더 구조를 유지하려고 parentId=null이면 루트만 반환하므로, 전체 합계는 따로 집계해야 함.
+    @Query("SELECT COALESCE(SUM(f.sizeBytes), 0) FROM FileEntity f WHERE f.user.id = :userId AND f.isDirectory = false")
+    long sumSizeBytesByUserId(@Param("userId") String userId);
 }

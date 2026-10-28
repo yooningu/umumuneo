@@ -45,6 +45,46 @@
   background-color: var(--gray4);
 }
 
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--gray2);
+}
+
+.breadcrumbSegment {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbSep {
+  margin: 0 4px;
+  color: var(--gray3);
+}
+
+.breadcrumbItem {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: var(--gray2);
+}
+
+.breadcrumbItem:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.breadcrumbCurrent {
+  color: var(--gray1);
+  font-weight: bold;
+  cursor: default;
+}
+
+.breadcrumbCurrent:hover {
+  background-color: transparent;
+}
+
 .selectionBar {
   display: flex;
   align-items: center;
@@ -79,12 +119,16 @@
 
 .header {
   display: flex;
+  align-items: center;
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .headerBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   background: none;
   cursor: pointer;
@@ -95,6 +139,49 @@
 .headerBtnActive {
   color: #7c8cf8;
   font-weight: bold;
+}
+
+.sortArrow {
+  font-size: 10px;
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+
+.sortArrowAsc {
+  transform: rotate(180deg);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  background-color: var(--gray4);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.viewToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.viewToggleBtn:hover {
+  color: #666;
+}
+
+.viewToggleBtnActive {
+  background-color: #fff;
+  color: #7c8cf8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .grid {
@@ -170,6 +257,65 @@
   font-size: 10px;
   color: #999;
   margin-top: 2px;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.listRow:hover {
+  background-color: #fafafa;
+}
+
+.listRowSelected {
+  background-color: #eef0ff;
+  border-color: #7c8cf8;
+}
+
+.listRowDropTarget {
+  background-color: #e3e7ff;
+  border-color: #7c8cf8;
+  border-style: dashed;
+}
+
+.listIcon {
+  position: relative;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.listName {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listMeta {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+  width: 90px;
+  text-align: right;
 }
 
 .selectionBox {

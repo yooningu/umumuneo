@@ -115,6 +115,11 @@ export interface Holiday {
   date: string; // "YYYY-MM-DD"
   name: string;
 }
+export interface ArchiveEntry {
+  name: string;
+  sizeBytes: number | null;
+  directory: boolean;
+}
 export interface FileItem {
   id: string;
   parentId: string | null;

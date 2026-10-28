@@ -112,6 +112,10 @@ public class InboundEmailService {
         } catch (IOException e) {
             log.error("첨부파일 '{}' 저장 실패", req.getFilename(), e);
             return null;
+        } catch (RuntimeException e) {
+            // 저장 용량 초과 등 - 이 첨부파일만 건너뛰고 나머지 메일 처리는 계속 진행
+            log.warn("첨부파일 '{}' 저장 실패: {}", req.getFilename(), e.getMessage());
+            return null;
         }
     }
 

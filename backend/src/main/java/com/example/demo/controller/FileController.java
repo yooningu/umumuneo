@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.request.FileRequest;
+import com.example.demo.dto.response.ArchiveEntryResponse;
 import com.example.demo.dto.response.FileResponse;
 import com.example.demo.service.FileService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -42,6 +43,14 @@ public class FileController {
             @RequestParam(required = false) String source
     ) {
         return ResponseEntity.ok(fileService.getFiles(userId, parentId, isFavorite, search, source));
+    }
+
+    // GET /api/v1/files/usage (사이드바 "사용중" 용량 - 폴더 구조와 무관한 전체 합계)
+    @GetMapping("/usage")
+    public ResponseEntity<Map<String, Long>> getUsage(
+            @AuthenticationPrincipal String userId
+    ) {
+        return ResponseEntity.ok(Map.of("usedBytes", fileService.getTotalUsedBytes(userId)));
     }
 
     // POST /api/v1/files/upload
@@ -190,6 +199,36 @@ public class FileController {
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .contentType(mediaType)
                 .body(region);
+    }
+
+    // GET /api/v1/files/{id}/content (txt 파일 내용 - 미리보기에서 간단 편집용)
+    // 한글 등이 깨지지 않도록 UTF-8을 명시 (기본 StringHttpMessageConverter는 ISO-8859-1을 씀)
+    @GetMapping(value = "/{id}/content", produces = "text/plain;charset=UTF-8")
+    public ResponseEntity<String> getTextContent(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id
+    ) throws IOException {
+        return ResponseEntity.ok(fileService.getTextContent(userId, id));
+    }
+
+    // PUT /api/v1/files/{id}/content (txt 파일 내용 수정 - 전체 덮어쓰기)
+    @PutMapping("/{id}/content")
+    public ResponseEntity<Void> updateTextContent(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id,
+            @Valid @RequestBody FileRequest.UpdateContent request
+    ) throws IOException {
+        fileService.updateTextContent(userId, id, request.getContent());
+        return ResponseEntity.ok().build();
+    }
+
+    // GET /api/v1/files/{id}/archive-entries (zip/7z/tar/tar.gz 내부 목록 - 압축을 풀지 않고 이름/크기만 읽음)
+    @GetMapping("/{id}/archive-entries")
+    public ResponseEntity<List<ArchiveEntryResponse>> getArchiveEntries(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id
+    ) throws IOException {
+        return ResponseEntity.ok(fileService.getArchiveEntries(userId, id));
     }
 
     // DELETE /api/v1/files/{id}

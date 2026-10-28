@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.request.FileRequest;
+import com.example.demo.dto.response.ArchiveEntryResponse;
 import com.example.demo.dto.response.FileResponse;
 import com.example.demo.entity.FileEntity;
 import com.example.demo.entity.UploadSession;
@@ -10,6 +11,13 @@ import com.example.demo.repository.UploadSessionRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.util.FileShareTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
+import org.apache.commons.compress.archivers.sevenz.SevenZFile;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -20,11 +28,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +52,9 @@ public class FileService {
 
     @Value("${file.upload-dir}")
     private String uploadDir;
+
+    @Value("${file.max-storage-bytes}")
+    private long maxStorageBytes;
 
     @Value("${app.public-base-url}")
     private String publicBaseUrl;
@@ -77,6 +91,12 @@ public class FileService {
         return files.stream().map(FileResponse::new).toList();
     }
 
+    // 사이드바 "사용중" 용량 표시용 - 폴더 구조와 무관하게 전체 파일 크기 합계
+    @Transactional(readOnly = true)
+    public long getTotalUsedBytes(String userId) {
+        return fileRepository.sumSizeBytesByUserId(userId);
+    }
+
     // 파일 업로드 (업로드된 파일들의 메타데이터 반환 - id로 나중에 공개 링크 생성 등에 사용)
     // source: 누가 올린 건지(NAS 직접 업로드/챗봇 첨부 등) - null이면 기본값(UPLOAD)
     @Transactional
@@ -92,6 +112,12 @@ public class FileService {
         FileEntity.FileSource fileSource = source != null && !source.isBlank()
                 ? FileEntity.FileSource.valueOf(source.toUpperCase())
                 : FileEntity.FileSource.UPLOAD;
+
+        long incomingBytes = 0;
+        for (MultipartFile file : files) {
+            incomingBytes += file.getSize();
+        }
+        checkStorageQuota(userId, incomingBytes);
 
         // 유저별 업로드 디렉토리 생성
         Path userDir = Paths.get(uploadDir, userId);
@@ -131,6 +157,8 @@ public class FileService {
     @Transactional
     public FileEntity saveEmailAttachment(User user, com.example.demo.entity.InboundEmail email,
                                            String filename, String contentType, byte[] data) throws IOException {
+        checkStorageQuota(user.getId(), data.length);
+
         Path userDir = Paths.get(uploadDir, user.getId());
         Files.createDirectories(userDir);
 
@@ -164,6 +192,8 @@ public class FileService {
     public String initChunkedUpload(String userId, FileRequest.InitChunkedUpload request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        checkStorageQuota(userId, request.getTotalSize());
 
         UploadSession session = new UploadSession();
         session.setUser(user);
@@ -403,6 +433,93 @@ public class FileService {
         return new ShareableFile(resource, file.getMimeType(), file.getName());
     }
 
+    // txt 파일 내용 조회 (미리보기에서 간단히 편집할 수 있게)
+    @Transactional(readOnly = true)
+    public String getTextContent(String userId, String fileId) throws IOException {
+        FileEntity file = findFile(userId, fileId);
+        if (file.getIsDirectory()) {
+            throw new RuntimeException("폴더는 열 수 없습니다.");
+        }
+        if (!"txt".equalsIgnoreCase(file.getExtension())) {
+            throw new RuntimeException("텍스트 파일만 편집할 수 있습니다.");
+        }
+        Path filePath = Paths.get(file.getStoragePath());
+        if (!Files.exists(filePath)) {
+            throw new RuntimeException("파일을 찾을 수 없습니다.");
+        }
+        return Files.readString(filePath, StandardCharsets.UTF_8);
+    }
+
+    // txt 파일 내용 수정 (전체 덮어쓰기 - 간단 편집이라 부분 수정은 지원하지 않음)
+    @Transactional
+    public void updateTextContent(String userId, String fileId, String content) throws IOException {
+        FileEntity file = findFile(userId, fileId);
+        if (file.getIsDirectory()) {
+            throw new RuntimeException("폴더는 수정할 수 없습니다.");
+        }
+        if (!"txt".equalsIgnoreCase(file.getExtension())) {
+            throw new RuntimeException("텍스트 파일만 편집할 수 있습니다.");
+        }
+        Path filePath = Paths.get(file.getStoragePath());
+        Files.writeString(filePath, content, StandardCharsets.UTF_8);
+        file.setSizeBytes(Files.size(filePath));
+        fileRepository.save(file);
+    }
+
+    // 압축파일(zip/7z/tar/tar.gz) 내부 파일 목록 - 압축을 풀지 않고 엔트리 이름/크기만 읽음.
+    // rar나 단일 gz 등 지원 안 하는 형식은 예외를 던짐 (프론트에서 "지원 안 함"으로 안내).
+    @Transactional(readOnly = true)
+    public List<ArchiveEntryResponse> getArchiveEntries(String userId, String fileId) throws IOException {
+        FileEntity file = findFile(userId, fileId);
+        if (file.getIsDirectory()) {
+            throw new RuntimeException("폴더는 압축 목록을 볼 수 없습니다.");
+        }
+
+        Path filePath = Paths.get(file.getStoragePath());
+        if (!Files.exists(filePath)) {
+            throw new RuntimeException("파일을 찾을 수 없습니다.");
+        }
+
+        String ext = file.getExtension() != null ? file.getExtension().toLowerCase() : "";
+        String lowerName = file.getName() != null ? file.getName().toLowerCase() : "";
+        List<ArchiveEntryResponse> entries = new ArrayList<>();
+
+        if (ext.equals("zip")) {
+            try (ZipFile zipFile = ZipFile.builder().setFile(filePath.toFile()).get()) {
+                Enumeration<ZipArchiveEntry> en = zipFile.getEntries();
+                while (en.hasMoreElements()) {
+                    ZipArchiveEntry e = en.nextElement();
+                    entries.add(new ArchiveEntryResponse(e.getName(), e.isDirectory() ? null : e.getSize(), e.isDirectory()));
+                }
+            }
+        } else if (ext.equals("7z")) {
+            try (SevenZFile sevenZFile = SevenZFile.builder().setFile(filePath.toFile()).get()) {
+                SevenZArchiveEntry e;
+                while ((e = sevenZFile.getNextEntry()) != null) {
+                    entries.add(new ArchiveEntryResponse(e.getName(), e.isDirectory() ? null : e.getSize(), e.isDirectory()));
+                }
+            }
+        } else if (ext.equals("tar")) {
+            try (TarArchiveInputStream tis = new TarArchiveInputStream(Files.newInputStream(filePath))) {
+                TarArchiveEntry e;
+                while ((e = tis.getNextEntry()) != null) {
+                    entries.add(new ArchiveEntryResponse(e.getName(), e.isDirectory() ? null : e.getSize(), e.isDirectory()));
+                }
+            }
+        } else if (lowerName.endsWith(".tar.gz") || ext.equals("tgz")) {
+            try (TarArchiveInputStream tis = new TarArchiveInputStream(new GzipCompressorInputStream(Files.newInputStream(filePath)))) {
+                TarArchiveEntry e;
+                while ((e = tis.getNextEntry()) != null) {
+                    entries.add(new ArchiveEntryResponse(e.getName(), e.isDirectory() ? null : e.getSize(), e.isDirectory()));
+                }
+            }
+        } else {
+            throw new RuntimeException("이 압축 형식은 목록 보기를 지원하지 않습니다.");
+        }
+
+        return entries;
+    }
+
     // 카카오 등 외부 서비스에 잠깐(15분) 공개할 다운로드 링크 생성. 소유권은 여기서 한 번만 확인하고,
     // 이후엔 서명된 토큰 자체가 접근 권한 역할을 한다 (배포 후 app.public-base-url을 실제 도메인으로 바꿔야 동작함).
     @Transactional(readOnly = true)
@@ -452,6 +569,15 @@ public class FileService {
             throw new RuntimeException("해당 파일에 대한 권한이 없습니다.");
         }
         return file;
+    }
+
+    // 인당 최대 저장 용량(file.max-storage-bytes) 초과 여부 확인 - 업로드 시작 전에 미리 막음
+    private void checkStorageQuota(String userId, long incomingBytes) {
+        long used = fileRepository.sumSizeBytesByUserId(userId);
+        if (used + incomingBytes > maxStorageBytes) {
+            long maxGb = maxStorageBytes / 1024 / 1024 / 1024;
+            throw new RuntimeException("저장 용량(최대 " + maxGb + "GB)을 초과해서 업로드할 수 없습니다.");
+        }
     }
 
     // 확장자 추출

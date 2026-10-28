@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getFiles, downloadFile } from '../../api/file';
+import { getFiles, getStorageUsage, downloadFile } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasSidebar.module.css';
 
@@ -20,9 +20,8 @@ interface Props {
   onSelectSource: (source: FileSource | null) => void;
 }
 
-// 저장용량 쪽은 백엔드에 별도 쿼터 개념이 없어서 표시용으로 최상위 폴더 파일 크기 합만 대략 계산함
-// (하위 폴더까지 재귀로 합치려면 백엔드에 집계용 API가 따로 필요함 - 지금은 없어서 근사치)
-const DISPLAY_LIMIT_BYTES = 100 * 1024 * 1024 * 1024;
+// 백엔드(file.max-storage-bytes)에서 실제로 강제하는 인당 최대 용량(30GB)과 맞춰둠
+const DISPLAY_LIMIT_BYTES = 30 * 1024 * 1024 * 1024;
 
 // 1GB 미만이면 MB 단위로 보여줘서, 사용량이 적을 때 "0.0GB"처럼 안 보이게 함
 function formatUsed(bytes: number): string {
@@ -38,9 +37,7 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
 
   useEffect(() => {
     getFiles({ isFavorite: true }).then(setFavorites).catch(console.error);
-    getFiles().then(files => {
-      setUsedBytes(files.reduce((sum, f) => sum + (f.sizeBytes ?? 0), 0));
-    }).catch(console.error);
+    getStorageUsage().then(setUsedBytes).catch(console.error);
   }, [refreshKey]);
 
   const percent = Math.min(100, (usedBytes / DISPLAY_LIMIT_BYTES) * 100);

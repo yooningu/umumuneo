@@ -46,4 +46,11 @@ public class FileRequest {
         @NotBlank(message = "세션 id는 필수입니다.")
         private String sessionId;
     }
+
+    // txt 파일 간단 편집 - 내용 전체를 덮어씀 (빈 파일로 저장할 수도 있으므로 @NotBlank는 안 붙임)
+    @Getter
+    public static class UpdateContent {
+        @NotNull(message = "내용은 필수입니다.")
+        private String content;
+    }
 }

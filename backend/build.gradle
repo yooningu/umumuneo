@@ -41,6 +41,10 @@ dependencies {
     // DB
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
+    // 압축파일(zip/7z/tar/tar.gz) 내부 목록 읽기 - 압축을 풀지 않고 엔트리 목록만 읽음
+    implementation 'org.apache.commons:commons-compress:1.26.1'
+    implementation 'org.tukaani:xz:1.9'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

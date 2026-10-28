@@ -1,5 +1,5 @@
 import client from './client';
-import type { FileItem } from '../types';
+import type { ArchiveEntry, FileItem } from '../types';
 
 export const getFiles = async (params?: {
   parentId?: string;
@@ -115,6 +115,28 @@ export const moveFile = async (id: string, parentId: string | null): Promise<voi
 export const getPreviewBlobUrl = async (id: string): Promise<string> => {
   const res = await client.get(`/files/${id}/view`, { responseType: 'blob' });
   return window.URL.createObjectURL(res.data);
+};
+
+// zip/7z/tar/tar.gz 내부 목록 (압축을 풀지 않고 이름/크기만) - rar 등 지원 안 하는 형식이면 에러 던짐
+export const getArchiveEntries = async (id: string): Promise<ArchiveEntry[]> => {
+  const res = await client.get(`/files/${id}/archive-entries`);
+  return res.data;
+};
+
+// 사이드바 "사용중" 용량 - 폴더 구조와 무관한 전체 파일 크기 합계 (getFiles()로는 루트만 집계되므로 따로 조회)
+export const getStorageUsage = async (): Promise<number> => {
+  const res = await client.get('/files/usage');
+  return res.data.usedBytes;
+};
+
+// txt 파일 내용 (미리보기에서 간단 편집용) - txt 외 형식이면 에러
+export const getTextContent = async (id: string): Promise<string> => {
+  const res = await client.get(`/files/${id}/content`, { responseType: 'text' });
+  return res.data;
+};
+
+export const updateTextContent = async (id: string, content: string): Promise<void> => {
+  await client.put(`/files/${id}/content`, { content });
 };
 
 // NAS에 이미 올라가 있는 파일을 챗봇에 첨부할 때, vision 모델에 넘길 base64로 바로 변환하려고
