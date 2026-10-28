@@ -3,8 +3,10 @@ package com.example.demo.service;
 import com.example.demo.dto.request.FileRequest;
 import com.example.demo.dto.response.FileResponse;
 import com.example.demo.entity.FileEntity;
+import com.example.demo.entity.UploadSession;
 import com.example.demo.entity.User;
 import com.example.demo.repository.FileRepository;
+import com.example.demo.repository.UploadSessionRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.util.FileShareTokenUtil;
 import lombok.RequiredArgsConstructor;
@@ -16,12 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -30,6 +36,7 @@ public class FileService {
 
     private final FileRepository fileRepository;
     private final UserRepository userRepository;
+    private final UploadSessionRepository uploadSessionRepository;
     private final FileShareTokenUtil fileShareTokenUtil;
 
     @Value("${file.upload-dir}")
@@ -136,6 +143,139 @@ public class FileService {
         fileEntity.setEmail(email);
 
         return fileRepository.save(fileEntity);
+    }
+
+    // ===== 큰 파일 조각(청크) 업로드 =====
+    // Cloudflare가 프록시 요청 본문을 100MB로 제한해서, 그보다 큰 파일은 /upload로 한 번에 못 올림.
+    // 그래서 큰 파일은 init(세션 시작) → chunk(조각마다 여러 번) → complete(합치기) 순서로 나눠 보낸다.
+    // 받은 조각은 DB가 아니라 uploadDir/{userId}/_chunks/{sessionId}/{index} 경로에 그냥 파일로 쌓아두고,
+    // complete 시점에 순서대로 이어붙여서 진짜 파일을 만든다.
+
+    @Transactional
+    public String initChunkedUpload(String userId, FileRequest.InitChunkedUpload request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        UploadSession session = new UploadSession();
+        session.setUser(user);
+        session.setFilename(request.getFilename());
+        session.setContentType(request.getContentType());
+        session.setTotalSize(request.getTotalSize());
+        session.setTotalChunks(request.getTotalChunks());
+        session.setParentId(request.getParentId());
+        session.setSource(request.getSource());
+        uploadSessionRepository.save(session);
+        return session.getId();
+    }
+
+    // 조각 하나 저장 - DB는 안 건드리고 디스크에만 씀. readOnly 트랜잭션은 findUploadSession이
+    // session.getUser()(지연 로딩)를 안전하게 읽을 수 있도록 Hibernate 세션을 열어두기 위함.
+    @Transactional(readOnly = true)
+    public void uploadChunk(String userId, String sessionId, int chunkIndex, MultipartFile chunk) throws IOException {
+        findUploadSession(userId, sessionId); // 존재 + 소유권 확인
+        Path chunkDir = chunkDir(userId, sessionId);
+        Files.createDirectories(chunkDir);
+        Files.copy(chunk.getInputStream(), chunkDir.resolve(String.valueOf(chunkIndex)), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    // 지금까지 받은 조각 번호들 - 중간에 끊겼다가 재개할 때, 이미 보낸 조각은 다시 안 보내려고 씀
+    @Transactional(readOnly = true)
+    public Set<Integer> getUploadedChunks(String userId, String sessionId) throws IOException {
+        findUploadSession(userId, sessionId);
+        Path chunkDir = chunkDir(userId, sessionId);
+        if (!Files.exists(chunkDir)) return Set.of();
+        try (var stream = Files.list(chunkDir)) {
+            Set<Integer> result = new HashSet<>();
+            stream.forEach(p -> result.add(Integer.parseInt(p.getFileName().toString())));
+            return result;
+        }
+    }
+
+    // 조각이 전부 모이면 순서대로 이어붙여서 진짜 FileEntity로 만들고, 임시 조각들은 정리한다
+    @Transactional
+    public FileResponse completeChunkedUpload(String userId, String sessionId) throws IOException {
+        UploadSession session = findUploadSession(userId, sessionId);
+        Path chunkDir = chunkDir(userId, sessionId);
+
+        for (int i = 0; i < session.getTotalChunks(); i++) {
+            if (!Files.exists(chunkDir.resolve(String.valueOf(i)))) {
+                throw new RuntimeException("아직 전부 업로드되지 않았습니다 (조각 " + i + "번 누락).");
+            }
+        }
+
+        FileEntity parent = null;
+        if (session.getParentId() != null) {
+            parent = fileRepository.findById(session.getParentId())
+                    .orElseThrow(() -> new RuntimeException("폴더를 찾을 수 없습니다."));
+        }
+
+        Path userDir = Paths.get(uploadDir, userId);
+        Files.createDirectories(userDir);
+        String extension = getExtension(session.getFilename());
+        String storedName = UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+        Path targetPath = userDir.resolve(storedName);
+
+        try (OutputStream out = Files.newOutputStream(targetPath)) {
+            for (int i = 0; i < session.getTotalChunks(); i++) {
+                Files.copy(chunkDir.resolve(String.valueOf(i)), out);
+            }
+        }
+
+        FileEntity.FileSource fileSource = session.getSource() != null && !session.getSource().isBlank()
+                ? FileEntity.FileSource.valueOf(session.getSource().toUpperCase())
+                : FileEntity.FileSource.UPLOAD;
+
+        FileEntity fileEntity = new FileEntity();
+        fileEntity.setUser(session.getUser());
+        fileEntity.setParent(parent);
+        fileEntity.setName(session.getFilename());
+        fileEntity.setStoragePath(targetPath.toString());
+        fileEntity.setIsDirectory(false);
+        fileEntity.setSizeBytes(Files.size(targetPath));
+        fileEntity.setMimeType(session.getContentType());
+        fileEntity.setExtension(extension.isEmpty() ? null : extension);
+        fileEntity.setIsFavorite(false);
+        fileEntity.setSource(fileSource);
+        fileRepository.save(fileEntity);
+
+        deleteDirectoryRecursive(chunkDir);
+        uploadSessionRepository.delete(session);
+
+        return new FileResponse(fileEntity);
+    }
+
+    // 업로드 취소 - 받아둔 조각들과 세션을 전부 지운다 (완성 안 된 파일은 서버에 안 남김)
+    @Transactional
+    public void cancelChunkedUpload(String userId, String sessionId) throws IOException {
+        UploadSession session = findUploadSession(userId, sessionId);
+        deleteDirectoryRecursive(chunkDir(userId, sessionId));
+        uploadSessionRepository.delete(session);
+    }
+
+    private UploadSession findUploadSession(String userId, String sessionId) {
+        UploadSession session = uploadSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("업로드 세션을 찾을 수 없습니다."));
+        if (!session.getUser().getId().equals(userId)) {
+            throw new RuntimeException("해당 업로드 세션에 대한 권한이 없습니다.");
+        }
+        return session;
+    }
+
+    private Path chunkDir(String userId, String sessionId) {
+        return Paths.get(uploadDir, userId, "_chunks", sessionId);
+    }
+
+    private void deleteDirectoryRecursive(Path dir) throws IOException {
+        if (!Files.exists(dir)) return;
+        try (var stream = Files.walk(dir)) {
+            stream.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.delete(p);
+                } catch (IOException ignored) {
+                    // 임시 조각 정리 실패는 치명적이지 않으므로 무시
+                }
+            });
+        }
     }
 
     // 폴더 생성 (생성된 폴더 정보를 반환 - 폴더 업로드 시 그 안에 파일을 바로 넣을 수 있게 id가 필요함)

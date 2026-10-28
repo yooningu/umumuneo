@@ -1,10 +1,23 @@
-import { uploadFiles, createDirectory } from '../api/file';
+import {
+  uploadFiles,
+  createDirectory,
+  initChunkedUpload,
+  uploadChunk,
+  getUploadedChunks,
+  completeChunkedUpload,
+  cancelChunkedUpload,
+} from '../api/file';
+
+// Cloudflare가 프록시 요청 본문을 100MB로 제한해서, 그보다 큰 파일은 한 번에 못 올림.
+// 이 크기를 넘으면 조각내서 나눠 보낸다 (여유 있게 80MB를 기준으로, 20MB씩 쪼갬).
+const CHUNK_THRESHOLD = 80 * 1024 * 1024;
+const CHUNK_SIZE = 20 * 1024 * 1024;
 
 export interface UploadTask {
   id: string;
   name: string;
   progress: number; // 0~100
-  status: 'queued' | 'uploading' | 'done' | 'error';
+  status: 'queued' | 'uploading' | 'paused' | 'done' | 'error' | 'canceled';
 }
 
 export interface DroppedEntry {
@@ -39,12 +52,12 @@ function upsertTask(task: UploadTask) {
   emit();
 }
 
-// 완료/실패 항목은 잠깐 보여준 뒤 목록에서 자동으로 지운다
-function scheduleCleanup(id: string) {
+// 완료/실패/취소 항목은 잠깐 보여준 뒤 목록에서 자동으로 지운다
+function scheduleCleanup(id: string, delay = 3000) {
   setTimeout(() => {
     tasks = tasks.filter(t => t.id !== id);
     emit();
-  }, 3000);
+  }, delay);
 }
 
 let counter = 0;
@@ -69,18 +82,80 @@ interface Job {
   id: string;
   file: File;
   parentId: string | undefined;
+  controller: AbortController | null; // 실제로 전송 중일 때만 값이 있음
+  paused: boolean;
+  canceled: boolean;
+  // CHUNK_THRESHOLD보다 큰 파일만 사용 - 조각 업로드 진행 상태 (일시정지 후 재개해도 이미 보낸
+  // 조각은 다시 안 보내는, 진짜 이어받기가 가능한 유일한 경우)
+  chunked?: {
+    sessionId: string;
+    totalChunks: number;
+    uploadedChunks: Set<number>;
+  };
 }
 
 // 실제 업로드는 여기 FIFO 큐에 쌓아두고 한 번에 하나씩만 처리한다. 업로드 도중에 또 다른 파일을
 // 올려도(버튼을 또 누르거나 드래그앤드롭을 또 하거나) 기존 걸 밀어내거나 같이 뒤섞이지 않고,
 // 먼저 넣은 것부터 순서대로 끝까지 진행된다.
 const jobQueue: Job[] = [];
+const jobsById = new Map<string, Job>();
 let isProcessing = false;
 
 function enqueueJob(job: Job) {
+  jobsById.set(job.id, job);
   jobQueue.push(job);
   upsertTask({ id: job.id, name: job.file.name, progress: 0, status: 'queued' });
   void processQueue();
+}
+
+// 큰 파일(CHUNK_THRESHOLD 초과)을 20MB씩 쪼개서 순서대로 올린다. 이미 올라간 조각이 있으면
+// (재개하는 경우) 건너뛰어서 처음부터 다시 보내지 않는다 - 바이트 단위까지는 아니지만 조각
+// 단위로는 진짜 이어받기가 된다.
+async function uploadChunked(job: Job): Promise<void> {
+  const totalChunks = Math.ceil(job.file.size / CHUNK_SIZE);
+
+  if (!job.chunked) {
+    const sessionId = await initChunkedUpload({
+      filename: job.file.name,
+      totalSize: job.file.size,
+      totalChunks,
+      contentType: job.file.type || undefined,
+      parentId: job.parentId,
+      source: 'UPLOAD',
+    });
+    job.chunked = { sessionId, totalChunks, uploadedChunks: new Set() };
+  } else {
+    // 재개하는 경우 - 서버 기준으로 이미 저장된 조각을 다시 확인한다(여러 기기/탭에서도 안전)
+    const already = await getUploadedChunks(job.chunked.sessionId);
+    job.chunked.uploadedChunks = new Set(already);
+  }
+
+  const { sessionId, uploadedChunks } = job.chunked;
+
+  for (let i = 0; i < totalChunks; i++) {
+    if (uploadedChunks.has(i)) continue;
+    if (job.paused || job.canceled) throw new Error('upload interrupted');
+
+    job.controller = new AbortController();
+    const start = i * CHUNK_SIZE;
+    const chunk = job.file.slice(start, start + CHUNK_SIZE);
+    await uploadChunk(sessionId, i, chunk, job.controller.signal);
+    uploadedChunks.add(i);
+    upsertTask({
+      id: job.id,
+      name: job.file.name,
+      progress: Math.round((uploadedChunks.size / totalChunks) * 100),
+      status: 'uploading',
+    });
+  }
+
+  await completeChunkedUpload(sessionId);
+  job.chunked = undefined;
+}
+
+function chunkedProgress(job: Job): number {
+  if (!job.chunked) return 0;
+  return Math.round((job.chunked.uploadedChunks.size / job.chunked.totalChunks) * 100);
 }
 
 async function processQueue() {
@@ -88,21 +163,87 @@ async function processQueue() {
   isProcessing = true;
   while (jobQueue.length > 0) {
     const job = jobQueue.shift()!;
-    upsertTask({ id: job.id, name: job.file.name, progress: 0, status: 'uploading' });
+    // 대기 중일 때 취소/일시정지됐으면 실제로 업로드를 시작하지 않고 건너뜀
+    if (job.canceled) continue;
+    if (job.paused) continue;
+
+    upsertTask({ id: job.id, name: job.file.name, progress: chunkedProgress(job), status: 'uploading' });
     try {
-      await uploadFiles([job.file], job.parentId, 'UPLOAD', (percent) => {
-        upsertTask({ id: job.id, name: job.file.name, progress: percent, status: 'uploading' });
-      });
+      if (job.file.size > CHUNK_THRESHOLD) {
+        await uploadChunked(job);
+      } else {
+        job.controller = new AbortController();
+        await uploadFiles([job.file], job.parentId, 'UPLOAD', (percent) => {
+          upsertTask({ id: job.id, name: job.file.name, progress: percent, status: 'uploading' });
+        }, job.controller.signal);
+      }
       upsertTask({ id: job.id, name: job.file.name, progress: 100, status: 'done' });
+      jobsById.delete(job.id);
       notifyDone();
-    } catch (e) {
-      console.error(e);
-      upsertTask({ id: job.id, name: job.file.name, progress: 0, status: 'error' });
-    } finally {
       scheduleCleanup(job.id);
+    } catch (e) {
+      if (job.canceled) {
+        if (job.chunked) cancelChunkedUpload(job.chunked.sessionId).catch(() => {});
+        upsertTask({ id: job.id, name: job.file.name, progress: 0, status: 'canceled' });
+        jobsById.delete(job.id);
+        scheduleCleanup(job.id, 1500);
+      } else if (job.paused) {
+        // 조각 업로드 중이었으면 이미 보낸 조각은 서버에 그대로 남아있어서, 재개 시 그만큼은 건너뜀.
+        // 조각 업로드가 아니었으면(작은 파일) 재개할 때 처음부터 다시 올라감.
+        upsertTask({ id: job.id, name: job.file.name, progress: chunkedProgress(job), status: 'paused' });
+      } else {
+        console.error(e);
+        if (job.chunked) cancelChunkedUpload(job.chunked.sessionId).catch(() => {});
+        upsertTask({ id: job.id, name: job.file.name, progress: 0, status: 'error' });
+        jobsById.delete(job.id);
+        scheduleCleanup(job.id);
+      }
+    } finally {
+      job.controller = null;
     }
   }
   isProcessing = false;
+}
+
+// 취소 - 대기 중이었으면 큐에서 그냥 빠지고, 전송 중이었으면 요청을 중단시킨다.
+// 둘 다 서버에는 아무것도 안 남는다(끊긴 업로드는 저장 안 됨).
+export function cancelUpload(id: string) {
+  const job = jobsById.get(id);
+  if (!job) return;
+  job.canceled = true;
+  if (job.controller) {
+    job.controller.abort();
+  } else {
+    // 아직 네트워크 요청 자체가 시작 안 된 상태(큐 대기 중, 또는 일시정지 상태) - 바로 취소 처리.
+    // 조각 업로드를 하다가 일시정지해둔 상태였다면 서버에 남아있는 조각들도 같이 정리한다.
+    if (job.chunked) cancelChunkedUpload(job.chunked.sessionId).catch(() => {});
+    upsertTask({ id, name: job.file.name, progress: 0, status: 'canceled' });
+    jobsById.delete(id);
+    scheduleCleanup(id, 1500);
+  }
+}
+
+// 일시정지 - 대기 중인 파일은 그냥 줄에서 빠져서 다른 파일이 먼저 올라가게 하고,
+// 이미 전송 중인 파일은 그 요청을 중단한다(바이트 단위로 이어받는 게 아니라, 재개하면 처음부터 다시 올라감).
+export function pauseUpload(id: string) {
+  const job = jobsById.get(id);
+  if (!job) return;
+  job.paused = true;
+  if (job.controller) {
+    job.controller.abort();
+  } else {
+    upsertTask({ id, name: job.file.name, progress: chunkedProgress(job), status: 'paused' });
+  }
+}
+
+// 재개 - 큐 맨 뒤에 다시 넣는다
+export function resumeUpload(id: string) {
+  const job = jobsById.get(id);
+  if (!job || !job.paused) return;
+  job.paused = false;
+  jobQueue.push(job);
+  upsertTask({ id, name: job.file.name, progress: chunkedProgress(job), status: 'queued' });
+  void processQueue();
 }
 
 // 파일/폴더 목록을 큐에 넣는다. relativePath에 "/"가 있으면(폴더에서 왔으면) 실제로 같은 구조의
@@ -130,7 +271,7 @@ export async function enqueueUpload(entries: DroppedEntry[], parentId: string | 
     segments.pop(); // 파일명 제거
     const dirPath = segments.join('/');
     const targetParentId = dirPath ? await getOrCreateDir(dirPath) : parentId;
-    enqueueJob({ id: nextId(), file, parentId: targetParentId });
+    enqueueJob({ id: nextId(), file, parentId: targetParentId, controller: null, paused: false, canceled: false });
   }
 }
 

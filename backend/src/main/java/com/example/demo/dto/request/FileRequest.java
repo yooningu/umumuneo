@@ -1,6 +1,7 @@
 package com.example.demo.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 public class FileRequest {
@@ -22,5 +23,27 @@ public class FileRequest {
     public static class Move {
         // null이면 최상위(루트)로 이동
         private String parentId;
+    }
+
+    // 큰 파일을 조각내서 올리기 시작할 때 - Cloudflare의 100MB 요청 본문 제한 때문에
+    // 그보다 큰 파일은 /upload로 한 번에 못 올려서 /upload/init → /upload/chunk(여러 번) →
+    // /upload/complete 순서로 나눠 보냄
+    @Getter
+    public static class InitChunkedUpload {
+        @NotBlank(message = "파일 이름은 필수입니다.")
+        private String filename;
+        @NotNull(message = "전체 용량은 필수입니다.")
+        private Long totalSize;
+        @NotNull(message = "조각 개수는 필수입니다.")
+        private Integer totalChunks;
+        private String contentType;
+        private String parentId;
+        private String source;
+    }
+
+    @Getter
+    public static class SessionId {
+        @NotBlank(message = "세션 id는 필수입니다.")
+        private String sessionId;
     }
 }

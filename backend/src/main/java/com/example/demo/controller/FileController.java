@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/files")
@@ -51,6 +53,57 @@ public class FileController {
             @RequestParam(required = false) String source
     ) throws IOException {
         return ResponseEntity.status(201).body(fileService.uploadFiles(userId, files, parentId, source));
+    }
+
+    // ===== 큰 파일 조각 업로드 (Cloudflare 100MB 요청 본문 제한 우회용) =====
+
+    // POST /api/v1/files/upload/init - 조각 업로드 시작, 세션 id 발급
+    @PostMapping("/upload/init")
+    public ResponseEntity<Map<String, String>> initChunkedUpload(
+            @AuthenticationPrincipal String userId,
+            @Valid @RequestBody FileRequest.InitChunkedUpload request
+    ) {
+        return ResponseEntity.ok(Map.of("sessionId", fileService.initChunkedUpload(userId, request)));
+    }
+
+    // POST /api/v1/files/upload/chunk - 조각 하나 업로드
+    @PostMapping("/upload/chunk")
+    public ResponseEntity<Void> uploadChunk(
+            @AuthenticationPrincipal String userId,
+            @RequestParam String sessionId,
+            @RequestParam int chunkIndex,
+            @RequestParam("chunk") MultipartFile chunk
+    ) throws IOException {
+        fileService.uploadChunk(userId, sessionId, chunkIndex, chunk);
+        return ResponseEntity.ok().build();
+    }
+
+    // GET /api/v1/files/upload/{sessionId}/chunks - 지금까지 받은 조각 번호들 (재개 시 중복 전송 방지)
+    @GetMapping("/upload/{sessionId}/chunks")
+    public ResponseEntity<Set<Integer>> getUploadedChunks(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String sessionId
+    ) throws IOException {
+        return ResponseEntity.ok(fileService.getUploadedChunks(userId, sessionId));
+    }
+
+    // POST /api/v1/files/upload/complete - 조각이 전부 모이면 하나로 합쳐서 진짜 파일로 만듦
+    @PostMapping("/upload/complete")
+    public ResponseEntity<FileResponse> completeChunkedUpload(
+            @AuthenticationPrincipal String userId,
+            @Valid @RequestBody FileRequest.SessionId request
+    ) throws IOException {
+        return ResponseEntity.status(201).body(fileService.completeChunkedUpload(userId, request.getSessionId()));
+    }
+
+    // DELETE /api/v1/files/upload/{sessionId} - 업로드 취소, 받아둔 조각들 정리
+    @DeleteMapping("/upload/{sessionId}")
+    public ResponseEntity<Void> cancelChunkedUpload(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String sessionId
+    ) throws IOException {
+        fileService.cancelChunkedUpload(userId, sessionId);
+        return ResponseEntity.noContent().build();
     }
 
     // POST /api/v1/files/directory

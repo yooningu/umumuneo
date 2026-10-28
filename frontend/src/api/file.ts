@@ -15,7 +15,8 @@ export const uploadFiles = async (
   files: File[],
   parentId?: string,
   source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL',
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  signal?: AbortSignal
 ): Promise<FileItem[]> => {
   const formData = new FormData();
   files.forEach(f => formData.append('file', f));
@@ -26,6 +27,7 @@ export const uploadFiles = async (
     onUploadProgress: onProgress
       ? (e) => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
       : undefined,
+    signal,
   });
   return res.data;
 };
@@ -33,6 +35,52 @@ export const uploadFiles = async (
 export const createDirectory = async (name: string, parentId?: string): Promise<FileItem> => {
   const res = await client.post('/files/directory', { name, parentId });
   return res.data;
+};
+
+// ===== 큰 파일 조각(청크) 업로드 - Cloudflare가 프록시 요청 본문을 100MB로 제한해서,
+// 그보다 큰 파일은 /files/upload로 한 번에 못 올리고 조각내서 나눠 보내야 함 =====
+
+export const initChunkedUpload = async (params: {
+  filename: string;
+  totalSize: number;
+  totalChunks: number;
+  contentType?: string;
+  parentId?: string;
+  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL';
+}): Promise<string> => {
+  const res = await client.post('/files/upload/init', params);
+  return res.data.sessionId;
+};
+
+export const uploadChunk = async (
+  sessionId: string,
+  chunkIndex: number,
+  chunk: Blob,
+  signal?: AbortSignal
+): Promise<void> => {
+  const formData = new FormData();
+  formData.append('sessionId', sessionId);
+  formData.append('chunkIndex', String(chunkIndex));
+  formData.append('chunk', chunk);
+  await client.post('/files/upload/chunk', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    signal,
+  });
+};
+
+// 중간에 끊겼다가 재개할 때, 서버에 이미 저장된 조각 번호들을 받아와서 중복 전송을 피하는 데 씀
+export const getUploadedChunks = async (sessionId: string): Promise<number[]> => {
+  const res = await client.get(`/files/upload/${sessionId}/chunks`);
+  return res.data;
+};
+
+export const completeChunkedUpload = async (sessionId: string): Promise<FileItem> => {
+  const res = await client.post('/files/upload/complete', { sessionId });
+  return res.data;
+};
+
+export const cancelChunkedUpload = async (sessionId: string): Promise<void> => {
+  await client.delete(`/files/upload/${sessionId}`);
 };
 
 export const toggleFavorite = async (id: string): Promise<void> => {
