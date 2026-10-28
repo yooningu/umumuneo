@@ -78,7 +78,6 @@
 .viewToggle {
   display: flex;
   border-radius: 10px;
-  overflow: hidden;
   padding: 4px;
   background-color: var(--gray5);
   border: 1px solid var(--gray3);
@@ -101,6 +100,7 @@
   background-color: var(--brand);
   color: var(--white);
   font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 6px rgba(108, 108, 108, 0.45);
 }
 
 .addBtn {

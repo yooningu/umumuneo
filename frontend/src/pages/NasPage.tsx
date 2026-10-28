@@ -30,7 +30,13 @@ export default function NasPage() {
 
   const openFolder = (id: string, name: string) => {
     // sourceFilter는 그대로 유지 - 분류를 보던 중 폴더에 들어가도 같은 분류 안에서 탐색되게
-    setFolderStack(prev => [...prev, { id, name }]);
+    setFolderStack(prev => {
+      // 검색 결과(폴더 깊이 무관하게 평면으로 보여줌)에서 폴더를 열면, 검색 전에 있던 경로에
+      // 이미 그 폴더가 들어있을 수 있음 - 중복 key가 생기지 않도록 그 지점으로 되돌아가는 것으로 취급
+      const existingIndex = prev.findIndex(f => f.id === id);
+      if (existingIndex !== -1) return prev.slice(0, existingIndex + 1);
+      return [...prev, { id, name }];
+    });
     setParentId(id);
     setSearch('');
   };

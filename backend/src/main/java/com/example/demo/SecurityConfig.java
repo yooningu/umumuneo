@@ -49,6 +49,10 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        // preflight(OPTIONS) 응답을 브라우저가 1시간 캐싱하게 함 - 이게 없으면 Authorization/
+        // Content-Type 헤더가 붙는 모든 요청마다 매번 OPTIONS 왕복이 먼저 생겨서, Cloudflare
+        // Tunnel을 거치는 지금 구조에서는 API 호출마다 왕복이 실질적으로 2배가 됨
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
