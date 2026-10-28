@@ -54,6 +54,14 @@ export default function NasPage() {
       />
 
       <div className={styles.body}>
+        <div className={styles.sidePane}>
+          <NasSidebar
+            refreshKey={refreshKey}
+            onOpenFolder={openFolder}
+            sourceFilter={sourceFilter}
+            onSelectSource={selectSource}
+          />
+        </div>
         <div className={styles.mainPane}>
           <NasFileGrid
             parentId={parentId}
@@ -63,14 +71,6 @@ export default function NasPage() {
             refreshKey={refreshKey}
             onOpenFolder={openFolder}
             onChanged={bump}
-          />
-        </div>
-        <div className={styles.sidePane}>
-          <NasSidebar
-            refreshKey={refreshKey}
-            onOpenFolder={openFolder}
-            sourceFilter={sourceFilter}
-            onSelectSource={selectSource}
           />
         </div>
       </div>

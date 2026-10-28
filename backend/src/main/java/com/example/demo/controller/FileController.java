@@ -55,12 +55,11 @@ public class FileController {
 
     // POST /api/v1/files/directory
     @PostMapping("/directory")
-    public ResponseEntity<Void> createDirectory(
+    public ResponseEntity<FileResponse> createDirectory(
             @AuthenticationPrincipal String userId,
             @Valid @RequestBody FileRequest.CreateDirectory request
     ) {
-        fileService.createDirectory(userId, request);
-        return ResponseEntity.status(201).build();
+        return ResponseEntity.status(201).body(fileService.createDirectory(userId, request));
     }
 
     // PATCH /api/v1/files/{id}/favorite
@@ -81,6 +80,17 @@ public class FileController {
             @Valid @RequestBody FileRequest.Rename request
     ) {
         fileService.rename(userId, id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    // PATCH /api/v1/files/{id}/move (다른 폴더로 이동 - 드래그앤드롭)
+    @PatchMapping("/{id}/move")
+    public ResponseEntity<Void> move(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id,
+            @RequestBody FileRequest.Move request
+    ) {
+        fileService.move(userId, id, request);
         return ResponseEntity.ok().build();
     }
 

@@ -17,4 +17,10 @@ public class FileRequest {
         @NotBlank(message = "파일 이름은 필수입니다.")
         private String name;
     }
+
+    @Getter
+    public static class Move {
+        // null이면 최상위(루트)로 이동
+        private String parentId;
+    }
 }

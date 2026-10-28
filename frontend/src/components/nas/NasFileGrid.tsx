@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { getFiles, uploadFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile } from '../../api/file';
+import { useState, useEffect, useRef, type DragEvent } from 'react';
+import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
+import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
 import type { FileItem, NasTypeFilter } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
@@ -19,6 +20,10 @@ interface Props {
 type SortKey = 'name' | 'updatedAt' | 'sizeBytes';
 
 const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
+
+// 타일을 드래그해서 다른 폴더 위에 놓을 때(이동) dataTransfer에 담는 커스텀 타입 -
+// OS에서 끌어온 진짜 파일 드래그와 구분하는 용도 (저건 'Files' 타입이 붙어있음)
+const NAS_IDS_MIME = 'application/x-nas-ids';
 
 function matchesTypeFilter(f: FileItem, filter: NasTypeFilter): boolean {
   if (filter === 'ALL') return true;
@@ -65,11 +70,18 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; mode: 'file' | 'empty' } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [isFileDragging, setIsFileDragging] = useState(false); // OS에서 파일/폴더를 끌어다 놓는 중인지
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null); // 타일 드래그 중 올려놓은 폴더 타일
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const tileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragBaseSelection = useRef<Set<string>>(new Set());
   const dragAdditive = useRef(false);
+  const fileDragCounter = useRef(0);
+
+  // 업로드 큐에서 파일 하나가 다 올라갈 때마다(큐가 순서대로 처리하는 중이라 여러 번 올 수 있음)
+  // 지금 보고 있는 목록을 새로고침한다
+  useEffect(() => subscribeUploadDone(onChanged), [onChanged]);
 
   useEffect(() => {
     setSelected(new Set());
@@ -154,14 +166,77 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
     downloadFile(f.id, f.name).catch(console.error);
   };
 
-  const handleUpload = async (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
+  // 타일을 드래그해서 다른 폴더 타일 위에 놓으면 그 폴더로 이동시킨다.
+  // 드래그한 타일이 이미 선택되어 있었으면(여러 개 선택 상태) 선택된 것 전부를 같이 옮긴다.
+  const handleTileDragStart = (e: DragEvent, f: FileItem) => {
+    const ids = selected.has(f.id) ? [...selected] : [f.id];
+    e.dataTransfer.setData(NAS_IDS_MIME, JSON.stringify(ids));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleFolderDragOver = (e: DragEvent, folder: FileItem) => {
+    if (!e.dataTransfer.types.includes(NAS_IDS_MIME)) return; // OS 파일 드래그는 그리드 전체에서 처리하므로 여기선 무시
+    e.preventDefault();
+    e.stopPropagation();
+    if (dropTargetId !== folder.id) setDropTargetId(folder.id);
+  };
+
+  const handleFolderDragLeave = (e: DragEvent, folder: FileItem) => {
+    if (!e.dataTransfer.types.includes(NAS_IDS_MIME)) return;
+    if (dropTargetId === folder.id) setDropTargetId(null);
+  };
+
+  const handleFolderDrop = async (e: DragEvent, folder: FileItem) => {
+    if (!e.dataTransfer.types.includes(NAS_IDS_MIME)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetId(null);
+    const raw = e.dataTransfer.getData(NAS_IDS_MIME);
+    if (!raw) return;
+    const ids: string[] = JSON.parse(raw).filter((id: string) => id !== folder.id);
+    if (ids.length === 0) return;
     try {
-      await uploadFiles(Array.from(fileList), parentId ?? undefined);
+      await Promise.all(ids.map(id => moveFile(id, folder.id)));
+      setSelected(new Set());
       onChanged();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
     }
+  };
+
+  // 파일 input(webkitdirectory 포함)에서 고른 파일들을 업로드 큐에 넣는다.
+  // webkitRelativePath가 있으면(폴더로 고른 경우) 그 경로 그대로 폴더 구조를 유지해서 올린다.
+  const handleFileListUpload = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const entries: DroppedEntry[] = Array.from(fileList).map(file => ({
+      file,
+      relativePath: file.webkitRelativePath || file.name,
+    }));
+    enqueueUpload(entries, parentId ?? undefined).catch(console.error);
+  };
+
+  // 드래그앤드롭 - 브라우저 기본 동작(파일을 열어버림)을 막아야 드롭이 동작함
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    if (!e.dataTransfer.types.includes('Files')) return;
+    fileDragCounter.current++;
+    setIsFileDragging(true);
+  };
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+  };
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    fileDragCounter.current = Math.max(0, fileDragCounter.current - 1);
+    if (fileDragCounter.current === 0) setIsFileDragging(false);
+  };
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    fileDragCounter.current = 0;
+    setIsFileDragging(false);
+    collectDroppedEntries(e.dataTransfer)
+      .then(entries => enqueueUpload(entries, parentId ?? undefined))
+      .catch(console.error);
   };
 
   const handleNewFolder = async () => {
@@ -254,7 +329,18 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
   ];
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isFileDragging && (
+        <div className={styles.dragOverlay}>
+          <span>여기에 파일/폴더를 놓으세요</span>
+        </div>
+      )}
       <div className={styles.actionRow}>
         <button className={styles.actionBtn} onClick={handleNewFolder}>+ 새 폴더</button>
         <button className={styles.actionBtn} onClick={() => fileInputRef.current?.click()}>파일 업로드</button>
@@ -264,7 +350,7 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
           type="file"
           multiple
           hidden
-          onChange={e => { handleUpload(e.target.files); e.target.value = ''; }}
+          onChange={e => { handleFileListUpload(e.target.files); e.target.value = ''; }}
         />
         <input
           ref={folderInputRef}
@@ -273,7 +359,7 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
           hidden
           // @ts-expect-error webkitdirectory는 표준 React 타입엔 없지만 Chrome/Edge가 폴더 업로드용으로 지원하는 속성
           webkitdirectory=""
-          onChange={e => { handleUpload(e.target.files); e.target.value = ''; }}
+          onChange={e => { handleFileListUpload(e.target.files); e.target.value = ''; }}
         />
 
         {selected.size > 0 && (
@@ -305,9 +391,14 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
                 if (el) tileRefs.current.set(f.id, el);
                 else tileRefs.current.delete(f.id);
               }}
-              className={`${styles.tile} ${selected.has(f.id) ? styles.tileSelected : ''}`.trim()}
+              className={`${styles.tile} ${selected.has(f.id) ? styles.tileSelected : ''} ${dropTargetId === f.id ? styles.tileDropTarget : ''}`.trim()}
               onClick={e => handleTileClick(e, f)}
               onDoubleClick={() => handleOpen(f)}
+              draggable
+              onDragStart={e => handleTileDragStart(e, f)}
+              onDragOver={f.isDirectory ? (e => handleFolderDragOver(e, f)) : undefined}
+              onDragLeave={f.isDirectory ? (e => handleFolderDragLeave(e, f)) : undefined}
+              onDrop={f.isDirectory ? (e => handleFolderDrop(e, f)) : undefined}
             >
               <div className={styles.tileIcon}>
                 <NasThumbnail file={f} fallback={fileIcon(f)} />

@@ -11,6 +11,7 @@ import ChatPage from './pages/ChatPage';
 import NasPage from './pages/NasPage';
 import MailPage from './pages/MailPage';
 import SettingsPage from './pages/SettingsPage';
+import UploadProgressWidget from './components/common/UploadProgressWidget';
 import { getMe } from './api/user';
 import styles from './App.module.css';
 
@@ -112,6 +113,8 @@ export default function App() {
         <Route path="/mail" element={<PrivateRoute><MailPage /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
       </Routes>
+      {/* 어느 페이지로 이동해도 유지되는 업로드 진행 위젯 - 업로드 중에 다른 페이지로 가도 끊기지 않음 */}
+      <UploadProgressWidget />
     </BrowserRouter>
   );
 }

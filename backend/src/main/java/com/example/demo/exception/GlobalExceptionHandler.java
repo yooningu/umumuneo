@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 
@@ -21,6 +22,19 @@ public class GlobalExceptionHandler {
                 .body(Map.of(
                         "error", "InvalidRefreshToken",
                         "message", e.getMessage() != null ? e.getMessage() : "유효하지 않은 Refresh Token입니다."
+                ));
+    }
+
+    // 존재하지 않는 경로로 요청 → 404 (예전엔 아래 catch-all(Exception.class)에 걸려서
+    // "경로가 아예 없음"도 500으로 나갔는데, 그러면 "배포가 안 됐다/경로 오타"랑 "서버 코드가
+    // 실제로 터졌다"를 구분할 수가 없어서 혼란스러웠음 - 제대로 404로 분리함)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNoResourceFound(NoResourceFoundException e) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "error", "NotFound",
+                        "message", "존재하지 않는 API 경로입니다: " + e.getResourcePath()
                 ));
     }
 

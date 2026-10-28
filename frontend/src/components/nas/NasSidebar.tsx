@@ -22,8 +22,12 @@ interface Props {
 // (하위 폴더까지 재귀로 합치려면 백엔드에 집계용 API가 따로 필요함 - 지금은 없어서 근사치)
 const DISPLAY_LIMIT_BYTES = 100 * 1024 * 1024 * 1024;
 
-function formatGB(bytes: number): string {
-  return (bytes / 1024 / 1024 / 1024).toFixed(1);
+// 1GB 미만이면 MB 단위로 보여줘서, 사용량이 적을 때 "0.0GB"처럼 안 보이게 함
+function formatUsed(bytes: number): string {
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  }
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}GB`;
 }
 
 export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onSelectSource }: Props) {
@@ -76,7 +80,7 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
         <div className={styles.sectionTitle}>저장용량</div>
         <div className={styles.storageRow}>
           <span>사용중</span>
-          <span>{formatGB(usedBytes)}GB / {DISPLAY_LIMIT_BYTES / 1024 / 1024 / 1024}GB</span>
+          <span>{formatUsed(usedBytes)} / {DISPLAY_LIMIT_BYTES / 1024 / 1024 / 1024}GB</span>
         </div>
         <div className={styles.storageBarTrack}>
           <div className={styles.storageBarFill} style={{ width: `${percent}%` }} />

@@ -1,0 +1,76 @@
+.container {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  background-color: var(--white);
+  border: 1px solid var(--gray4);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  z-index: 2000;
+}
+
+.header {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
+  margin-bottom: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--font-s);
+}
+
+.itemName {
+  min-width: 0;
+  color: var(--gray2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.itemStatus {
+  flex-shrink: 0;
+  color: var(--gray3);
+}
+
+.track {
+  height: 5px;
+  border-radius: 999px;
+  background-color: var(--gray5);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background-color: var(--blue);
+  transition: width 0.15s ease;
+}
+
+.fillDone {
+  background-color: var(--green);
+}
+
+.fillError {
+  background-color: var(--red);
+}

@@ -14,7 +14,8 @@ export const getFiles = async (params?: {
 export const uploadFiles = async (
   files: File[],
   parentId?: string,
-  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL'
+  source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL',
+  onProgress?: (percent: number) => void
 ): Promise<FileItem[]> => {
   const formData = new FormData();
   files.forEach(f => formData.append('file', f));
@@ -22,12 +23,16 @@ export const uploadFiles = async (
   if (source) formData.append('source', source);
   const res = await client.post('/files/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress
+      ? (e) => onProgress(e.total ? Math.round((e.loaded / e.total) * 100) : 0)
+      : undefined,
   });
   return res.data;
 };
 
-export const createDirectory = async (name: string, parentId?: string): Promise<void> => {
-  await client.post('/files/directory', { name, parentId });
+export const createDirectory = async (name: string, parentId?: string): Promise<FileItem> => {
+  const res = await client.post('/files/directory', { name, parentId });
+  return res.data;
 };
 
 export const toggleFavorite = async (id: string): Promise<void> => {
@@ -50,6 +55,11 @@ export const downloadFile = async (id: string, filename: string): Promise<void> 
 
 export const deleteFile = async (id: string): Promise<void> => {
   await client.delete(`/files/${id}`);
+};
+
+// 다른 폴더로 이동 (드래그앤드롭) - parentId가 undefined/null이면 최상위(루트)로 이동
+export const moveFile = async (id: string, parentId: string | null): Promise<void> => {
+  await client.patch(`/files/${id}/move`, { parentId });
 };
 
 // 썸네일/큰 미리보기용 - 인증 헤더가 필요해서 <img src="..."> 로 바로 못 쓰고,

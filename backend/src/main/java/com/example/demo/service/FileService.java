@@ -138,9 +138,9 @@ public class FileService {
         return fileRepository.save(fileEntity);
     }
 
-    // 폴더 생성
+    // 폴더 생성 (생성된 폴더 정보를 반환 - 폴더 업로드 시 그 안에 파일을 바로 넣을 수 있게 id가 필요함)
     @Transactional
-    public void createDirectory(String userId, FileRequest.CreateDirectory request) {
+    public FileResponse createDirectory(String userId, FileRequest.CreateDirectory request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
@@ -158,6 +158,7 @@ public class FileService {
         directory.setIsFavorite(false);
 
         fileRepository.save(directory);
+        return new FileResponse(directory);
     }
 
     // 파일/폴더 이름 변경
@@ -165,6 +166,42 @@ public class FileService {
     public void rename(String userId, String fileId, FileRequest.Rename request) {
         FileEntity file = findFile(userId, fileId);
         file.setName(request.getName());
+        fileRepository.save(file);
+    }
+
+    // 파일/폴더를 다른 폴더로 이동 (드래그앤드롭으로 타일을 폴더 위에 놓았을 때)
+    @Transactional
+    public void move(String userId, String fileId, FileRequest.Move request) {
+        FileEntity file = findFile(userId, fileId);
+
+        if (request.getParentId() == null) {
+            file.setParent(null);
+            fileRepository.save(file);
+            return;
+        }
+
+        if (request.getParentId().equals(fileId)) {
+            throw new RuntimeException("자기 자신에게는 이동할 수 없습니다.");
+        }
+
+        FileEntity newParent = findFile(userId, request.getParentId());
+        if (!newParent.getIsDirectory()) {
+            throw new RuntimeException("폴더가 아닌 곳으로는 이동할 수 없습니다.");
+        }
+
+        // 폴더를 자기 자신의 하위 폴더로 옮기면 순환 구조가 생기므로, 목적지가 옮기려는 폴더의
+        // 자손인지 거슬러 올라가며 확인한다
+        if (file.getIsDirectory()) {
+            FileEntity cursor = newParent;
+            while (cursor != null) {
+                if (cursor.getId().equals(file.getId())) {
+                    throw new RuntimeException("폴더를 자기 자신의 하위로 이동할 수 없습니다.");
+                }
+                cursor = cursor.getParent();
+            }
+        }
+
+        file.setParent(newParent);
         fileRepository.save(file);
     }
 
