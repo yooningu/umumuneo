@@ -14,6 +14,7 @@
 
 .viewToggle {
   display: flex;
+  width: 100%;
   border-radius: 10px;
   padding: 3px;
   background-color: var(--gray5);
@@ -21,6 +22,7 @@
 }
 
 .toggleBtn {
+  flex: 1;
   padding: 6px 16px;
   border: none;
   border-radius: 8px;

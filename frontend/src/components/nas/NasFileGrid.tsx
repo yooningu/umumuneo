@@ -3,7 +3,7 @@ import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong } from 'react-icons/fa6';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
-import type { FileItem, NasTypeFilter } from '../../types';
+import type { FileItem } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
 import NasContextMenu, { type ContextMenuItem } from './NasContextMenu';
@@ -13,7 +13,6 @@ interface Props {
   parentId: string | null;
   search: string;
   onSearchChange: (v: string) => void;
-  typeFilter: NasTypeFilter;
   sourceFilter?: 'UPLOAD' | 'CHATBOT' | 'EMAIL' | null;
   folderStack: { id: string; name: string }[];
   refreshKey: number;
@@ -40,22 +39,6 @@ const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
 // OS에서 끌어온 진짜 파일 드래그와 구분하는 용도 (저건 'Files' 타입이 붙어있음)
 const NAS_IDS_MIME = 'application/x-nas-ids';
 
-function matchesTypeFilter(f: FileItem, filter: NasTypeFilter): boolean {
-  if (filter === 'ALL') return true;
-  if (f.isDirectory) return false;
-  const mime = f.mimeType ?? '';
-  const ext = (f.extension ?? '').toLowerCase();
-  const isPdf = mime === 'application/pdf' || ext === 'pdf';
-  const isArchive = ARCHIVE_EXTENSIONS.includes(ext);
-  switch (filter) {
-    case 'IMAGE': return mime.startsWith('image/');
-    case 'VIDEO': return mime.startsWith('video/');
-    case 'PDF': return isPdf;
-    case 'ARCHIVE': return isArchive;
-    case 'OTHER': return !mime.startsWith('image/') && !mime.startsWith('video/') && !isPdf && !isArchive;
-  }
-}
-
 function fileIcon(f: FileItem): string {
   if (f.isDirectory) return '📁';
   const mime = f.mimeType ?? '';
@@ -77,7 +60,7 @@ function formatSize(bytes?: number): string {
 
 // 나스(파일) 메인 영역: 상단 빠른 작업(새 폴더/업로드) + 정렬 헤더 + 파일/폴더 타일 그리드.
 // 검색어가 있으면 전체(폴더 무관) 검색, 없으면 현재 폴더(parentId) 안의 목록을 보여줌.
-export default function NasFileGrid({ parentId, search, onSearchChange, typeFilter, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
+export default function NasFileGrid({ parentId, search, onSearchChange, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -121,7 +104,6 @@ export default function NasFileGrid({ parentId, search, onSearchChange, typeFilt
   };
 
   const visible = [...files]
-    .filter(f => matchesTypeFilter(f, typeFilter))
     .sort((a, b) => {
       let cmp: number;
       if (sortKey === 'name') cmp = a.name.localeCompare(b.name);

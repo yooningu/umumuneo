@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import NasFileGrid from '../components/nas/NasFileGrid';
 import NasSidebar from '../components/nas/NasSidebar';
-import type { NasTypeFilter } from '../types';
 import styles from './NasPage.module.css';
 
 type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
@@ -12,7 +11,6 @@ export default function NasPage() {
   const [parentId, setParentId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<NasTypeFilter>('ALL');
   const [sourceFilter, setSourceFilter] = useState<FileSource | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -66,7 +64,6 @@ export default function NasPage() {
             parentId={parentId}
             search={search}
             onSearchChange={setSearch}
-            typeFilter={typeFilter}
             sourceFilter={sourceFilter}
             folderStack={folderStack}
             refreshKey={refreshKey}

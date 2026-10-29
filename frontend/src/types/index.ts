@@ -110,7 +110,6 @@ export interface MailDetail {
   receivedAt: string;
   attachments: MailAttachment[];
 }
-export type NasTypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'PDF' | 'ARCHIVE' | 'OTHER';
 export interface Memo {
   content: string;
   updatedAt: string | null;
