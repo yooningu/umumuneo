@@ -12,6 +12,7 @@ import styles from './NasFileGrid.module.css';
 interface Props {
   parentId: string | null;
   search: string;
+  onSearchChange: (v: string) => void;
   typeFilter: NasTypeFilter;
   sourceFilter?: 'UPLOAD' | 'CHATBOT' | 'EMAIL' | null;
   folderStack: { id: string; name: string }[];
@@ -76,7 +77,7 @@ function formatSize(bytes?: number): string {
 
 // 나스(파일) 메인 영역: 상단 빠른 작업(새 폴더/업로드) + 정렬 헤더 + 파일/폴더 타일 그리드.
 // 검색어가 있으면 전체(폴더 무관) 검색, 없으면 현재 폴더(parentId) 안의 목록을 보여줌.
-export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
+export default function NasFileGrid({ parentId, search, onSearchChange, typeFilter, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -404,6 +405,12 @@ export default function NasFileGrid({ parentId, search, typeFilter, sourceFilter
             </span>
           ))}
         </div>
+        <input
+          className={styles.searchInput}
+          placeholder="파일 검색"
+          value={search}
+          onChange={e => onSearchChange(e.target.value)}
+        />
         <input
           ref={fileInputRef}
           type="file"

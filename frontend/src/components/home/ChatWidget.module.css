@@ -11,6 +11,8 @@
 .dragOverlay {
   position: absolute;
   inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  border-radius: inherit;
   display: flex;
   align-items: center;
   justify-content: center;

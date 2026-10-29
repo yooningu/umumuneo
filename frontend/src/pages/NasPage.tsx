@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import NasToolbar from '../components/nas/NasToolbar';
 import NasFileGrid from '../components/nas/NasFileGrid';
 import NasSidebar from '../components/nas/NasSidebar';
 import type { NasTypeFilter } from '../types';
@@ -7,8 +6,8 @@ import styles from './NasPage.module.css';
 
 type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
 
-// 나스(파일) 페이지: 위쪽 툴바(타입 필터/검색/상위폴더) + 메인 파일 그리드 + 오른쪽 즐겨찾기·용량 사이드바.
-// 폴더 이동은 폴더 스택(folderStack)으로 관리해서 "상위 폴더로" 버튼이 한 단계씩 뒤로 가게 한다.
+// 나스(파일) 페이지: 메인 파일 그리드(경로/검색) + 오른쪽 즐겨찾기·용량 사이드바.
+// 폴더 이동은 폴더 스택(folderStack)으로 관리해서 경로(breadcrumb) 클릭으로 원하는 단계로 바로 이동한다.
 export default function NasPage() {
   const [parentId, setParentId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
@@ -41,14 +40,6 @@ export default function NasPage() {
     setSearch('');
   };
 
-  const goUp = () => {
-    setFolderStack(prev => {
-      const next = prev.slice(0, -1);
-      setParentId(next.length > 0 ? next[next.length - 1].id : null);
-      return next;
-    });
-  };
-
   // 경로(breadcrumb)에서 중간 폴더를 클릭하면 그 폴더까지만 남기고 그 자리로 이동
   const goToFolderIndex = (index: number) => {
     setFolderStack(prev => {
@@ -61,15 +52,6 @@ export default function NasPage() {
 
   return (
     <div className={styles.container}>
-      <NasToolbar
-        typeFilter={typeFilter}
-        onTypeFilterChange={setTypeFilter}
-        search={search}
-        onSearchChange={setSearch}
-        canGoUp={folderStack.length > 0}
-        onGoUp={goUp}
-      />
-
       <div className={styles.body}>
         <div className={styles.sidePane}>
           <NasSidebar
@@ -83,6 +65,7 @@ export default function NasPage() {
           <NasFileGrid
             parentId={parentId}
             search={search}
+            onSearchChange={setSearch}
             typeFilter={typeFilter}
             sourceFilter={sourceFilter}
             folderStack={folderStack}

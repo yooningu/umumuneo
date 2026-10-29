@@ -111,6 +111,10 @@ export interface MailDetail {
   attachments: MailAttachment[];
 }
 export type NasTypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'PDF' | 'ARCHIVE' | 'OTHER';
+export interface Memo {
+  content: string;
+  updatedAt: string | null;
+}
 export interface Holiday {
   date: string; // "YYYY-MM-DD"
   name: string;

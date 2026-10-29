@@ -16,8 +16,8 @@
   align-items: center;
   justify-content: center;
   color: #7c8cf8;
-  font-size: 15px;
-  font-weight: bold;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-bold);
   z-index: 10;
   pointer-events: none;
 }
@@ -37,7 +37,7 @@
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-m);
   color: var(--gray1);
 }
 
@@ -49,7 +49,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--font-m);
   color: var(--gray2);
 }
 
@@ -77,12 +77,23 @@
 
 .breadcrumbCurrent {
   color: var(--gray1);
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   cursor: default;
 }
 
 .breadcrumbCurrent:hover {
   background-color: transparent;
+}
+
+.searchInput {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--gray5);
+  font-size: var(--font-m);
+  width: 200px;
+  outline: none;
+  margin-left: auto;
 }
 
 .selectionBar {
@@ -93,7 +104,7 @@
 }
 
 .selectionCount {
-  font-size: 12px;
+  font-size: var(--font-s);
   color: var(--gray2);
   margin-right: 4px;
 }
@@ -105,7 +116,7 @@
   border: 1px solid var(--gray3);
   background: #fff;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-m);
 }
 
 .iconBtn:hover {
@@ -132,13 +143,13 @@
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #999;
 }
 
 .headerBtnActive {
   color: #7c8cf8;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 .sortArrow {
@@ -171,7 +182,7 @@
   background: transparent;
   color: #999;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-m);
 }
 
 .viewToggleBtn:hover {
@@ -198,7 +209,7 @@
   grid-column: 1 / -1;
   text-align: center;
   color: #bbb;
-  font-size: 13px;
+  font-size: var(--font-m);
   margin-top: 40px;
 }
 
@@ -238,13 +249,13 @@
   position: absolute;
   top: -4px;
   right: -8px;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #f5a623;
 }
 
 .tileName {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #333;
   max-width: 100%;
   white-space: nowrap;
@@ -254,7 +265,7 @@
 }
 
 .tileMeta {
-  font-size: 10px;
+  font-size: var(--font-s);
   color: #999;
   margin-top: 2px;
 }
@@ -295,7 +306,7 @@
 
 .listIcon {
   position: relative;
-  font-size: 18px;
+  font-size: var(--font-l);
   line-height: 1;
   flex-shrink: 0;
   width: 20px;
@@ -303,7 +314,7 @@
 
 .listName {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--font-m);
   color: #333;
   white-space: nowrap;
   overflow: hidden;
@@ -311,7 +322,7 @@
 }
 
 .listMeta {
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #999;
   flex-shrink: 0;
   width: 90px;

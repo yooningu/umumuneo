@@ -9,19 +9,19 @@
 }
 
 .sectionTitle {
-  font-size: 12px;
-  font-weight: bold;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-bold);
   color: #999;
   margin-bottom: 8px;
 }
 
 .empty {
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #bbb;
 }
 
 .favItem {
-  font-size: 13px;
+  font-size: var(--font-m);
   color: #333;
   padding: 6px 4px;
   border-radius: 6px;
@@ -38,13 +38,13 @@
 .favItemActive {
   background-color: #eef0ff;
   color: #7c8cf8;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 .storageRow {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-s);
   color: #666;
   margin-bottom: 6px;
 }

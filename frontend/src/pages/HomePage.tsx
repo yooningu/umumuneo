@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import WeeklyCalendar from '../components/schedule/WeeklyCalendar';
 import MiniCalendar from '../components/home/MiniCalendar';
-import ScheduleList from '../components/schedule/ScheduleList';
+import EtcPanel from '../components/home/EtcPanel';
 import ChatWidget from '../components/home/ChatWidget';
 import styles from './HomePage.module.css';
 
@@ -29,7 +29,7 @@ export default function HomePage() {
             <MiniCalendar selectedDate={selectedDate} onDateSelect={setSelectedDate} refreshKey={refreshKey} />
           </div>
           <div className={styles.scheduleList}>
-            <ScheduleList
+            <EtcPanel
               selectedDate={selectedDate}
               refreshKey={refreshKey}
               onScheduleChange={() => setRefreshKey(k => k + 1)}
