@@ -46,4 +46,9 @@ public interface FileRepository extends JpaRepository<FileEntity, String> {
     // getFiles()는 폴더 구조를 유지하려고 parentId=null이면 루트만 반환하므로, 전체 합계는 따로 집계해야 함.
     @Query("SELECT COALESCE(SUM(f.sizeBytes), 0) FROM FileEntity f WHERE f.user.id = :userId AND f.isDirectory = false")
     long sumSizeBytesByUserId(@Param("userId") String userId);
+
+    // 목록에 보여줄 폴더들 중 실제로 안에 뭔가(파일/폴더) 들어있는 폴더의 id만 추출 - 빈 폴더 아이콘 구분용
+    // (폴더마다 개별 조회하지 않고 한 번에 물어봐서 true/false 판단용으로만 씀)
+    @Query("SELECT DISTINCT f.parent.id FROM FileEntity f WHERE f.parent.id IN :parentIds")
+    List<String> findDistinctParentIdsIn(@Param("parentIds") List<String> parentIds);
 }

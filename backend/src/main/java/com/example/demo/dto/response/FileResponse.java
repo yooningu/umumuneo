@@ -19,10 +19,15 @@ public class FileResponse {
     private final Boolean previewable; // true면 /{id}/view 로 브라우저에 바로 보여줄 수 있음 (이미지/영상/PDF)
     private final Boolean isFavorite;
     private final String source;
+    private final Boolean hasChildren; // 폴더일 때만 값 있음 - 안에 파일/폴더가 있는지 (빈 폴더 아이콘 구분용)
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
     public FileResponse(FileEntity file) {
+        this(file, false);
+    }
+
+    public FileResponse(FileEntity file, boolean hasChildren) {
         this.id = file.getId();
         this.parentId = file.getParent() != null ? file.getParent().getId() : null;
         this.name = file.getName();
@@ -35,6 +40,7 @@ public class FileResponse {
         this.previewable = !file.getIsDirectory() && FileEntity.isPreviewable(file.getMimeType());
         this.isFavorite = file.getIsFavorite();
         this.source = file.getSource() != null ? file.getSource().name() : null;
+        this.hasChildren = file.getIsDirectory() ? hasChildren : null;
         this.createdAt = file.getCreatedAt();
         this.updatedAt = file.getUpdatedAt();
     }

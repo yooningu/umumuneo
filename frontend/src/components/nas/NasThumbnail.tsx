@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { getPreviewBlobUrl } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasThumbnail.module.css';
 
 interface Props {
   file: FileItem;
-  fallback: string; // 미리보기가 안 되거나 아직 로딩 중일 때 보여줄 이모지 아이콘
+  fallback: ReactNode; // 미리보기가 안 되거나 아직 로딩 중일 때 보여줄 파일 종류 아이콘
 }
 
 // 그리드 타일 안에서 이미지/영상/PDF는 실제 내용을 축소해서 보여주고, 그 외는 이모지 아이콘 그대로.

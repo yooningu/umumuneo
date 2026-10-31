@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { FaChevronLeft } from 'react-icons/fa6';
 import { getFiles } from '../../api/file';
+import { getFileIcon } from '../../utils/fileIcon';
 import type { FileItem } from '../../types';
 import NasThumbnail from '../nas/NasThumbnail';
 import styles from './NasFilePickerModal.module.css';
@@ -9,15 +10,6 @@ import styles from './NasFilePickerModal.module.css';
 interface Props {
   onSelect: (file: FileItem) => void;
   onClose: () => void;
-}
-
-function fileIcon(f: FileItem): string {
-  if (f.isDirectory) return '📁';
-  const mime = f.mimeType ?? '';
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  if (mime === 'application/pdf') return '📕';
-  return '📄';
 }
 
 // 챗봇 첨부에서 "NAS에서 추가"를 눌렀을 때 뜨는 간단한 파일 선택 모달.
@@ -57,7 +49,7 @@ export default function NasFilePickerModal({ onSelect, onClose }: Props) {
                 onClick={() => (f.isDirectory ? openFolder(f) : onSelect(f))}
               >
                 <div className={styles.tileIcon}>
-                  <NasThumbnail file={f} fallback={fileIcon(f)} />
+                  <NasThumbnail file={f} fallback={getFileIcon(f)} />
                 </div>
                 <div className={styles.tileName} title={f.name}>{f.name}</div>
               </div>

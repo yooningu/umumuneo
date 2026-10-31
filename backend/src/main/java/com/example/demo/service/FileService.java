@@ -88,7 +88,17 @@ public class FileService {
             files = fileRepository.findByUserIdAndParentIsNull(userId);
         }
 
-        return files.stream().map(FileResponse::new).toList();
+        List<String> directoryIds = files.stream()
+                .filter(FileEntity::getIsDirectory)
+                .map(FileEntity::getId)
+                .toList();
+        Set<String> parentsWithChildren = directoryIds.isEmpty()
+                ? Set.of()
+                : new HashSet<>(fileRepository.findDistinctParentIdsIn(directoryIds));
+
+        return files.stream()
+                .map(f -> new FileResponse(f, parentsWithChildren.contains(f.getId())))
+                .toList();
     }
 
     // 사이드바 "사용중" 용량 표시용 - 폴더 구조와 무관하게 전체 파일 크기 합계

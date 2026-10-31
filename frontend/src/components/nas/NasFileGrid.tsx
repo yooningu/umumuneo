@@ -3,6 +3,7 @@ import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong } from 'react-icons/fa6';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
+import { getFileIcon } from '../../utils/fileIcon';
 import type { FileItem } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
@@ -33,22 +34,9 @@ const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
   sizeBytes: 'desc',
 };
 
-const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
-
 // 타일을 드래그해서 다른 폴더 위에 놓을 때(이동) dataTransfer에 담는 커스텀 타입 -
 // OS에서 끌어온 진짜 파일 드래그와 구분하는 용도 (저건 'Files' 타입이 붙어있음)
 const NAS_IDS_MIME = 'application/x-nas-ids';
-
-function fileIcon(f: FileItem): string {
-  if (f.isDirectory) return '📁';
-  const mime = f.mimeType ?? '';
-  const ext = (f.extension ?? '').toLowerCase();
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  if (mime === 'application/pdf' || ext === 'pdf') return '📕';
-  if (ARCHIVE_EXTENSIONS.includes(ext)) return '🗜️';
-  return '📄';
-}
 
 function formatSize(bytes?: number): string {
   if (bytes == null) return '-';
@@ -480,7 +468,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
               onDrop={f.isDirectory ? (e => handleFolderDrop(e, f)) : undefined}
             >
               <div className={styles.tileIcon}>
-                <NasThumbnail file={f} fallback={fileIcon(f)} />
+                <NasThumbnail file={f} fallback={getFileIcon(f)} />
                 {f.isFavorite && <span className={styles.favBadge}>★</span>}
               </div>
               <div className={styles.tileName} title={f.name}>{f.name}</div>
@@ -508,7 +496,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
               onDrop={f.isDirectory ? (e => handleFolderDrop(e, f)) : undefined}
             >
               <span className={styles.listIcon}>
-                {fileIcon(f)}
+                {getFileIcon(f)}
                 {f.isFavorite && <span className={styles.favBadge}>★</span>}
               </span>
               <span className={styles.listName} title={f.name}>{f.name}</span>

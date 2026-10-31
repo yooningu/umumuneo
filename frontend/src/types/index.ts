@@ -135,6 +135,7 @@ export interface FileItem {
   previewable: boolean; // true면 /files/{id}/view 로 브라우저에 바로 띄울 수 있음 (이미지/영상/PDF), false면 다운로드만 가능
   isFavorite: boolean;
   source?: 'UPLOAD' | 'CHATBOT' | 'EMAIL' | null; // 어디서 들어온 파일인지 (NAS 사이드바 분류용)
+  hasChildren?: boolean | null; // 폴더일 때만 값 있음 - 안에 파일/폴더가 있는지
   createdAt: string;
   updatedAt: string;
 }

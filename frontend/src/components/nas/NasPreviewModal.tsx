@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IoClose, IoFolderOutline, IoDocumentOutline } from "react-icons/io5";
 import { getPreviewBlobUrl, getArchiveEntries, getTextContent, updateTextContent, downloadFile, deleteFile } from '../../api/file';
+import { getFileIcon } from '../../utils/fileIcon';
 import type { ArchiveEntry, FileItem } from '../../types';
 import styles from './NasPreviewModal.module.css';
 
@@ -18,17 +19,6 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
-
-// 미리보기를 지원하지 않는 파일일 때 그리드 타일과 똑같은 기본 아이콘을 보여줌
-function fileIcon(f: FileItem): string {
-  const mime = f.mimeType ?? '';
-  const ext = (f.extension ?? '').toLowerCase();
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime.startsWith('video/')) return '🎬';
-  if (mime === 'application/pdf' || ext === 'pdf') return '📕';
-  if (ARCHIVE_EXTENSIONS.includes(ext)) return '🗜️';
-  return '📄';
-}
 
 function formatSize(bytes?: number): string {
   if (bytes == null) return '-';
@@ -160,7 +150,7 @@ export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: P
               </div>
             )
           ) : !file.previewable ? (
-            <span className={styles.fallbackIcon}>{fileIcon(file)}</span>
+            <span className={styles.fallbackIcon}>{getFileIcon(file)}</span>
           ) : !url ? (
             <div className={styles.loading}>불러오는 중...</div>
           ) : mime.startsWith('image/') ? (
@@ -170,7 +160,7 @@ export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: P
           ) : mime === 'application/pdf' ? (
             <embed src={url} type="application/pdf" className={styles.previewPdf} />
           ) : (
-            <span className={styles.fallbackIcon}>{fileIcon(file)}</span>
+            <span className={styles.fallbackIcon}>{getFileIcon(file)}</span>
           )}
         </div>
         <div className={styles.details}>
