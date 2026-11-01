@@ -18,6 +18,9 @@ export default function LoginPage() {
     <div className={styles.container}>
       <LoginBackground />
       <div className={styles.loginBox}>
+        <a href={KAKAO_AUTH_URL} className={styles.link} onClick={handleLoginClick}>
+          <button className={styles.button}>카카오로 로그인</button>
+        </a>
         <label className={styles.rememberRow}>
           <input
             type="checkbox"
@@ -26,9 +29,6 @@ export default function LoginPage() {
           />
           로그인 상태 유지
         </label>
-        <a href={KAKAO_AUTH_URL} className={styles.link} onClick={handleLoginClick}>
-          <button className={styles.button}>카카오로 로그인</button>
-        </a>
       </div>
     </div>
   );
