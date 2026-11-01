@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
 import { getSchedules } from '../../api/schedule';
 import { getHolidays } from '../../api/holiday';
 import { getTimetables } from '../../api/timetable';
@@ -9,6 +9,7 @@ import ScheduleEditModal from './ScheduleEditModal';
 import TimetableDetailModal from './TimetableDetailModal';
 import TimetableEditModal from './TimetableEditModal';
 import Tooltip from '../common/Tooltip';
+import NasContextMenu, { type ContextMenuItem } from '../nas/NasContextMenu';
 import styles from './WeeklyCalendar.module.css';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   refreshKey?: number;
   onScheduleChange?: () => void;
   onVisibleCountChange?: (count: number) => void;
+  onRequestAddSchedule?: (dateStr: string) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -97,7 +99,7 @@ function getOverlapMargins(index: number, total: number): { left: number; right:
   return { left: 8, right: 8 };
 }
 
-export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange }: Props) {
+export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onVisibleCountChange, onRequestAddSchedule }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
@@ -107,6 +109,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const [selectedTimetableGroup, setSelectedTimetableGroup] = useState<Timetable[] | null>(null);
   const [timetableModalMode, setTimetableModalMode] = useState<'view' | 'edit'>('view');
   const [expandedAlldayDays, setExpandedAlldayDays] = useState<Set<string>>(new Set());
+  const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number; dateStr: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
   const dateRangeKeyRef = useRef(''); // 직전에 조회한 날짜 구간 - 바뀐 경우에만 목록을 즉시 비움
@@ -120,6 +123,15 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
     });
   };
   const today = new Date();
+
+  const handleBgContextMenu = (e: MouseEvent, dateStr: string) => {
+    e.preventDefault();
+    setBgContextMenu({ x: e.clientX, y: e.clientY, dateStr });
+  };
+
+  const bgContextMenuItems: ContextMenuItem[] = bgContextMenu
+    ? [{ label: '스케줄 추가', onClick: () => onRequestAddSchedule?.(bgContextMenu.dateStr) }]
+    : [];
 
   // 달력 주 단위가 아니라, 선택한 날짜를 가운데 두고 그만큼(7/5/3일)만 보여줌
   const visibleDates = getCenteredDates(selectedDate, visibleCount);
@@ -354,7 +366,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
               i === selectedVisibleIndex ? styles.selectedCol : '',
             ].join(' ').trim();
             return (
-              <div key={i} className={dayColClassName}>
+              <div key={i} className={dayColClassName} onContextMenu={e => handleBgContextMenu(e, dateStr)}>
                 {/* 시간표 배경 블록 */}
                 {dayTimetables.map(({ timetable: t, startMin, endMin }) => (
                   <div
@@ -463,6 +475,15 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
           onCancel={() => setTimetableModalMode('view')}
           onSaved={() => { onScheduleChange?.(); setSelectedTimetableGroup(null); }}
           onDeleted={() => { onScheduleChange?.(); setSelectedTimetableGroup(null); }}
+        />
+      )}
+
+      {bgContextMenu && (
+        <NasContextMenu
+          x={bgContextMenu.x}
+          y={bgContextMenu.y}
+          items={bgContextMenuItems}
+          onClose={() => setBgContextMenu(null)}
         />
       )}
     </div>

@@ -12,4 +12,7 @@ public interface UploadSessionRepository extends JpaRepository<UploadSession, St
 
     // 한참 지나도 끝까지 안 끝난(complete/cancel 없이 방치된) 세션 - 주기적 정리용
     List<UploadSession> findByCreatedAtBefore(LocalDateTime cutoff);
+
+    // 유저의 업로드 세션 전체 조회 (회원탈퇴 시 전부 정리하는 용도)
+    List<UploadSession> findByUserId(String userId);
 }

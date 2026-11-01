@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type DragEvent } from 'react';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
-import { FaArrowDownLong } from 'react-icons/fa6';
+import { FaArrowDownLong, FaStar } from 'react-icons/fa6';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
 import { getFileIcon } from '../../utils/fileIcon';
@@ -8,6 +8,7 @@ import type { FileItem } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
 import NasContextMenu, { type ContextMenuItem } from './NasContextMenu';
+import ConfirmDialog from '../common/ConfirmDialog';
 import styles from './NasFileGrid.module.css';
 
 interface Props {
@@ -38,6 +39,16 @@ const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
 // OS에서 끌어온 진짜 파일 드래그와 구분하는 용도 (저건 'Files' 타입이 붙어있음)
 const NAS_IDS_MIME = 'application/x-nas-ids';
 
+// 이름 입력 인풋이 DOM에 나타나는 순간 포커스 + 전체 선택. 컴포넌트 밖에 선언해서 매 렌더마다
+// 새 함수가 되지 않게 함 - 콜백 ref가 렌더마다 바뀌면 React가 그때마다 다시 호출해서(select()가
+// 매 키 입력마다 다시 실행됨) 한 글자만 남고 다음 글자가 전체를 덮어쓰는 버그가 생겼었음
+function focusEditInput(el: HTMLInputElement | null) {
+  if (el) {
+    el.focus();
+    el.select();
+  }
+}
+
 function formatSize(bytes?: number): string {
   if (bytes == null) return '-';
   if (bytes < 1024) return `${bytes}B`;
@@ -51,6 +62,7 @@ function formatSize(bytes?: number): string {
 export default function NasFileGrid({ parentId, search, onSearchChange, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_SORT_DIR.name);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -60,6 +72,8 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
   const [isFileDragging, setIsFileDragging] = useState(false); // OS에서 파일/폴더를 끌어다 놓는 중인지
   const [dropTargetId, setDropTargetId] = useState<string | null>(null); // 타일 드래그 중 올려놓은 폴더 타일
+  const [editingId, setEditingId] = useState<string | null>(null); // 이름을 바로 타이핑 중인 타일(새 폴더 생성 직후 / 이름 변경)
+  const [editingValue, setEditingValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const tileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -237,12 +251,13 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       .catch(console.error);
   };
 
+  // 탐색기처럼: 이름을 먼저 물어보지 않고 "새 폴더"로 바로 만든 뒤, 그 자리에서 바로 이름을 타이핑하게 함
   const handleNewFolder = async () => {
-    const name = window.prompt('폴더 이름을 입력하세요');
-    if (!name?.trim()) return;
     try {
-      await createDirectory(name.trim(), parentId ?? undefined);
+      const created = await createDirectory('새 폴더', parentId ?? undefined);
       onChanged();
+      setEditingId(created.id);
+      setEditingValue(created.name);
     } catch (e) {
       console.error(e);
     }
@@ -258,14 +273,23 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     }
   };
 
-  const handleRename = async () => {
+  const handleRename = () => {
     if (selected.size !== 1) return;
     const target = files.find(f => f.id === [...selected][0]);
     if (!target) return;
-    const name = window.prompt('새 이름을 입력하세요', target.name);
-    if (!name?.trim() || name === target.name) return;
+    setEditingId(target.id);
+    setEditingValue(target.name);
+  };
+
+  const commitEdit = async () => {
+    const id = editingId;
+    const name = editingValue.trim();
+    setEditingId(null);
+    if (!id) return;
+    const target = files.find(f => f.id === id);
+    if (!target || !name || name === target.name) return;
     try {
-      await renameFile(target.id, name.trim());
+      await renameFile(id, name);
       setSelected(new Set());
       onChanged();
     } catch (e) {
@@ -273,9 +297,15 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     }
   };
 
-  const handleDelete = async () => {
+  const cancelEdit = () => setEditingId(null);
+
+  const handleDelete = () => {
     if (selected.size === 0) return;
-    if (!window.confirm(`${selected.size}개 항목을 삭제할까요?`)) return;
+    setConfirmDelete(true);
+  };
+
+  const confirmDeleteSelected = async () => {
+    setConfirmDelete(false);
     try {
       await Promise.all([...selected].map(id => deleteFile(id)));
       setSelected(new Set());
@@ -429,6 +459,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
           )}
         </button>
         <div className={styles.viewToggle}>
+          <div className={`${styles.toggleThumb} ${viewMode === 'list' ? styles.toggleThumbRight : ''}`.trim()} />
           <button
             className={`${styles.viewToggleBtn} ${viewMode === 'grid' ? styles.viewToggleBtnActive : ''}`.trim()}
             onClick={() => setViewMode('grid')}
@@ -469,11 +500,24 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
             >
               <div className={styles.tileIcon}>
                 <NasThumbnail file={f} fallback={getFileIcon(f)} />
-                {f.isFavorite && <span className={styles.favBadge}>★</span>}
+                {f.isFavorite && <span className={styles.favBadge}><FaStar /></span>}
               </div>
-              <div className={styles.tileName} title={f.name}>{f.name}</div>
-              {!f.isDirectory && (
-                <div className={styles.tileMeta}>{formatSize(f.sizeBytes)} · {f.updatedAt.slice(0, 10)}</div>
+              {editingId === f.id ? (
+                <input
+                  ref={focusEditInput}
+                  className={styles.tileNameInput}
+                  value={editingValue}
+                  onChange={e => setEditingValue(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  onDoubleClick={e => e.stopPropagation()}
+                  onBlur={commitEdit}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+                    else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                  }}
+                />
+              ) : (
+                <div className={styles.tileName} title={f.name}>{f.name}</div>
               )}
             </div>
           ))
@@ -497,9 +541,25 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
             >
               <span className={styles.listIcon}>
                 {getFileIcon(f)}
-                {f.isFavorite && <span className={styles.favBadge}>★</span>}
+                {f.isFavorite && <span className={styles.favBadge}><FaStar /></span>}
               </span>
-              <span className={styles.listName} title={f.name}>{f.name}</span>
+              {editingId === f.id ? (
+                <input
+                  ref={focusEditInput}
+                  className={styles.listNameInput}
+                  value={editingValue}
+                  onChange={e => setEditingValue(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  onDoubleClick={e => e.stopPropagation()}
+                  onBlur={commitEdit}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+                    else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                  }}
+                />
+              ) : (
+                <span className={styles.listName} title={f.name}>{f.name}</span>
+              )}
               <span className={styles.listMeta}>{f.isDirectory ? '-' : formatSize(f.sizeBytes)}</span>
               <span className={styles.listMeta}>{f.updatedAt.slice(0, 10)}</span>
             </div>
@@ -535,6 +595,15 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
           y={contextMenu.y}
           items={contextMenu.mode === 'file' ? fileMenuItems : emptyMenuItems}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          message={`${selected.size}개 항목을 삭제할까요?`}
+          danger
+          onConfirm={confirmDeleteSelected}
+          onCancel={() => setConfirmDelete(false)}
         />
       )}
     </div>

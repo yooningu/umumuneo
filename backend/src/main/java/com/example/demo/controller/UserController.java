@@ -35,4 +35,13 @@ public class UserController {
         userService.updateMe(userId, request);
         return ResponseEntity.ok().build();
     }
+
+    // DELETE /api/v1/users/me - 회원탈퇴 요청. 바로 지워지지 않고 30일 뒤에 실제로 삭제됨
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMe(
+            @AuthenticationPrincipal String userId
+    ) {
+        userService.requestDeletion(userId);
+        return ResponseEntity.ok().build();
+    }
 }

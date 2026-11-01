@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { CiMemoPad } from 'react-icons/ci';
+import { AiOutlineSchedule } from 'react-icons/ai';
 import ScheduleList from '../schedule/ScheduleList';
 import MemoWidget from './MemoWidget';
 import styles from './EtcPanel.module.css';
@@ -19,17 +21,20 @@ export default function EtcPanel({ selectedDate, refreshKey, onScheduleChange }:
     <div className={styles.container}>
       <div className={styles.toggleRow}>
         <div className={styles.viewToggle}>
+          <div className={`${styles.toggleThumb} ${mode === 'memo' ? styles.toggleThumbRight : ''}`.trim()} />
           <button
             className={`${styles.toggleBtn} ${mode === 'schedule' ? styles.toggleBtnActive : ''}`.trim()}
             onClick={() => setMode('schedule')}
           >
-            일정
+            <span className={styles.btnText}>일정</span>
+            <span className={styles.btnIcon}><AiOutlineSchedule /></span>
           </button>
           <button
             className={`${styles.toggleBtn} ${mode === 'memo' ? styles.toggleBtnActive : ''}`.trim()}
             onClick={() => setMode('memo')}
           >
-            메모장
+            <span className={styles.btnText}>메모장</span>
+            <span className={styles.btnIcon}><CiMemoPad /></span>
           </button>
         </div>
       </div>

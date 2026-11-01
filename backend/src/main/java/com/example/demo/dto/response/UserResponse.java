@@ -8,7 +8,6 @@ public class UserResponse {
 
     private final String id;
     private final String nickname;
-    private final String email;
     private final String emailAlias;
     private final Integer notifOffsetMin;
     private final Boolean notifEnabled;
@@ -17,7 +16,6 @@ public class UserResponse {
     public UserResponse(User user) {
         this.id = user.getId();
         this.nickname = user.getNickname();
-        this.email = user.getEmail();
         this.emailAlias = user.getEmailAlias();
         this.notifOffsetMin = user.getNotifOffsetMin();
         this.notifEnabled = user.getNotifEnabled();

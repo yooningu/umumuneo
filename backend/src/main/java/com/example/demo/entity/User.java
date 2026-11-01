@@ -26,9 +26,6 @@ public class User {
     @Column(length = 50, nullable = false)
     private String nickname;
 
-    @Column(length = 100)
-    private String email;
-
     // umumuneo.com 개인 메일 수신용 별칭 (예: "x7k2m9pq" -> x7k2m9pq@umumuneo.com 으로 온 메일이 이 유저 것)
     @Column(name = "email_alias", length = 50, unique = true)
     private String emailAlias;
@@ -60,6 +57,11 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // 회원탈퇴 요청 시각 - null이 아니면 탈퇴 처리 중(로그인 차단). 이 시점으로부터 30일 뒤
+    // AccountDeletionCleanupService가 실제로 데이터를 전부 지운다 (그 전까지는 데이터 보존)
+    @Column(name = "deletion_requested_at")
+    private LocalDateTime deletionRequestedAt;
 
     @PrePersist
     protected void onCreate() {

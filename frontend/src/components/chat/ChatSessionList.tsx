@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { IoClose } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { getSessions, deleteSession } from '../../api/chat';
+import ConfirmDialog from '../common/ConfirmDialog';
 import type { ChatSession } from '../../types';
 import styles from './ChatSessionList.module.css';
 
@@ -26,14 +27,21 @@ function formatRelative(dateStr: string): string {
 // sessionId를 null로 올려줘서(ChatPage가 ChatWidget을 새로 마운트) 빈 대화를 시작한다.
 export default function ChatSessionList({ activeSessionId, onSelect, refreshKey }: Props) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     getSessions().then(setSessions).catch(console.error);
   }, [refreshKey]);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!window.confirm('이 대화를 삭제할까요?')) return;
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
+    if (!id) return;
     try {
       await deleteSession(id);
       setSessions(prev => prev.filter(s => s.id !== id));
@@ -68,6 +76,15 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
           ))
         )}
       </div>
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          message="이 대화를 삭제할까요?"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </div>
   );
 }

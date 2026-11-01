@@ -15,7 +15,7 @@
   height: 64px;
   object-fit: cover;
   border-radius: 6px;
-  background-color: #000;
+  background-color: var(--black);
 }
 
 .thumbPdfClip {
@@ -23,9 +23,9 @@
   height: 64px;
   overflow: hidden;
   border-radius: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--gray4);
   position: relative;
-  background-color: #fff;
+  background-color: var(--white);
 }
 
 .thumbPdfEmbed {

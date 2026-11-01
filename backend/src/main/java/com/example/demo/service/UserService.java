@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
 @Service
@@ -49,6 +50,16 @@ public class UserService {
             user.setEmailAlias(alias);
         }
 
+        userRepository.save(user);
+    }
+
+    // 회원탈퇴 요청 - 바로 지우지 않고 요청 시각만 기록함. 실제 데이터 삭제는
+    // AccountDeletionCleanupService가 30일 뒤에 처리 (그 전까지는 로그인만 막힘, 데이터는 보존)
+    @Transactional
+    public void requestDeletion(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+        user.setDeletionRequestedAt(LocalDateTime.now());
         userRepository.save(user);
     }
 }

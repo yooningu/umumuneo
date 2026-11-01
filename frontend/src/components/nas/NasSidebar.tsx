@@ -7,10 +7,10 @@ type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
 
 // null(전체)은 분류 필터를 끄고 평소처럼 전부 보여주는 상태
 const CATEGORIES: { source: FileSource | null; label: string; icon: string }[] = [
-  { source: null, label: '전체', icon: '🗂️' },
-  { source: 'UPLOAD', label: '업로드', icon: '📥' },
-  { source: 'EMAIL', label: '이메일', icon: '📧' },
-  { source: 'CHATBOT', label: '챗봇', icon: '🤖' },
+  { source: null, label: '전체', icon: '' },
+  { source: 'UPLOAD', label: '업로드', icon: '' },
+  { source: 'EMAIL', label: '이메일', icon: '' },
+  { source: 'CHATBOT', label: '챗봇', icon: '' },
 ];
 
 interface Props {
@@ -29,6 +29,14 @@ function formatUsed(bytes: number): string {
     return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
   }
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}GB`;
+}
+
+// 사용량 비율에 따라 바 색을 단계적으로 바꿔서 한눈에 위험도를 알 수 있게 함
+function usageBarClass(percent: number, styles: Record<string, string>): string {
+  if (percent < 25) return styles.storageBarFillBlue;
+  if (percent < 50) return styles.storageBarFillGreen;
+  if (percent < 75) return styles.storageBarFillYellow;
+  return styles.storageBarFillRed;
 }
 
 export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onSelectSource }: Props) {
@@ -56,7 +64,7 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
         ) : (
           favorites.map(f => (
             <div key={f.id} className={styles.favItem} onClick={() => handleFavoriteClick(f)} title={f.name}>
-              {f.isDirectory ? '📁' : '📄'} {f.name}
+              {f.name}
             </div>
           ))
         )}
@@ -82,7 +90,10 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
           <span>{formatUsed(usedBytes)} / {DISPLAY_LIMIT_BYTES / 1024 / 1024 / 1024}GB</span>
         </div>
         <div className={styles.storageBarTrack}>
-          <div className={styles.storageBarFill} style={{ width: `${percent}%` }} />
+          <div
+            className={`${styles.storageBarFill} ${usageBarClass(percent, styles)}`.trim()}
+            style={{ width: `${percent}%` }}
+          />
         </div>
       </div>
     </div>

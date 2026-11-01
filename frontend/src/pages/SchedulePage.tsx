@@ -30,6 +30,7 @@ export default function SchedulePage() {
   const [dayPanelOpen, setDayPanelOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(7);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalDate, setAddModalDate] = useState<string | null>(null); // 우클릭으로 특정 셀에서 추가하면 그 날짜, 아니면 selectedDate를 씀
 
   const bump = () => setRefreshKey(k => k + 1);
 
@@ -61,7 +62,8 @@ export default function SchedulePage() {
     setSelectedDate(new Date());
   };
 
-  const handleAdd = () => {
+  const handleAdd = (dateStr?: string) => {
+    setAddModalDate(dateStr ?? null);
     setAddModalOpen(true);
   };
 
@@ -80,7 +82,7 @@ export default function SchedulePage() {
         onPrev={handlePrev}
         onNext={handleNext}
         onToday={handleToday}
-        onAdd={handleAdd}
+        onAdd={() => handleAdd()}
       />
 
       <div className={styles.body}>
@@ -92,6 +94,7 @@ export default function SchedulePage() {
               refreshKey={refreshKey}
               onScheduleChange={bump}
               onVisibleCountChange={setVisibleCount}
+              onRequestAddSchedule={handleAdd}
             />
           ) : (
             <MonthCalendar
@@ -113,7 +116,7 @@ export default function SchedulePage() {
 
       {addModalOpen && (
         <AddScheduleModal
-          defaultDate={toDateStr(selectedDate)}
+          defaultDate={addModalDate ?? toDateStr(selectedDate)}
           onCancel={() => setAddModalOpen(false)}
           onSaved={() => { bump(); setAddModalOpen(false); }}
         />

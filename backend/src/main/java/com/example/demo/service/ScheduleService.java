@@ -223,6 +223,16 @@ public class ScheduleService {
         scheduleRepository.delete(schedule);
     }
 
+    // 회원탈퇴 시 유저의 일정을 전부 정리 (톡캘린더 이벤트도 하나씩 같이 삭제)
+    @Transactional
+    public void deleteAllSchedulesForUser(String userId) {
+        List<Schedule> schedules = scheduleRepository.findByUserId(userId);
+        for (Schedule schedule : schedules) {
+            deleteKakaoEventIfAny(schedule);
+        }
+        scheduleRepository.deleteAll(schedules);
+    }
+
     // 일정에 걸린 알림이 톡캘린더에 등록돼 있으면 삭제
     private void deleteKakaoEventIfAny(Schedule schedule) {
         Notification notification = schedule.getNotification();

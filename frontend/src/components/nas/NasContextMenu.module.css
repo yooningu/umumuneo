@@ -1,8 +1,8 @@
 .menu {
   position: fixed;
   z-index: 2000;
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
+  background-color: var(--white);
+  border: 1px solid var(--gray4);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
@@ -18,13 +18,13 @@
   background: none;
   cursor: pointer;
   font-size: var(--font-m);
-  color: #333;
+  color: var(--gray1);
   border-radius: 6px;
   box-sizing: border-box;
 }
 
 .menuItem:hover {
-  background-color: #f5f5f7;
+  background-color: var(--gray5);
 }
 
 .menuItem:disabled {
@@ -33,5 +33,5 @@
 }
 
 .menuItemDanger {
-  color: #e05252;
+  color: var(--red2);
 }

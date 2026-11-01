@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { IoClose, IoFolderOutline, IoDocumentOutline } from "react-icons/io5";
 import { getPreviewBlobUrl, getArchiveEntries, getTextContent, updateTextContent, downloadFile, deleteFile } from '../../api/file';
 import { getFileIcon } from '../../utils/fileIcon';
+import ConfirmDialog from '../common/ConfirmDialog';
 import type { ArchiveEntry, FileItem } from '../../types';
 import styles from './NasPreviewModal.module.css';
 
@@ -12,13 +13,10 @@ interface Props {
   onSaved?: () => void;
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  UPLOAD: '업로드',
-  EMAIL: '이메일',
-  CHATBOT: '챗봇',
-};
-
 const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
+const AUTOSAVE_DELAY_MS = 1200;
+
+type SaveState = 'idle' | 'saving' | 'saved';
 
 function formatSize(bytes?: number): string {
   if (bytes == null) return '-';
@@ -32,12 +30,14 @@ function formatSize(bytes?: number): string {
 export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: Props) {
   const [url, setUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [archiveEntries, setArchiveEntries] = useState<ArchiveEntry[] | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
-  const [originalText, setOriginalText] = useState<string | null>(null);
   const [textError, setTextError] = useState<string | null>(null);
-  const [savingText, setSavingText] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestContentRef = useRef('');
 
   const isArchive = ARCHIVE_EXTENSIONS.includes((file.extension ?? '').toLowerCase());
   const isTxt = (file.extension ?? '').toLowerCase() === 'txt';
@@ -68,36 +68,60 @@ export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: P
   useEffect(() => {
     if (!isTxt) return;
     setTextContent(null);
-    setOriginalText(null);
     setTextError(null);
+    setSaveState('idle');
     getTextContent(file.id)
-      .then(c => { setTextContent(c); setOriginalText(c); })
+      .then(c => { setTextContent(c); latestContentRef.current = c; })
       .catch(() => setTextError('내용을 불러올 수 없어요.'));
   }, [file.id, isTxt]);
 
+  // 타이핑을 멈추고 일정 시간이 지나면 자동으로 저장 (메모장과 동일한 방식) - 저장 버튼 없음
+  const scheduleSave = (next: string) => {
+    latestContentRef.current = next;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      saveTimerRef.current = null;
+      setSaveState('saving');
+      try {
+        await updateTextContent(file.id, latestContentRef.current);
+        setSaveState('saved');
+        onSaved?.();
+      } catch (e) {
+        console.error(e);
+        setSaveState('idle');
+      }
+    }, AUTOSAVE_DELAY_MS);
+  };
+
+  // 모달이 닫히는 등 컴포넌트가 사라질 때 아직 저장 안 된 변경이 남아있으면 그 전에 바로 저장
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        updateTextContent(file.id, latestContentRef.current).catch(console.error);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file.id]);
+
   const mime = file.mimeType ?? '';
-  const textDirty = textContent !== null && textContent !== originalText;
 
   const handleDownload = () => {
     downloadFile(file.id, file.name).catch(console.error);
   };
 
-  const handleSaveText = async () => {
-    if (textContent === null || !textDirty) return;
-    setSavingText(true);
-    try {
-      await updateTextContent(file.id, textContent);
-      setOriginalText(textContent);
-      onSaved?.();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSavingText(false);
-    }
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setTextContent(e.target.value);
+    setSaveState('idle');
+    scheduleSave(e.target.value);
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`"${file.name}"을 삭제할까요?`)) return;
+  const handleDelete = () => {
+    setConfirmDelete(true);
+  };
+
+  const confirmDeleteFile = async () => {
+    setConfirmDelete(false);
     setDeleting(true);
     try {
       await deleteFile(file.id);
@@ -122,12 +146,18 @@ export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: P
             ) : textContent === null ? (
               <div className={styles.loading}>불러오는 중...</div>
             ) : (
-              <textarea
-                className={styles.textEditor}
-                value={textContent}
-                onChange={e => setTextContent(e.target.value)}
-                spellCheck={false}
-              />
+              <div className={styles.textEditorWrap}>
+                <textarea
+                  className={styles.textEditor}
+                  value={textContent}
+                  onChange={handleTextChange}
+                  spellCheck={false}
+                />
+                <div className={styles.textStatusRow}>
+                  {saveState === 'saving' && <span>저장 중...</span>}
+                  {saveState === 'saved' && <span>저장됨</span>}
+                </div>
+              </div>
             )
           ) : isArchive ? (
             archiveError ? (
@@ -166,23 +196,22 @@ export default function NasPreviewModal({ file, onClose, onDeleted, onSaved }: P
         <div className={styles.details}>
           <div className={styles.detailRow}><span className={styles.detailLabel}>크기</span><span>{formatSize(file.sizeBytes)}</span></div>
           <div className={styles.detailRow}><span className={styles.detailLabel}>종류</span><span>{file.extension?.toUpperCase() || file.mimeType || '-'}</span></div>
-          {file.source && (
-            <div className={styles.detailRow}><span className={styles.detailLabel}>출처</span><span>{SOURCE_LABEL[file.source] ?? file.source}</span></div>
-          )}
           <div className={styles.detailRow}><span className={styles.detailLabel}>수정일</span><span>{file.updatedAt.slice(0, 16).replace('T', ' ')}</span></div>
         </div>
         <div className={styles.footer}>
           <button className={styles.deleteBtn} onClick={handleDelete} disabled={deleting}>삭제</button>
-          {isTxt ? (
-            <>
-              <button className={styles.secondaryBtn} onClick={handleDownload}>다운로드</button>
-              <button className={styles.saveBtn} onClick={handleSaveText} disabled={!textDirty || savingText}>수정 저장</button>
-            </>
-          ) : (
-            <button className={styles.saveBtn} onClick={handleDownload}>다운로드</button>
-          )}
+          <button className={styles.saveBtn} onClick={handleDownload}>다운로드</button>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          message={`"${file.name}"을 삭제할까요?`}
+          danger
+          onConfirm={confirmDeleteFile}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </div>
   );
 }

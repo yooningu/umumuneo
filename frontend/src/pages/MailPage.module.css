@@ -2,50 +2,77 @@
   display: flex;
   height: 100%;
   min-height: 0;
+  padding: 16px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .listPane {
   width: 320px;
   min-width: 240px;
   flex-shrink: 0;
-  border-right: 1px solid #e0e0e0;
-  overflow-y: auto;
-  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--white);
+  border: 1px solid var(--gray3);
+  border-radius: 16px;
 }
 
 .listHeader {
-  padding: 16px;
-  font-size: 15px;
-  font-weight: bold;
-  color: #333;
-  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  padding: 12px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--gray5);
+  font-size: var(--font-m);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.listScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.highlight {
+  background-color: var(--brand);
+  color: var(--white);
+  border-radius: 2px;
 }
 
 .listItem {
   display: block;
-  width: 100%;
+  width: calc(100% - 16px);
+  margin: 4px 8px;
   text-align: left;
   padding: 12px 16px;
   border: none;
-  border-bottom: 1px solid #f0f0f0;
+  border-radius: 8px;
   background-color: transparent;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .listItem:hover {
-  background-color: #f8f9fa;
+  background-color: var(--gray5);
 }
 
 .listItemActive {
-  background-color: #eef0fe;
+  background-color: var(--gray4);
 }
 
 .listItemTop {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray3);
   margin-bottom: 2px;
 }
 
@@ -60,9 +87,9 @@
 }
 
 .listItemSubject {
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
   margin-bottom: 2px;
   overflow: hidden;
   white-space: nowrap;
@@ -70,57 +97,61 @@
 }
 
 .listItemPreview {
-  font-size: 12px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray3);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .attachmentBadge {
-  color: #7c8cf8;
-  font-weight: 600;
+  color: var(--brand);
+  font-weight: var(--font-weight-semibold);
 }
 
 .detailPane {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  background-color: var(--white);
+  border: 1px solid var(--gray3);
+  border-radius: 20px;
+  box-sizing: border-box;
 }
 
 .empty {
-  color: #bbb;
-  font-size: 13px;
+  color: var(--gray3);
+  font-size: var(--font-m);
   text-align: center;
   margin-top: 40px;
 }
 
 .errorBox {
-  color: #ff6b6b;
-  font-size: 13px;
+  color: var(--red);
+  font-size: var(--font-m);
   text-align: center;
   margin-top: 40px;
 }
 
 .detailSubject {
-  font-size: 18px;
-  color: #333;
+  font-size: var(--font-l);
+  color: var(--gray1);
   margin: 0 0 8px;
 }
 
 .detailMeta {
   display: flex;
   gap: 16px;
-  font-size: 12px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray3);
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--gray4);
   margin-bottom: 16px;
 }
 
 .detailBody {
-  font-size: 14px;
-  color: #333;
+  font-size: var(--font-m);
+  color: var(--gray1);
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.6;
@@ -130,19 +161,19 @@
   width: 100%;
   min-height: 120px;
   border: none;
-  background-color: #fff;
+  background-color: var(--white);
 }
 
 .attachmentSection {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--gray4);
 }
 
 .attachmentSectionTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: #555;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray2);
   margin-bottom: 8px;
 }
 
@@ -151,7 +182,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background-color: #f8f9fa;
+  background-color: var(--gray5);
   border-radius: 8px;
   margin-bottom: 6px;
 }
@@ -172,32 +203,32 @@
 }
 
 .attachmentName {
-  font-size: 13px;
-  color: #333;
+  font-size: var(--font-m);
+  color: var(--gray1);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .attachmentSize {
-  font-size: 11px;
-  color: #888;
+  font-size: var(--font-s);
+  color: var(--gray3);
 }
 
 .downloadButton {
   flex-shrink: 0;
-  border: 1px solid #7c8cf8;
-  color: #7c8cf8;
-  background-color: #fff;
+  border: 1px solid var(--brand);
+  color: var(--brand);
+  background-color: var(--white);
   border-radius: 6px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--font-s);
   cursor: pointer;
 }
 
 .downloadButton:hover {
-  background-color: #7c8cf8;
-  color: #fff;
+  background-color: var(--brand);
+  color: var(--white);
 }
 
 @media (max-width: 640px) {
@@ -207,7 +238,5 @@
   .listPane {
     width: 100%;
     max-height: 40vh;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
   }
 }

@@ -24,4 +24,7 @@ public interface InboundEmailRepository extends JpaRepository<InboundEmail, Stri
     List<InboundEmailListProjection> findListViewByUserId(@Param("userId") String userId);
 
     Optional<InboundEmail> findByIdAndUserId(String id, String userId);
+
+    // 유저의 수신 메일 전체 조회 (회원탈퇴 시 전부 정리하는 용도)
+    List<InboundEmail> findByUserId(String userId);
 }

@@ -34,21 +34,33 @@
 }
 
 .dayCell {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .dayCell:hover {
   background-color: var(--gray5);
 }
 
-.selected {
-  background-color: var(--gray4);
+.selected::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  pointer-events: none;
+  /* 일정 바/점이 칸 밖으로 살짝 번져나가도 테두리가 항상 그 위에 보이도록 */
+  z-index: 2;
+  /* 테두리 선 양옆(바깥쪽/안쪽)에 흰색 1px씩 둘러서 테두리가 또렷하게 분리되어 보이도록 */
+  box-shadow: 0 0 0 1px var(--white), inset 0 0 0 1px var(--white);
 }
 
 .dayNumber {
+  position: relative;
   width: 24px;
   height: 24px;
   line-height: 24px;
@@ -81,10 +93,27 @@
   text-overflow: ellipsis;
 }
 
+.todayCell {
+  background-color: rgba(255, 165, 0, 0.15);
+}
+
+.todayCell:hover {
+  background-color: rgba(255, 165, 0, 0.22);
+}
+
 .today {
-  background-color: var(--blue);
-  color: var(--white);
+  color: var(--brand);
   font-weight: var(--font-weight-bold);
+}
+
+.bell {
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  transform: translateY(-50%);
+  font-size: var(--font-s);
+  line-height: 1;
+  color: var(--yellow);
 }
 
 .dotsRow {

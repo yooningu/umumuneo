@@ -3,6 +3,7 @@ import { IoClose } from "react-icons/io5";
 import type { Schedule, ScheduleType, RepeatRule } from '../../types';
 import { updateSchedule, deleteSchedule } from '../../api/schedule';
 import TimeField from '../common/TimeField';
+import { scheduleFormSchema, flattenZodErrors } from '../../validation/schedule';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
@@ -44,11 +45,19 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
   const [offsetMin, setOffsetMin] = useState(schedule.notification?.offsetMin ?? 5);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const toggleNotif = () => setNotifOn(v => !v);
 
   const handleSave = async () => {
-    if (!title.trim() || saving) return;
+    if (saving) return;
+    const result = scheduleFormSchema.safeParse({ title, type, startDate, endDate, startTime, endTime });
+    if (!result.success) {
+      setErrors(flattenZodErrors(result.error));
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       await updateSchedule(schedule.id, {
@@ -92,6 +101,7 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
         <div className={styles.formGroup}>
           <span className={styles.label}>제목</span>
           <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} />
+          {errors.title && <span className={styles.fieldError}>{errors.title}</span>}
         </div>
         <div className={styles.formGroup}>
           <span className={styles.label}>유형</span>
@@ -116,6 +126,9 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
               <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
             )}
           </div>
+          {(errors.startDate || errors.endDate) && (
+            <span className={styles.fieldError}>{errors.startDate || errors.endDate}</span>
+          )}
         </div>
 
         {showStartTime(type) && (
@@ -127,6 +140,9 @@ export default function ScheduleEditModal({ schedule, onCancel, onSaved, onDelet
                 <TimeField value={endTime} onChange={setEndTime} />
               )}
             </div>
+            {(errors.startTime || errors.endTime) && (
+              <span className={styles.fieldError}>{errors.startTime || errors.endTime}</span>
+            )}
           </div>
         )}
 

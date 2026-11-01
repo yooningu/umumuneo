@@ -4,6 +4,7 @@ import { createSchedule } from '../../api/schedule';
 import { createTimetableGroup } from '../../api/timetable';
 import { toDateStr } from '../../utils/date';
 import TimeField from '../common/TimeField';
+import { scheduleFormSchema, timetableFormSchema, flattenZodErrors } from '../../validation/schedule';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
@@ -48,6 +49,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
   const [mode, setMode] = useState<Mode>('schedule');
   const [title, setTitle] = useState('');
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // 일정 모드 전용 상태
   const [type, setType] = useState<ScheduleType>('ALLDAY');
@@ -75,8 +77,23 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
   };
 
   const handleSave = async () => {
-    if (!title.trim() || saving) return;
-    if (mode === 'timetable' && (!startTime || !endTime || selectedDays.length === 0)) return;
+    if (saving) return;
+
+    if (mode === 'schedule') {
+      const result = scheduleFormSchema.safeParse({ title, type, startDate, endDate, startTime, endTime });
+      if (!result.success) {
+        setErrors(flattenZodErrors(result.error));
+        return;
+      }
+    } else {
+      const result = timetableFormSchema.safeParse({ title, selectedDays, startTime, endTime });
+      if (!result.success) {
+        setErrors(flattenZodErrors(result.error));
+        return;
+      }
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       if (mode === 'schedule') {
@@ -113,6 +130,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
       <div className={`${styles.card} ${styles.cardEdit}`} onClick={e => e.stopPropagation()}>
         <div className={`${styles.header} ${styles.headerEdit}`}>
           <div className={styles.modeToggle}>
+            <div className={`${styles.modeToggleThumb} ${mode === 'timetable' ? styles.modeToggleThumbRight : ''}`.trim()} />
             <button
               className={`${styles.modeToggleBtn} ${mode === 'schedule' ? styles.modeToggleBtnActive : ''}`}
               onClick={() => setMode('schedule')}
@@ -131,6 +149,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
         <div className={styles.formGroup}>
           <span className={styles.label}>제목</span>
           <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} />
+          {errors.title && <span className={styles.fieldError}>{errors.title}</span>}
         </div>
 
         {mode === 'schedule' ? (
@@ -158,6 +177,9 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
                   <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
                 )}
               </div>
+              {(errors.startDate || errors.endDate) && (
+                <span className={styles.fieldError}>{errors.startDate || errors.endDate}</span>
+              )}
             </div>
 
             {showStartTime(type) && (
@@ -169,6 +191,9 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
                     <TimeField value={endTime} onChange={setEndTime} />
                   )}
                 </div>
+                {(errors.startTime || errors.endTime) && (
+                  <span className={styles.fieldError}>{errors.startTime || errors.endTime}</span>
+                )}
               </div>
             )}
 
@@ -227,6 +252,7 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
                   </button>
                 ))}
               </div>
+              {errors.selectedDays && <span className={styles.fieldError}>{errors.selectedDays}</span>}
             </div>
 
             <div className={styles.formGroup}>
@@ -235,6 +261,9 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
                 <TimeField value={startTime} onChange={setStartTime} />
                 <TimeField value={endTime} onChange={setEndTime} />
               </div>
+              {(errors.startTime || errors.endTime) && (
+                <span className={styles.fieldError}>{errors.startTime || errors.endTime}</span>
+              )}
             </div>
 
             <div className={styles.formGroup}>

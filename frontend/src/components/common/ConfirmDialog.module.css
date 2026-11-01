@@ -1,0 +1,80 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.card {
+  width: 320px;
+  max-width: 90vw;
+  background-color: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.message {
+  font-size: var(--font-m);
+  color: var(--gray1);
+  line-height: 1.5;
+  margin: 0 0 18px;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn {
+  padding: 8px 16px;
+  border: 1px solid var(--gray3);
+  border-radius: 8px;
+  background-color: var(--white);
+  color: var(--gray1);
+  font-size: var(--font-s);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
+.cancelBtn:hover {
+  background-color: var(--gray5);
+}
+
+.confirmBtn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--brand);
+  color: var(--white);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised-brand);
+}
+
+.confirmBtn:hover {
+  opacity: 0.85;
+}
+
+.confirmBtnDanger {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--red2);
+  color: var(--white);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised-brand);
+}
+
+.confirmBtnDanger:hover {
+  opacity: 0.85;
+}

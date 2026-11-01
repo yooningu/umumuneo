@@ -75,6 +75,10 @@ public class AuthService {
                     return userRepository.save(newUser);
                 });
 
+        if (user.getDeletionRequestedAt() != null) {
+            throw new RuntimeException("탈퇴 처리 중인 계정입니다. 문의가 필요하면 관리자에게 연락해주세요.");
+        }
+
         user.setKakaoAccessToken(kakaoAccessToken);
         if (kakaoRefreshToken != null) {
             user.setKakaoRefreshToken(kakaoRefreshToken);

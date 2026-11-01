@@ -7,7 +7,6 @@ export interface LoginResponse {
 export interface User {
   id: string;
   nickname: string;
-  email: string | null;
   emailAlias: string | null; // umumuneo.com 개인 메일 별칭 (예: "abc123" -> abc123@umumuneo.com). 아직 안 정했으면 null
   notifOffsetMin: number;
   notifEnabled: boolean;

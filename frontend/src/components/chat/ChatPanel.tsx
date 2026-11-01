@@ -5,6 +5,7 @@ import { sendMessage, getMessages } from '../../api/chat';
 import { uploadFiles, getFileBlob, getPreviewBlobUrl } from '../../api/file';
 import { transcribeAudio } from '../../api/stt';
 import Loader from '../common/Loader';
+import Alert from '../common/Alert';
 import AttachMenu from '../common/AttachMenu';
 import NasFilePickerModal from '../common/NasFilePickerModal';
 import NasThumbnail from '../nas/NasThumbnail';
@@ -78,6 +79,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null);
   const [secretMode, setSecretMode] = useState(false); // 켜져있으면 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
+  const [alertMessage, setAlertMessage] = useState<string | null>(null); // window.alert() 대신 쓰는 토스트 알림 문구
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<(string | null)[]>([]); // pendingFiles와 순서 맞춘 미리보기 URL (이미지가 아니면 null)
@@ -263,7 +265,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      alert('이 브라우저는 마이크 녹음을 지원하지 않아요.');
+      setAlertMessage('이 브라우저는 마이크 녹음을 지원하지 않아요.');
       return;
     }
     try {
@@ -282,7 +284,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
           if (text) setInput(prev => (prev ? `${prev} ${text}` : text));
         } catch (e) {
           console.error(e);
-          alert('음성 인식에 실패했어요.');
+          setAlertMessage('음성 인식에 실패했어요.');
         } finally {
           setTranscribing(false);
         }
@@ -293,7 +295,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       setIsWhisperRecording(true);
     } catch (e) {
       console.error(e);
-      alert('마이크 권한이 필요해요.');
+      setAlertMessage('마이크 권한이 필요해요.');
     }
   };
 
@@ -428,6 +430,8 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
           <span>드래그로 파일 넣기</span>
         </div>
       )}
+
+      <Alert message={alertMessage} onClose={() => setAlertMessage(null)} />
 
       {/* 상단 바 - 대화 영역과 분리된 별도 바. 시크릿 모드일 땐 가운데에 표시되고,
           대화가 아직 시작 안 된 경우에만 우측에 시크릿 모드 전환 아이콘이 뜬다

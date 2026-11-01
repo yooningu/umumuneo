@@ -3,6 +3,7 @@ import { getSchedules } from '../../api/schedule';
 import { getHolidays } from '../../api/holiday';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
+import { PiAlarmFill } from 'react-icons/pi';
 import styles from './MonthCalendar.module.css';
 
 interface Props {
@@ -64,6 +65,14 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
     }
   }
 
+  // 알림은 시작일 하루에만 가므로(기간 내내 가는 게 아님), 벨 표시도 시작일에만
+  const notifiedDays = new Set<number>();
+  for (const s of schedules) {
+    if (s.notification && s.startDate >= monthStart && s.startDate <= monthEnd) {
+      notifiedDays.add(Number(s.startDate.slice(8, 10)));
+    }
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.weekdayRow}>
@@ -99,11 +108,12 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
             <div
               key={i}
               onClick={() => onDateSelect(date)}
-              className={`${styles.dayCell} ${isSelected ? styles.selected : ''}`}
+              className={`${styles.dayCell} ${isSelected ? styles.selected : ''} ${isToday ? styles.todayCell : ''}`}
               title={holidayName}
             >
               <span className={numberClassName}>
                 {day}
+                {notifiedDays.has(day) && <span className={styles.bell}><PiAlarmFill /></span>}
               </span>
               {holidayName && <div className={styles.holidayLabel}>{holidayName}</div>}
               <div className={styles.dotsRow}>

@@ -3,19 +3,19 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #fff;
+  background-color: var(--white);
 }
 
 .dragOverlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(124, 140, 248, 0.15);
-  border: 2px dashed #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.15);
+  border: 2px dashed var(--brand);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #7c8cf8;
+  color: var(--brand);
   font-size: var(--font-m);
   font-weight: var(--font-weight-bold);
   z-index: 10;
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--gray4);
   flex-wrap: wrap;
 }
 
@@ -35,7 +35,7 @@
   padding: 6px 12px;
   border: 1px solid var(--gray3);
   border-radius: 8px;
-  background: #fff;
+  background: var(--white);
   cursor: pointer;
   font-size: var(--font-m);
   color: var(--gray1);
@@ -114,7 +114,7 @@
   height: 28px;
   border-radius: 6px;
   border: 1px solid var(--gray3);
-  background: #fff;
+  background: var(--white);
   cursor: pointer;
   font-size: var(--font-m);
 }
@@ -133,7 +133,7 @@
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--gray4);
 }
 
 .headerBtn {
@@ -144,11 +144,11 @@
   background: none;
   cursor: pointer;
   font-size: var(--font-s);
-  color: #999;
+  color: var(--gray3);
 }
 
 .headerBtnActive {
-  color: #7c8cf8;
+  color: var(--brand);
   font-weight: var(--font-weight-bold);
 }
 
@@ -164,14 +164,34 @@
 
 .viewToggle {
   display: flex;
-  gap: 2px;
+  position: relative;
   margin-left: auto;
   background-color: var(--gray4);
   border-radius: 8px;
   padding: 2px;
+  box-shadow: var(--shadow-toggle-track);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 6px;
+  background-color: var(--brand);
+  box-shadow: var(--shadow-toggle-thumb-brand);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.toggleThumbRight {
+  transform: translateX(100%);
 }
 
 .viewToggleBtn {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -180,19 +200,18 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #999;
+  color: var(--gray3);
   cursor: pointer;
   font-size: var(--font-m);
+  transition: color 0.2s ease;
 }
 
 .viewToggleBtn:hover {
-  color: #666;
+  color: var(--gray2);
 }
 
 .viewToggleBtnActive {
-  background-color: #fff;
-  color: #7c8cf8;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  color: var(--white);
 }
 
 .grid {
@@ -208,7 +227,7 @@
 .empty {
   grid-column: 1 / -1;
   text-align: center;
-  color: #bbb;
+  color: var(--gray3);
   font-size: var(--font-m);
   margin-top: 40px;
 }
@@ -225,17 +244,21 @@
 }
 
 .tile:hover {
-  background-color: #fafafa;
+  background-color: var(--gray5);
 }
 
 .tileSelected {
-  background-color: #eef0ff;
-  border-color: #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.12);
+  border-color: var(--brand);
+}
+
+.tileSelected:hover {
+  background-color: rgba(255, 165, 0, 0.08);
 }
 
 .tileDropTarget {
-  background-color: #e3e7ff;
-  border-color: #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.18);
+  border-color: var(--brand);
   border-style: dashed;
 }
 
@@ -250,13 +273,13 @@
   top: -4px;
   right: -8px;
   font-size: var(--font-s);
-  color: #f5a623;
+  color: var(--yellow);
 }
 
 .tileName {
   margin-top: 6px;
   font-size: var(--font-s);
-  color: #333;
+  color: var(--gray1);
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -264,10 +287,19 @@
   text-align: center;
 }
 
-.tileMeta {
+.tileNameInput {
+  margin-top: 6px;
+  width: 100%;
   font-size: var(--font-s);
-  color: #999;
-  margin-top: 2px;
+  font-family: inherit;
+  color: var(--gray1);
+  background-color: var(--white);
+  border: 1px solid var(--brand);
+  border-radius: 4px;
+  padding: 1px 4px;
+  text-align: center;
+  box-sizing: border-box;
+  outline: none;
 }
 
 .list {
@@ -290,17 +322,21 @@
 }
 
 .listRow:hover {
-  background-color: #fafafa;
+  background-color: var(--gray5);
 }
 
 .listRowSelected {
-  background-color: #eef0ff;
-  border-color: #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.12);
+  border-color: var(--brand);
+}
+
+.listRowSelected:hover {
+  background-color: rgba(255, 165, 0, 0.08);
 }
 
 .listRowDropTarget {
-  background-color: #e3e7ff;
-  border-color: #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.18);
+  border-color: var(--brand);
   border-style: dashed;
 }
 
@@ -315,23 +351,37 @@
 .listName {
   flex: 1;
   font-size: var(--font-m);
-  color: #333;
+  color: var(--gray1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.listNameInput {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-m);
+  font-family: inherit;
+  color: var(--gray1);
+  background-color: var(--white);
+  border: 1px solid var(--brand);
+  border-radius: 4px;
+  padding: 1px 4px;
+  box-sizing: border-box;
+  outline: none;
+}
+
 .listMeta {
   font-size: var(--font-s);
-  color: #999;
+  color: var(--gray3);
   flex-shrink: 0;
   width: 90px;
   text-align: right;
 }
 
 .selectionBox {
-  background-color: rgba(124, 140, 248, 0.15);
-  border: 1px solid #7c8cf8;
+  background-color: rgba(255, 165, 0, 0.15);
+  border: 1px solid var(--brand);
   pointer-events: none;
   z-index: 500;
 }

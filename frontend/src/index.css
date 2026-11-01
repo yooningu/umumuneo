@@ -32,6 +32,45 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+
+  /* 토글(스위치) 전용 소프트 그림자 - 떠있는 썸(선택 막대)과 파인 트랙(바깥 배경)에 공통으로 씀.
+     썸이 브랜드색(주황)인 토글은 라이트모드에선 같은 값, 다크모드에서만 더 쎄게(아래 재정의 참고) */
+  --shadow-toggle-thumb: 0 0 6px rgba(108, 108, 108, 0.45);
+  /* 주황 썸은 배경 자체가 밝아서 흐릿한 단일 그림자로는 티가 잘 안 나 - 짙은 쪽/밝은 쪽을 나눈 입체 그림자로 */
+  --shadow-toggle-thumb-brand: 2px 2px 5px rgba(19, 21, 20, 0.3), -2px -2px 5px rgba(255, 255, 255, 0.95);
+  --shadow-toggle-track: inset -2px -2px 5px rgba(255, 255, 255, 0.64), inset 2px 2px 5px rgba(19, 21, 20, 0.16);
+
+  /* 버튼류(스케줄 페이지 이전/다음/오늘/추가 버튼 등)에 쓰는 떠있는 느낌의 소프트 그림자.
+     브랜드색(주황) 배경 버튼은 라이트모드에선 같은 값, 다크모드에서만 더 쎄게(아래 재정의 참고) */
+  --shadow-raised: 2px 2px 4px rgba(19, 21, 20, 0.16), -2px -2px 4px rgba(255, 255, 255, 0.9);
+  --shadow-raised-brand: var(--shadow-raised);
+}
+
+/* 다크모드: 설정의 테마에 따라 <html data-theme="dark">가 붙으면 적용됨 (App.tsx의 applyTheme 참고).
+   컴포넌트들이 --white를 카드/배경, --gray1을 본문 글자색, --gray4/5를 테두리/옅은 배경으로 쓰고 있어서
+   그 역할에 맞게 값만 뒤집어주면 거의 모든 화면이 따로 손 안 대도 다크모드로 바뀐다. */
+:root[data-theme="dark"] {
+  --white: #131514;
+  --gray1: #e8e9ea;
+  --gray2: #aab4c2;
+  --gray3: #7c8798;
+  --gray4: #343736;
+  --gray5: #262827;
+
+  /* green/blue/red/yellow 기본색은 어두운 배경에서 묻혀 보여서, 다크모드에선 더 진한 "2" 버전으로 통일 */
+  --green: var(--green2);
+  --blue: var(--blue2);
+  --red: var(--red2);
+  --yellow: var(--yellow2);
+
+  /* 소프트 그림자도 다시 정의 - 라이트모드 값은 흰 배경 위에 뜬다는 전제로 흰색 하이라이트를 섞어놨는데
+     어두운 배경 위에서 그대로 쓰면 하이라이트가 튀어 보여서, 어두운 배경에 맞게 하이라이트/그림자를 다시 잡음 */
+  --shadow-toggle-thumb: 0 0 10px rgba(0, 0, 0, 0.8);
+  --shadow-toggle-thumb-brand: 3px 3px 8px rgba(0, 0, 0, 0.8), -3px -3px 8px rgba(255, 255, 255, 0.35);
+  --shadow-toggle-track: inset -2px -2px 5px rgba(255, 255, 255, 0.12), inset 2px 2px 5px rgba(0, 0, 0, 0.7);
+  --shadow-raised: 3px 3px 6px rgba(0, 0, 0, 0.7), -3px -3px 6px rgba(255, 255, 255, 0.12);
+  /* 브랜드색 배경 버튼은 다크모드에서 더 쎄게 - 흰 배경 버튼보다 그림자를 키움 */
+  --shadow-raised-brand: 4px 4px 9px rgba(0, 0, 0, 0.85), -4px -4px 9px rgba(255, 255, 255, 0.18);
 }
 
 /* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */
@@ -46,7 +85,9 @@ body {
   height: 100%;
   font-family: "Noto Sans KR", sans-serif;
   font-weight: var(--font-weight-regular);
-
+  background-color: var(--white);
+  color: var(--gray1);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 #root {

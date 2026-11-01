@@ -13,6 +13,7 @@ import MailPage from './pages/MailPage';
 import SettingsPage from './pages/SettingsPage';
 import UploadProgressWidget from './components/common/UploadProgressWidget';
 import { getMe } from './api/user';
+import { applyTheme } from './utils/theme';
 import styles from './App.module.css';
 
 // 왼쪽 고정 사이드바 + 페이지 레이아웃
@@ -36,7 +37,10 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token) return;
     getMe()
-      .then(user => setNeedsEmailAlias(user.emailAlias === null))
+      .then(user => {
+        setNeedsEmailAlias(user.emailAlias === null);
+        applyTheme(user.theme); // 다른 기기에서 바꾼 테마가 있으면 로그인 직후 그걸로 동기화
+      })
       .catch(() => setNeedsEmailAlias(false)); // 조회 실패해도 화면은 정상적으로 보여줌
   }, [token]);
 

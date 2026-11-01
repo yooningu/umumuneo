@@ -9,3 +9,10 @@ files 테이블의 새 컬럼(source, email_id)은 nullable이라 Hibernate가 �
 
 1. DB에서 실행: DROP TABLE email_attachments;
 2. 미니 PC 디스크에서 삭제: /workspace/uploads/email-attachments/ 폴더 통째로
+
+[백엔드] 미니 PC에서 아래 정리 필요 (User.email 필드 삭제)
+users 테이블의 email 컬럼은 어디서도 값을 넣어준 적 없는 죽은 필드라 코드에서 지웠음(entity/User.java,
+UserResponse). Hibernate ddl-auto=update는 컬럼을 자동으로 "추가"만 하고 "삭제"는 안 해줘서,
+DB에는 아직 email 컬럼이 그대로 남아있음 - 직접 지워야 함.
+
+1. DB에서 실행: ALTER TABLE users DROP COLUMN email;

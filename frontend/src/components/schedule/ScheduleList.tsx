@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { getSchedules } from '../../api/schedule';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
@@ -29,6 +29,16 @@ function formatDateLabel(dateStr: string): string {
 function formatShortDate(dateStr: string): string {
   const [, m, d] = dateStr.split('-').map(Number);
   return `${m}월 ${d}일`;
+}
+
+// 일정 색(hex) -> "r, g, b" 문자열. CSS 변수로 넘겨서 기본/호버 배경 투명도를 CSS에서 다르게 줌
+// (구분선 대신 색으로 항목을 구분하고, 호버하면 더 연하게)
+function hexToRgbTriple(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `${r}, ${g}, ${b}`;
 }
 
 // 격주/매월/매년 반복 일정은 백엔드가 조회 기간(여기선 1년치) 안의 발생 횟수만큼 가상으로 펼쳐서
@@ -101,6 +111,7 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
               <div
                 key={s.id}
                 className={styles.item}
+                style={{ '--item-color': hexToRgbTriple(s.color || '#7c8cf8') } as CSSProperties}
                 onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
               >
                 <div className={styles.colorBar} style={{ backgroundColor: s.color || '#7c8cf8' }} />

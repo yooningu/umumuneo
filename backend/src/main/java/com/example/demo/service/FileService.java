@@ -11,6 +11,7 @@ import com.example.demo.repository.UploadSessionRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.util.FileShareTokenUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -569,6 +571,23 @@ public class FileService {
         }
 
         fileRepository.delete(file);
+    }
+
+    // 회원탈퇴 시 유저의 파일/폴더를 전부 정리. 루트(최상위) 행만 지워도 FileEntity의
+    // children(mappedBy="parent") cascade+orphanRemoval 덕에 하위 전체가 DB에서 같이 지워진다.
+    // 실제 디스크 파일은 개별 경로를 따라가지 않고, 이 유저 전용 디렉토리(uploadDir/{userId})를
+    // 통째로 재귀 삭제한다 (업로드 조각 임시 파일까지 전부 같은 디렉토리 아래에 있어서 한 번에 정리됨).
+    @Transactional
+    public void deleteAllFilesForUser(String userId) {
+        List<FileEntity> roots = fileRepository.findByUserIdAndParentIsNull(userId);
+        fileRepository.deleteAll(roots);
+
+        Path userDir = Paths.get(uploadDir, userId);
+        try {
+            deleteDirectoryRecursive(userDir);
+        } catch (IOException e) {
+            log.warn("회원탈퇴 디스크 정리 실패 (userId={}): {}", userId, e.getMessage());
+        }
     }
 
     // 파일 조회 + 권한 확인

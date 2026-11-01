@@ -36,4 +36,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
 
     // 반복 일정 전부 조회 (발생일 계산은 서비스 레이어에서)
     List<Schedule> findByUserIdAndRepeatRuleIsNotNull(String userId);
+
+    // 유저의 일정 전체 조회 (회원탈퇴 시 전부 정리하는 용도)
+    List<Schedule> findByUserId(String userId);
 }

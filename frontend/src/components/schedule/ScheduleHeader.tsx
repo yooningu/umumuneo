@@ -26,6 +26,7 @@ export default function ScheduleHeader({
     <div className={styles.header}>
       <div className={styles.left}>
         <div className={styles.viewToggle}>
+          <div className={`${styles.toggleThumb} ${viewMode === 'calendar' ? styles.toggleThumbRight : ''}`.trim()} />
           <button
             className={`${styles.toggleBtn} ${viewMode === 'scheduler' ? styles.toggleBtnActive : ''}`.trim()}
             onClick={() => onViewModeChange('scheduler')}

@@ -71,15 +71,35 @@
 /* 헤더에 타이틀 대신 들어가는 일정/시간표 전환 토글 (추가 모달 전용) */
 .modeToggle {
   display: flex;
+  position: relative;
   width: 100%;
   border-radius: 10px;
   overflow: hidden;
   padding: 3px;
-  gap: 2px;
   background-color: var(--gray5);
+  box-shadow: var(--shadow-toggle-track);
+}
+
+.modeToggleThumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 8px;
+  background-color: var(--brand);
+  box-shadow: var(--shadow-toggle-thumb-brand);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.modeToggleThumbRight {
+  transform: translateX(100%);
 }
 
 .modeToggleBtn {
+  position: relative;
+  z-index: 1;
   flex: 1;
   padding: 8px 18px;
   border: none;
@@ -90,13 +110,16 @@
   font-weight: var(--font-weight-regular);
   color: var(--gray2);
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
 .modeToggleBtnActive {
-  background-color: var(--white);
-  color: var(--gray1);
+  color: var(--white);
   font-weight: var(--font-weight-bold);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.modeToggleBtn:hover:not(.modeToggleBtnActive) {
+  font-weight: var(--font-weight-semibold);
 }
 
 .dot {
@@ -192,6 +215,7 @@
   font-size: var(--font-m);
   color: var(--gray1);
   cursor: pointer;
+  box-shadow: var(--shadow-raised);
 }
 
 .pillBtn:disabled {
@@ -209,6 +233,7 @@
   border-color: var(--blue);
   color: var(--white);
   font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-raised-brand);
 }
 
 /* 토글 스위치 */
@@ -286,6 +311,7 @@
   padding: 8px 10px;
   font-size: var(--font-m);
   color: var(--gray1);
+  background-color: inherit;
   width: 100%;
   box-sizing: border-box;
   font-family: inherit;
@@ -294,6 +320,17 @@
 .textarea {
   resize: vertical;
   min-height: 60px;
+}
+
+/* 날짜 입력의 브라우저 기본 달력 아이콘은 항상 검정이라 다크모드에서 안 보임 -
+   다크모드일 때만 반전시켜서 밝게 보이도록 함 */
+:global([data-theme="dark"]) .input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.fieldError {
+  font-size: var(--font-s);
+  color: var(--red2);
 }
 
 .row2 {

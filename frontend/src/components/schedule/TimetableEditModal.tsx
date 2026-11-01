@@ -4,6 +4,7 @@ import type { Timetable } from '../../types';
 import { updateTimetableGroup, deleteTimetableGroup } from '../../api/timetable';
 import { TIMETABLE_COLORS } from './AddScheduleModal';
 import TimeField from '../common/TimeField';
+import { timetableFormSchema, flattenZodErrors } from '../../validation/schedule';
 import styles from './ScheduleModal.module.css';
 
 interface Props {
@@ -25,6 +26,7 @@ export default function TimetableEditModal({ timetables, onCancel, onSaved, onDe
   const [endTime, setEndTime] = useState(first.endTime.slice(0, 5));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const toggleDay = (day: number) => {
     setSelectedDays(prev => (
@@ -33,7 +35,14 @@ export default function TimetableEditModal({ timetables, onCancel, onSaved, onDe
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !startTime || !endTime || selectedDays.length === 0 || saving) return;
+    if (saving) return;
+    const result = timetableFormSchema.safeParse({ title, selectedDays, startTime, endTime });
+    if (!result.success) {
+      setErrors(flattenZodErrors(result.error));
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       await updateTimetableGroup(groupKey, {
@@ -73,6 +82,7 @@ export default function TimetableEditModal({ timetables, onCancel, onSaved, onDe
         <div className={styles.formGroup}>
           <span className={styles.label}>제목</span>
           <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} />
+          {errors.title && <span className={styles.fieldError}>{errors.title}</span>}
         </div>
 
         <div className={styles.formGroup}>
@@ -88,6 +98,7 @@ export default function TimetableEditModal({ timetables, onCancel, onSaved, onDe
               </button>
             ))}
           </div>
+          {errors.selectedDays && <span className={styles.fieldError}>{errors.selectedDays}</span>}
         </div>
 
         <div className={styles.formGroup}>
@@ -96,6 +107,9 @@ export default function TimetableEditModal({ timetables, onCancel, onSaved, onDe
             <TimeField value={startTime} onChange={setStartTime} />
             <TimeField value={endTime} onChange={setEndTime} />
           </div>
+          {(errors.startTime || errors.endTime) && (
+            <span className={styles.fieldError}>{errors.startTime || errors.endTime}</span>
+          )}
         </div>
 
         <div className={styles.formGroup}>

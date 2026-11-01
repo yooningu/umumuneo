@@ -25,6 +25,11 @@
   cursor: pointer;
   font-size: var(--font-m);
   color: var(--gray2);
+  transition: color 0.15s ease;
+}
+
+.navButton:hover {
+  color: var(--brand);
 }
 
 .titleWrap {
@@ -38,6 +43,11 @@
   font-weight: var(--font-weight-bold);
   font-size: var(--font-m);
   color: var(--gray1);
+  transition: color 0.15s ease;
+}
+
+.title:hover {
+  color: var(--brand);
 }
 
 .weekdayRow {
@@ -80,17 +90,26 @@
   border-radius: 6px;
   box-sizing: border-box;
   height: 48px;
+  transition: background-color 0.15s ease;
+}
+
+.dayCell:hover {
+  background-color: var(--gray5);
 }
 
 .dayCell.today {
-  background-color: rgba(79, 187, 188, 0.15);
+  background-color: rgba(255, 165, 0, 0.15);
+}
+
+.dayCell.today:hover {
+  background-color: rgba(255, 165, 0, 0.22);
 }
 
 .dayCell.selected::after {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid var(--sub);
+  border: 1px solid var(--brand);
   border-radius: 6px;
   pointer-events: none;
   /* 일정 바가 칸 밖으로 살짝 번져나가도(bleed) 테두리가 항상 그 위에 보이도록 */
@@ -127,7 +146,7 @@
 }
 
 .dayNumber.today {
-  color: var(--sub);
+  color: var(--brand);
   font-weight: var(--font-weight-bold);
 }
 

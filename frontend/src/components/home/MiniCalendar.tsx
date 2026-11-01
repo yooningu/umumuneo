@@ -33,7 +33,6 @@ interface PeriodInterval {
   clipEndDay: number;
   isTrueStart: boolean;
   isTrueEnd: boolean;
-  hasNotification: boolean;
 }
 
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -89,11 +88,12 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
       const isTrueEnd = rangeEnd <= monthEndStr;
       const clipStartDay = isTrueStart ? Number(rangeStart.slice(8, 10)) : 1;
       const clipEndDay = isTrueEnd ? Number(rangeEnd.slice(8, 10)) : daysInMonth;
-      periodIntervals.push({ color, clipStartDay, clipEndDay, isTrueStart, isTrueEnd, hasNotification: !!s.notification });
+      periodIntervals.push({ color, clipStartDay, clipEndDay, isTrueStart, isTrueEnd });
       for (let d = clipStartDay; d <= clipEndDay; d++) {
         // 기간 일정은 아래 바(bar)로 표시되므로 점은 따로 찍지 않음 (중복 방지)
         const info = dayInfos.get(d) ?? { dots: [], hasNotification: false, titles: [] };
-        if (s.notification) info.hasNotification = true;
+        // 알림은 시작일 하루에만 가므로(기간 내내 매일 가는 게 아님), 벨 표시도 진짜 시작일에만
+        if (s.notification && d === clipStartDay && isTrueStart) info.hasNotification = true;
         info.titles.push(s.title);
         dayInfos.set(d, info);
       }
