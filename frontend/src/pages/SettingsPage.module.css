@@ -53,6 +53,52 @@
   color: var(--gray2);
 }
 
+.sessionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray4);
+}
+
+.sessionRow:last-of-type {
+  border-bottom: none;
+}
+
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sessionLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-m);
+  color: var(--gray1);
+}
+
+.sessionCurrentBadge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background-color: rgba(255, 165, 0, 0.15);
+  color: var(--brand);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sessionMeta {
+  font-size: var(--font-s);
+  color: var(--gray3);
+}
+
+.logoutAllBtn {
+  margin-top: 8px;
+}
+
 .themeToggle {
   position: relative;
   display: flex;

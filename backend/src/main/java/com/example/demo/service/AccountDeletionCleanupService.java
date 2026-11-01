@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.entity.User;
 import com.example.demo.repository.ChatSessionRepository;
 import com.example.demo.repository.InboundEmailRepository;
+import com.example.demo.repository.LoginSessionRepository;
 import com.example.demo.repository.MemoRepository;
 import com.example.demo.repository.NotificationLogRepository;
 import com.example.demo.repository.NotificationRepository;
@@ -29,6 +30,7 @@ public class AccountDeletionCleanupService {
     private static final long RETENTION_DAYS = 30;
 
     private final UserRepository userRepository;
+    private final LoginSessionRepository loginSessionRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final TimetableRepository timetableRepository;
     private final NotificationRepository notificationRepository;
@@ -58,6 +60,7 @@ public class AccountDeletionCleanupService {
 
     @Transactional
     public void purgeOne(String userId) {
+        loginSessionRepository.deleteAll(loginSessionRepository.findByUserId(userId));
         chatSessionRepository.deleteAll(chatSessionRepository.findByUserIdOrderByLastActiveAtDesc(userId));
         scheduleService.deleteAllSchedulesForUser(userId); // 톡캘린더 이벤트 삭제까지 포함
         timetableRepository.deleteAll(timetableRepository.findByUserId(userId));

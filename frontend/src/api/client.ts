@@ -41,10 +41,16 @@ client.interceptors.response.use(
         const accessToken = await refreshPromise;
         original.headers.Authorization = `Bearer ${accessToken}`;
         return client(original);
-      } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+      } catch (refreshError) {
+        // refresh token이 진짜로 무효(401)할 때만 로그아웃시킴. 서버가 잠깐 불안정하거나
+        // 네트워크가 끊긴 것뿐이면(네트워크 에러, 5xx 등) 세션을 지우지 않고 그냥 실패만 전파함 -
+        // 안 그러면 서버가 재시작/배포 중일 때마다 멀쩡한 로그인이 강제로 풀려버림
+        const status = (refreshError as { response?: { status?: number } })?.response?.status;
+        if (status === 401) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

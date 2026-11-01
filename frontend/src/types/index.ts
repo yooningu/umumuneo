@@ -4,6 +4,14 @@ export interface LoginResponse {
   talkMessageAgreed: boolean;
   agreementUrl: string | null;
 }
+export interface SessionInfo {
+  id: string;
+  deviceLabel: string | null;
+  rememberMe: boolean;
+  createdAt: string;
+  lastUsedAt: string;
+  isCurrent: boolean;
+}
 export interface User {
   id: string;
   nickname: string;

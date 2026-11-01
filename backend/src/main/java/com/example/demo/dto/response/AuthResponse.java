@@ -3,6 +3,7 @@ package com.example.demo.dto.response;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class AuthResponse {
@@ -27,5 +28,19 @@ public class AuthResponse {
     @AllArgsConstructor
     public static class DeviceToken {
         private String deviceToken;
+    }
+
+    // 설정 > 로그인된 기기 목록에 보여줄 세션 하나.
+    // isCurrent는 Boolean(래퍼) 타입으로 둠 - primitive boolean이면 Lombok이 isCurrent()를 만들고
+    // Jackson이 "is" 접두사를 떼어 JSON 키가 "current"가 돼버려서 프론트 필드명이랑 어긋남
+    @Getter
+    @AllArgsConstructor
+    public static class SessionInfo {
+        private String id;
+        private String deviceLabel;
+        private Boolean rememberMe;
+        private LocalDateTime createdAt;
+        private LocalDateTime lastUsedAt;
+        private Boolean isCurrent;
     }
 }

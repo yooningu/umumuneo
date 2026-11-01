@@ -27,24 +27,41 @@ public class JwtUtil {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    // Access Token 생성
-    public String generateAccessToken(String userId) {
+    // Access Token 생성. sessionId(jti)는 로그인 세션(기기) 하나를 가리킴 - access token 자체는
+    // 계속 무상태(세션이 끊겨도 자기 만료시간까지는 유효)지만, 어느 기기에서 온 요청인지
+    // ("이 기기" 표시) 구분하는 용도로 심어둠
+    public String generateAccessToken(String userId, String sessionId) {
         return Jwts.builder()
                 .subject(userId)
                 .claim("type", "access")
+                .id(sessionId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(secretKey)
                 .compact();
     }
 
-    // Refresh Token 생성
-    public String generateRefreshToken(String userId) {
+    // Refresh Token 생성. sessionId(jti)가 LoginSession 행의 id와 같아서,
+    // /auth/refresh 때마다 그 행이 아직 있는지로 유효성을 확인함 (행을 지우면 즉시 무효화됨)
+    public String generateRefreshToken(String userId, String sessionId) {
         return Jwts.builder()
                 .subject(userId)
                 .claim("type", "refresh")
+                .id(sessionId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    // "로그인 상태 유지" 체크했을 때 발급하는 Refresh Token - 만료시간 없이 발급(=로그아웃 전까지 계속 로그인 유지).
+    // type은 그대로 "refresh"라 /auth/refresh에서 보통 refresh token이랑 똑같이 처리됨
+    public String generatePersistentRefreshToken(String userId, String sessionId) {
+        return Jwts.builder()
+                .subject(userId)
+                .claim("type", "refresh")
+                .id(sessionId)
+                .issuedAt(new Date())
                 .signWith(secretKey)
                 .compact();
     }
@@ -79,6 +96,11 @@ public class JwtUtil {
     // 토큰 타입 확인 (access / refresh)
     public String getTokenType(String token) {
         return getClaims(token).get("type", String.class);
+    }
+
+    // 토큰에 심어진 세션 id(jti) 추출 - 이 변경 전에 발급된 토큰엔 없어서 null일 수 있음
+    public String getSessionId(String token) {
+        return getClaims(token).getId();
     }
 
     private Claims getClaims(String token) {
