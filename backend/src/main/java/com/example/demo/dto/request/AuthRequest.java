@@ -12,10 +12,4 @@ public class AuthRequest {
         // "로그인 상태 유지" 체크 여부 - true면 만료시간 없는 refresh token 발급
         private boolean rememberMe;
     }
-
-    @Getter
-    public static class Refresh {
-        @NotBlank(message = "Refresh Token은 필수입니다.")
-        private String refreshToken;
-    }
 }

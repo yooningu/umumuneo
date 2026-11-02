@@ -1,5 +1,6 @@
 package com.example.demo.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,6 +13,8 @@ public class AuthResponse {
     @AllArgsConstructor
     public static class Login {
         private String accessToken;
+        // 응답 바디로는 절대 안 내려감(HttpOnly 쿠키로만 전달) - 컨트롤러가 쿠키를 만들 때만 씀
+        @JsonIgnore
         private String refreshToken;
         private boolean talkMessageAgreed;  // 카카오톡 메시지 동의 여부
         private String agreementUrl;        // 동의 안 했을 때 동의 URL (동의 했으면 null)

@@ -22,10 +22,9 @@ export default function CallbackPage() {
     const rememberMe = sessionStorage.getItem('kakaoRememberMe') === '1';
 
     kakaoLogin(code, rememberMe)
-      .then(({ accessToken, refreshToken, talkMessageAgreed, agreementUrl }) => {
+      .then(({ accessToken, talkMessageAgreed, agreementUrl }) => {
         console.log('로그인 응답:', { talkMessageAgreed, agreementUrl });
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
         if (!talkMessageAgreed && agreementUrl) {
           console.log('talk_message 미동의 상태 -> 추가 동의 페이지로 이동:', agreementUrl);
           window.location.href = agreementUrl;

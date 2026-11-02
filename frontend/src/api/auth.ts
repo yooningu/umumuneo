@@ -6,11 +6,6 @@ export const kakaoLogin = async (code: string, rememberMe: boolean): Promise<Log
   return data;
 };
 
-export const refreshToken = async (refreshToken: string): Promise<{ accessToken: string }> => {
-  const { data } = await client.post('/auth/refresh', { refreshToken });
-  return data;
-};
-
 export const logout = async (): Promise<void> => {
   await client.post('/auth/logout');
 };

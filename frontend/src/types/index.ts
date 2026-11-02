@@ -1,6 +1,5 @@
 export interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   talkMessageAgreed: boolean;
   agreementUrl: string | null;
 }

@@ -3,6 +3,8 @@ import axios from 'axios';
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },
+  // refresh token이 HttpOnly 쿠키로 오가므로 요청에 쿠키를 실어 보내고 응답의 Set-Cookie도 저장하게 함
+  withCredentials: true,
 });
 
 // 요청마다 토큰 자동 첨부
@@ -18,10 +20,11 @@ client.interceptors.request.use((config) => {
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = localStorage.getItem('refreshToken');
+  // refresh token은 요청 body가 아니라 HttpOnly 쿠키로 자동으로 실려감 - withCredentials 필수
   const { data } = await axios.post(
     `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/auth/refresh`,
-    { refreshToken }
+    {},
+    { withCredentials: true }
   );
   localStorage.setItem('accessToken', data.accessToken);
   return data.accessToken;
@@ -48,7 +51,7 @@ client.interceptors.response.use(
         const status = (refreshError as { response?: { status?: number } })?.response?.status;
         if (status === 401) {
           localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('refreshToken'); // 마이그레이션 이전에 남아있던 값 정리용
           window.location.href = '/login';
         }
       }
