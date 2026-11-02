@@ -13,6 +13,7 @@ import MailPage from './pages/MailPage';
 import SettingsPage from './pages/SettingsPage';
 import UploadProgressWidget from './components/common/UploadProgressWidget';
 import { getMe } from './api/user';
+import { refreshAccessToken } from './api/client';
 import { applyTheme } from './utils/theme';
 import styles from './App.module.css';
 
@@ -31,20 +32,32 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 // 로그인 여부 확인 + 메일 별칭이 아직 없으면(최초 로그인) 정할 때까지 모달로 막음
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('accessToken');
+  // accessToken이 아직 있으면 바로 통과시키고, 없으면(만료돼서 지워졌거나 브라우저가 비웠거나)
+  // 포기하기 전에 refresh 쿠키로 재발급을 한 번 시도해봄 - 쿠키가 살아있으면 그걸로 복구됨
+  const [authState, setAuthState] = useState<'checking' | 'authed' | 'guest'>(
+    localStorage.getItem('accessToken') ? 'authed' : 'checking'
+  );
   const [needsEmailAlias, setNeedsEmailAlias] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (authState !== 'checking') return;
+    refreshAccessToken()
+      .then(() => setAuthState('authed'))
+      .catch(() => setAuthState('guest'));
+  }, [authState]);
+
+  useEffect(() => {
+    if (authState !== 'authed') return;
     getMe()
       .then(user => {
         setNeedsEmailAlias(user.emailAlias === null);
         applyTheme(user.theme); // 다른 기기에서 바꾼 테마가 있으면 로그인 직후 그걸로 동기화
       })
       .catch(() => setNeedsEmailAlias(false)); // 조회 실패해도 화면은 정상적으로 보여줌
-  }, [token]);
+  }, [authState]);
 
-  if (!token) return <Navigate to="/login" />;
+  if (authState === 'checking') return null;
+  if (authState === 'guest') return <Navigate to="/login" />;
 
   return (
     <AppLayout>

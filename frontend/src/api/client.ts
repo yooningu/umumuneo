@@ -19,7 +19,7 @@ client.interceptors.request.use((config) => {
 //  일부 요청이 로그인 화면으로 튕겨나가는(=페이지 전체 리로드) 문제가 생길 수 있음)
 let refreshPromise: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   // refresh token은 요청 body가 아니라 HttpOnly 쿠키로 자동으로 실려감 - withCredentials 필수
   const { data } = await axios.post(
     `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/auth/refresh`,
