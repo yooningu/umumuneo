@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { FaRegCalendar } from 'react-icons/fa6';
 import type { ScheduleType, RepeatRule } from '../../types';
 import { createSchedule } from '../../api/schedule';
 import { createTimetableGroup } from '../../api/timetable';
-import { toDateStr } from '../../utils/date';
+import { toDateStr, formatShortDate } from '../../utils/date';
 import TimeField from '../common/TimeField';
+import DateRangePickerPopover from '../common/DateRangePickerPopover';
+import DateBasicPickerPopover from '../common/DateBasicPickerPopover';
 import { scheduleFormSchema, timetableFormSchema, flattenZodErrors } from '../../validation/schedule';
 import styles from './ScheduleModal.module.css';
 
@@ -57,6 +60,8 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
   const todayStr = defaultDate ?? toDateStr(new Date());
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
+  const [rangePickerOpen, setRangePickerOpen] = useState(false);
+  const [basicPickerOpen, setBasicPickerOpen] = useState(false);
   const [repeatRule, setRepeatRule] = useState<RepeatRule | null>(null);
   const [notifOn, setNotifOn] = useState(false);
   const [offsetMin, setOffsetMin] = useState(5);
@@ -171,12 +176,44 @@ export default function AddScheduleModal({ defaultDate, onCancel, onSaved }: Pro
 
             <div className={styles.formGroup}>
               <span className={styles.label}>날짜</span>
-              <div className={styles.row2}>
-                <input type="date" className={styles.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-                {showEndDate(type) && (
-                  <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
-                )}
-              </div>
+              {showEndDate(type) ? (
+                <div className={styles.dateRangeWrap}>
+                  <button
+                    type="button"
+                    className={styles.dateRangeTrigger}
+                    onClick={() => setRangePickerOpen(v => !v)}
+                  >
+                    <FaRegCalendar />
+                    {formatShortDate(startDate)} - {formatShortDate(endDate)}
+                  </button>
+                  {rangePickerOpen && (
+                    <DateRangePickerPopover
+                      startDate={startDate}
+                      endDate={endDate}
+                      onSelect={(s, e) => { setStartDate(s); setEndDate(e); }}
+                      onClose={() => setRangePickerOpen(false)}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className={styles.dateRangeWrap}>
+                  <button
+                    type="button"
+                    className={styles.dateRangeTrigger}
+                    onClick={() => setBasicPickerOpen(v => !v)}
+                  >
+                    <FaRegCalendar />
+                    {formatShortDate(startDate)}
+                  </button>
+                  {basicPickerOpen && (
+                    <DateBasicPickerPopover
+                      value={startDate}
+                      onSelect={setStartDate}
+                      onClose={() => setBasicPickerOpen(false)}
+                    />
+                  )}
+                </div>
+              )}
               {(errors.startDate || errors.endDate) && (
                 <span className={styles.fieldError}>{errors.startDate || errors.endDate}</span>
               )}

@@ -96,6 +96,18 @@
   margin-left: auto;
 }
 
+@media (max-width: 767px) {
+  .searchInput {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
 .selectionBar {
   display: flex;
   align-items: center;

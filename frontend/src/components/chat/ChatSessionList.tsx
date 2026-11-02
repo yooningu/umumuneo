@@ -3,6 +3,7 @@ import { IoClose } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { getSessions, deleteSession } from '../../api/chat';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Skeleton from '../common/Skeleton';
 import type { ChatSession } from '../../types';
 import styles from './ChatSessionList.module.css';
 
@@ -27,10 +28,11 @@ function formatRelative(dateStr: string): string {
 // sessionId를 null로 올려줘서(ChatPage가 ChatWidget을 새로 마운트) 빈 대화를 시작한다.
 export default function ChatSessionList({ activeSessionId, onSelect, refreshKey }: Props) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    getSessions().then(setSessions).catch(console.error);
+    getSessions().then(setSessions).catch(console.error).finally(() => setLoading(false));
   }, [refreshKey]);
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -58,7 +60,14 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
         새 대화
       </button>
       <div className={styles.list}>
-        {sessions.length === 0 ? (
+        {loading ? (
+          [0, 1, 2, 3, 4].map(i => (
+            <div key={i} className={styles.skeletonItem}>
+              <Skeleton width="60%" height={13} />
+              <Skeleton width={36} height={11} />
+            </div>
+          ))
+        ) : sessions.length === 0 ? (
           <div className={styles.empty}>대화 기록이 없습니다</div>
         ) : (
           sessions.map(s => (

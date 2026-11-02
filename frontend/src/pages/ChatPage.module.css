@@ -20,3 +20,21 @@
   display: flex;
   width: auto;
 }
+
+@media (max-width: 767px) {
+  .container {
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .sidePane {
+    width: 100%;
+    min-width: 0;
+    max-height: 30vh;
+  }
+
+  .mainPane {
+    flex: 1;
+    min-height: 0;
+  }
+}

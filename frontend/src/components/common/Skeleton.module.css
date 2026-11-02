@@ -1,0 +1,16 @@
+.skeleton {
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--gray4) 25%, var(--gray5) 37%, var(--gray4) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}

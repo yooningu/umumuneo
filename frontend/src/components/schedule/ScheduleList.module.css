@@ -72,3 +72,11 @@
   color: var(--gray3);
   margin-top: 2px;
 }
+
+.skeletonLabel {
+  margin-bottom: 8px;
+}
+
+.skeletonItem {
+  margin-bottom: 4px;
+}

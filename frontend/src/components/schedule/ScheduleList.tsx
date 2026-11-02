@@ -4,7 +4,20 @@ import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
+import Skeleton from '../common/Skeleton';
 import styles from './ScheduleList.module.css';
+
+// 로딩 중에 실제 일정 항목(색 입혀진 배경 블록) 모양으로 보여줄 스켈레톤
+function ScheduleListSkeleton() {
+  return (
+    <div className={styles.dateGroup}>
+      <Skeleton width={80} height={14} className={styles.skeletonLabel} />
+      {[0, 1, 2].map(i => (
+        <Skeleton key={i} height={60} borderRadius={8} className={styles.skeletonItem} />
+      ))}
+    </div>
+  );
+}
 
 interface Props {
   selectedDate: Date;
@@ -59,6 +72,7 @@ function dedupeRepeating(list: Schedule[]): Schedule[] {
 
 export default function ScheduleList({ selectedDate, refreshKey, onScheduleChange }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
 
@@ -75,7 +89,8 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
         // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
         setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [refreshKey]);
 
   const todayStr = toDateStr(new Date());
@@ -99,7 +114,12 @@ export default function ScheduleList({ selectedDate, refreshKey, onScheduleChang
 
   return (
     <div className={styles.container}>
-      {groups.length === 0 ? (
+      {loading ? (
+        <>
+          <ScheduleListSkeleton />
+          <ScheduleListSkeleton />
+        </>
+      ) : groups.length === 0 ? (
         <div className={styles.empty}>다가오는 일정이 없습니다</div>
       ) : (
         groups.map(group => (

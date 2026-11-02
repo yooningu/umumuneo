@@ -54,6 +54,15 @@
   padding: 0 8px;
 }
 
+.skeletonItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 8px;
+}
+
 .item:hover {
   background-color: var(--gray5);
 }

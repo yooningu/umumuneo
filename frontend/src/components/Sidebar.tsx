@@ -54,7 +54,7 @@ export default function Sidebar() {
           return (
             <button
               key={item.path + index}
-              className={styles.navButton}
+              className={`${styles.navButton} ${isActive ? styles.navButtonActive : ''}`.trim()}
               onClick={() => navigate(item.path)}
             >
               {iconNode}

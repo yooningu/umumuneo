@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMemo, updateMemo } from '../../api/memo';
+import Skeleton from '../common/Skeleton';
 import styles from './MemoWidget.module.css';
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -59,7 +60,12 @@ export default function MemoWidget() {
   return (
     <div className={styles.container}>
       {loading ? (
-        <div className={styles.empty}>불러오는 중...</div>
+        <div className={styles.skeletonWrap}>
+          <Skeleton width="90%" />
+          <Skeleton width="75%" />
+          <Skeleton width="85%" />
+          <Skeleton width="40%" />
+        </div>
       ) : (
         <textarea
           className={styles.textarea}

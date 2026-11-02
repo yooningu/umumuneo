@@ -142,3 +142,19 @@
   cursor: pointer;
   box-shadow: var(--shadow-raised-brand);
 }
+
+@media (max-width: 767px) {
+  .header {
+    height: auto;
+    row-gap: 10px;
+  }
+
+  .left {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .addBtn {
+    width: 100%;
+  }
+}

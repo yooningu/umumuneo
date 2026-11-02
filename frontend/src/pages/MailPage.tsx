@@ -1,8 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getMails, getMailDetail } from '../api/mail';
 import { downloadFile, getPreviewBlobUrl } from '../api/file';
+import Skeleton from '../components/common/Skeleton';
 import type { MailItem, MailDetail, MailAttachment } from '../types';
 import styles from './MailPage.module.css';
+
+// 로딩 중에 실제 메일 항목(보낸사람/날짜 + 제목 + 미리보기) 모양으로 보여줄 스켈레톤
+function MailListSkeleton() {
+  return (
+    <div className={styles.listItem}>
+      <div className={styles.listItemTop}>
+        <Skeleton width="40%" height={12} />
+        <Skeleton width={50} height={12} />
+      </div>
+      <Skeleton width="60%" height={15} className={styles.skeletonGap} />
+      <Skeleton width="85%" height={13} className={styles.skeletonGap} />
+    </div>
+  );
+}
 
 function formatSize(bytes: number | null): string {
   if (bytes == null) return '';
@@ -145,7 +160,7 @@ export default function MailPage() {
           />
         </div>
         <div className={styles.listScroll}>
-          {loading && <div className={styles.empty}>불러오는 중...</div>}
+          {loading && [0, 1, 2, 3, 4].map(i => <MailListSkeleton key={i} />)}
           {!loading && visibleMails.length === 0 && (
             <div className={styles.empty}>{search ? '검색 결과가 없어요.' : '받은 메일이 없어요.'}</div>
           )}

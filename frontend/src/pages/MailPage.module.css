@@ -104,6 +104,10 @@
   text-overflow: ellipsis;
 }
 
+.skeletonGap {
+  margin-top: 6px;
+}
+
 .attachmentBadge {
   color: var(--brand);
   font-weight: var(--font-weight-semibold);
@@ -231,9 +235,10 @@
   color: var(--white);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .container {
     flex-direction: column;
+    padding: 12px;
   }
   .listPane {
     width: 100%;

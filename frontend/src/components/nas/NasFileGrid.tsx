@@ -9,7 +9,17 @@ import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
 import NasContextMenu, { type ContextMenuItem } from './NasContextMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Skeleton from '../common/Skeleton';
 import styles from './NasFileGrid.module.css';
+
+// 그리드 보기에서 로딩 중에 보여줄 타일 모양 스켈레톤 (아이콘 자리만)
+function NasTileSkeleton() {
+  return (
+    <div className={styles.tile}>
+      <Skeleton width={36} height={36} borderRadius={8} />
+    </div>
+  );
+}
 
 interface Props {
   parentId: string | null;
@@ -61,6 +71,7 @@ function formatSize(bytes?: number): string {
 // 검색어가 있으면 전체(폴더 무관) 검색, 없으면 현재 폴더(parentId) 안의 목록을 보여줌.
 export default function NasFileGrid({ parentId, search, onSearchChange, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -92,7 +103,8 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     const params = search.trim()
       ? { search: search.trim() }
       : { parentId: parentId ?? undefined, source: sourceFilter ?? undefined };
-    getFiles(params).then(setFiles).catch(console.error);
+    setLoading(true);
+    getFiles(params).then(setFiles).catch(console.error).finally(() => setLoading(false));
   }, [parentId, search, sourceFilter, refreshKey]);
 
   // 같은 항목을 다시 누르면 오름차순/내림차순이 뒤집힘
@@ -478,7 +490,9 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       </div>
 
       <div className={viewMode === 'grid' ? styles.grid : styles.list} onMouseDown={handleGridMouseDown}>
-        {visible.length === 0 ? (
+        {loading && viewMode === 'grid' ? (
+          Array.from({ length: 12 }, (_, i) => <NasTileSkeleton key={i} />)
+        ) : visible.length === 0 ? (
           <div className={styles.empty}>파일이 없습니다</div>
         ) : viewMode === 'grid' ? (
           visible.map(f => (

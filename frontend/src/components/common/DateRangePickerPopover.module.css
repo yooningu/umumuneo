@@ -1,0 +1,141 @@
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: var(--white);
+  border: 1px solid var(--gray4);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 100;
+}
+
+.months {
+  display: flex;
+  gap: 16px;
+}
+
+.month {
+  width: 200px;
+}
+
+.monthHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: var(--font-s);
+  color: var(--gray2);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.navBtn:hover {
+  background-color: var(--gray5);
+}
+
+.navBtnSpacer {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.monthTitle {
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
+}
+
+.weekdayRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.weekdayCell {
+  text-align: center;
+  font-size: var(--font-s);
+  color: var(--gray3);
+  padding: 2px 0;
+}
+
+.weekdayCell.saturday {
+  color: var(--blue);
+}
+
+.weekdayCell.sunday {
+  color: var(--red);
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.dayCell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  font-size: var(--font-s);
+  color: var(--gray1);
+  cursor: pointer;
+}
+
+.dayCell:hover {
+  background-color: var(--gray5);
+}
+
+.dayCell.saturday {
+  color: var(--blue);
+}
+
+.dayCell.sunday {
+  color: var(--red);
+}
+
+.today {
+  color: var(--brand);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 범위 안(시작/종료 사이) - 양 끝 빼고는 각지지 않게 연한 배경만 */
+.inRange {
+  background-color: rgba(255, 165, 0, 0.15);
+}
+
+/* 시작일/종료일 - 꽉 채운 원형으로 또렷하게 */
+.selected {
+  color: var(--white);
+  font-weight: var(--font-weight-bold);
+}
+
+.selected::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background-color: var(--brand);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+/* 시작/종료가 같은 날(하루짜리)이어도 양쪽 다 둥글게, 아니면 각 끝쪽만 둥글게 이어붙임 */
+.rangeStart:not(.rangeEnd) {
+  background: linear-gradient(to right, transparent 50%, rgba(255, 165, 0, 0.15) 50%);
+}
+
+.rangeEnd:not(.rangeStart) {
+  background: linear-gradient(to left, transparent 50%, rgba(255, 165, 0, 0.15) 50%);
+}

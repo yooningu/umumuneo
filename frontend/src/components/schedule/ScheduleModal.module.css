@@ -317,15 +317,35 @@
   font-family: inherit;
 }
 
+.dateRangeWrap {
+  position: relative;
+  width: 100%;
+}
+
+.dateRangeTrigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--gray4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: var(--font-m);
+  color: var(--gray1);
+  background-color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dateRangeTrigger:hover {
+  border-color: var(--gray3);
+}
+
 .textarea {
   resize: vertical;
   min-height: 60px;
-}
-
-/* 날짜 입력의 브라우저 기본 달력 아이콘은 항상 검정이라 다크모드에서 안 보임 -
-   다크모드일 때만 반전시켜서 밝게 보이도록 함 */
-:global([data-theme="dark"]) .input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
 }
 
 .fieldError {
