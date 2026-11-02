@@ -41,6 +41,8 @@ public class AuthResponse {
     public static class SessionInfo {
         private String id;
         private String deviceLabel;
+        private String country;
+        private String city;
         private Boolean rememberMe;
         private LocalDateTime createdAt;
         private LocalDateTime lastUsedAt;

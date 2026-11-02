@@ -6,6 +6,7 @@ import com.example.demo.entity.User;
 import com.example.demo.exception.InvalidRefreshTokenException;
 import com.example.demo.repository.LoginSessionRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.util.GeoLocationClient;
 import com.example.demo.util.JwtUtil;
 import com.example.demo.util.KakaoClient;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class AuthService {
     private final LoginSessionRepository loginSessionRepository;
     private final JwtUtil jwtUtil;
     private final KakaoNotificationService kakaoNotificationService;
+    private final GeoLocationClient geoLocationClient;
 
     @Value("${kakao.client-id}")
     private String kakaoClientId;
@@ -43,7 +45,7 @@ public class AuthService {
 
     // 카카오 로그인
     @Transactional
-    public AuthResponse.Login kakaoLogin(String code, boolean rememberMe, String userAgent) {
+    public AuthResponse.Login kakaoLogin(String code, boolean rememberMe, String userAgent, String ipAddress) {
         // 1. 인가코드 → 카카오 토큰 발급
         Map<String, Object> tokens = kakaoClient.getTokens(code);
         String kakaoAccessToken = tokens != null ? (String) tokens.get("access_token") : null;
@@ -88,12 +90,25 @@ public class AuthService {
         }
         user.setNickname(finalNickname);
 
-        // 4. 로그인 세션(기기) 하나 생성 - 이 행의 id를 토큰에 jti로 심어서 나중에 이 기기만
-        //    따로 로그아웃시키거나("이 기기 로그아웃"), refresh 때마다 세션이 살아있는지 확인함
-        LoginSession session = new LoginSession();
+        // 4. 로그인 세션(기기) - 같은 IP·기기로 이미 로그인된 세션이 있으면 새로 안 만들고 그대로
+        //    재사용함(마지막 활동 시각만 갱신) - 안 그러면 같은 기기로 여러 번 로그인할 때마다
+        //    "로그인된 기기" 목록에 구분 안 되는 중복 항목이 계속 쌓이는 문제가 있었음.
+        //    이 행의 id를 토큰에 jti로 심어서 나중에 이 기기만 따로 로그아웃시키거나
+        //    ("이 기기 로그아웃"), refresh 때마다 세션이 살아있는지 확인함
+        String deviceLabel = parseDeviceLabel(userAgent);
+        LoginSession session = loginSessionRepository
+                .findByUserIdAndIpAddressAndDeviceLabel(user.getId(), ipAddress, deviceLabel)
+                .orElseGet(LoginSession::new);
         session.setUser(user);
-        session.setDeviceLabel(parseDeviceLabel(userAgent));
+        session.setDeviceLabel(deviceLabel);
+        session.setIpAddress(ipAddress);
+        GeoLocationClient.GeoLocation geo = geoLocationClient.lookup(ipAddress);
+        if (geo != null) {
+            session.setCountry(geo.country());
+            session.setCity(geo.city());
+        }
         session.setRememberMe(rememberMe);
+        session.setLastUsedAt(LocalDateTime.now());
         session = loginSessionRepository.save(session);
 
         // 5. 자체 JWT 토큰 생성 ("로그인 상태 유지" 체크했으면 refresh token은 만료시간 없이)
@@ -168,6 +183,8 @@ public class AuthService {
                 .map(s -> new AuthResponse.SessionInfo(
                         s.getId(),
                         s.getDeviceLabel(),
+                        s.getCountry(),
+                        s.getCity(),
                         s.getRememberMe(),
                         s.getCreatedAt(),
                         s.getLastUsedAt(),

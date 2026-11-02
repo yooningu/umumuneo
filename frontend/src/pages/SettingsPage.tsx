@@ -150,6 +150,8 @@ export default function SettingsPage() {
                   </span>
                   <span className={styles.sessionMeta}>
                     마지막 활동 {formatRelative(session.lastUsedAt)}
+                    {(session.country || session.city) &&
+                      ` · ${[session.country, session.city].filter(Boolean).join(' ')}`}
                     {session.rememberMe && ' · 로그인 상태 유지'}
                   </span>
                 </div>

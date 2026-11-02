@@ -7,6 +7,7 @@ import com.example.demo.service.AuthService;
 import com.example.demo.util.JwtUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -39,9 +40,16 @@ public class AuthController {
     @PostMapping("/kakao")
     public ResponseEntity<AuthResponse.Login> kakaoLogin(
             @Valid @RequestBody AuthRequest.KakaoLogin request,
-            @RequestHeader(value = "User-Agent", required = false) String userAgent
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            @RequestHeader(value = "CF-Connecting-IP", required = false) String cfConnectingIp,
+            HttpServletRequest httpRequest
     ) {
-        AuthResponse.Login response = authService.kakaoLogin(request.getCode(), request.isRememberMe(), userAgent);
+        // Cloudflare Tunnel을 거치면 CF-Connecting-IP에 실제 클라이언트 IP가 들어있음(Cloudflare가
+        // 검증해서 붙여주는 헤더). 로컬 개발환경처럼 Cloudflare를 안 거치면 그냥 요청 자체의
+        // remoteAddr(보통 localhost/도커 내부 IP)로 대충 대체함. 이 IP로 국가/도시는
+        // AuthService에서 GeoLocationClient(ip-api.com)로 따로 조회함
+        String ipAddress = cfConnectingIp != null ? cfConnectingIp : httpRequest.getRemoteAddr();
+        AuthResponse.Login response = authService.kakaoLogin(request.getCode(), request.isRememberMe(), userAgent, ipAddress);
         Duration maxAge = request.isRememberMe()
                 ? PERSISTENT_COOKIE_MAX_AGE
                 : Duration.ofMillis(refreshTokenExpirationMs);

@@ -33,6 +33,17 @@ public class LoginSession {
     @Column(name = "device_label", length = 200)
     private String deviceLabel;
 
+    // 같은 기기에서 또 로그인했을 때(ip+device 일치) 새 행을 안 만들고 이 행을 재사용하는 데도 씀
+    @Column(name = "ip_address", length = 45)
+    private String ipAddress;
+
+    // IP로 조회한 대략적인 국가/도시(한글명) - 로컬 개발환경이나 조회 실패 시엔 비어있을 수 있음
+    @Column(name = "country", length = 50)
+    private String country;
+
+    @Column(name = "city", length = 50)
+    private String city;
+
     @Column(name = "remember_me", nullable = false)
     private Boolean rememberMe = false;
 

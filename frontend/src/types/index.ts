@@ -6,6 +6,8 @@ export interface LoginResponse {
 export interface SessionInfo {
   id: string;
   deviceLabel: string | null;
+  country: string | null;
+  city: string | null;
   rememberMe: boolean;
   createdAt: string;
   lastUsedAt: string;

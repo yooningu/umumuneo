@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type DragEvent } from 'react';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong, FaStar } from 'react-icons/fa6';
+import { BsDownload, BsPencil, BsTrash } from 'react-icons/bs';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
 import { getFileIcon } from '../../utils/fileIcon';
@@ -443,10 +444,10 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
         {selected.size > 0 && (
           <div className={styles.selectionBar}>
             <span className={styles.selectionCount}>{selected.size}개 선택됨</span>
-            <button className={styles.iconBtn} onClick={handleDownloadSelected} title="다운로드">⬇</button>
-            <button className={styles.iconBtn} onClick={handleToggleFavorite} title="즐겨찾기">★</button>
-            <button className={styles.iconBtn} onClick={handleRename} disabled={selected.size !== 1} title="이름 변경">✎</button>
-            <button className={styles.iconBtn} onClick={handleDelete} title="삭제">🗑</button>
+            <button className={styles.iconBtn} onClick={handleDownloadSelected} title="다운로드"><BsDownload /></button>
+            <button className={styles.iconBtn} onClick={handleToggleFavorite} title="즐겨찾기"><FaStar /></button>
+            <button className={styles.iconBtn} onClick={handleRename} disabled={selected.size !== 1} title="이름 변경"><BsPencil /></button>
+            <button className={styles.iconBtn} onClick={handleDelete} title="삭제"><BsTrash /></button>
           </div>
         )}
       </div>
