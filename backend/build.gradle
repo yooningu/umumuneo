@@ -45,6 +45,9 @@ dependencies {
     implementation 'org.apache.commons:commons-compress:1.26.1'
     implementation 'org.tukaani:xz:1.9'
 
+    // NAS 그리드 썸네일 - PDF 첫 페이지를 이미지로 렌더링하는 데 씀 (이미지는 ImageIO로, 영상은 ffmpeg로 처리)
+    implementation 'org.apache.pdfbox:pdfbox:3.0.3'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

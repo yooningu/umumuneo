@@ -12,7 +12,9 @@ services:
     restart: unless-stopped
 
   backend:
-    image: gradle:8-jdk17
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     container_name: spring-dev
     working_dir: /workspace
     volumes:

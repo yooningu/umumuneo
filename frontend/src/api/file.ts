@@ -117,6 +117,12 @@ export const getPreviewBlobUrl = async (id: string): Promise<string> => {
   return window.URL.createObjectURL(res.data);
 };
 
+// NAS 그리드 타일용 작은 썸네일 - 원본 전체가 아니라 서버가 미리 축소해서 캐싱해둔 JPEG만 받아옴
+export const getThumbnailBlobUrl = async (id: string): Promise<string> => {
+  const res = await client.get(`/files/${id}/thumbnail`, { responseType: 'blob' });
+  return window.URL.createObjectURL(res.data);
+};
+
 // zip/7z/tar/tar.gz 내부 목록 (압축을 풀지 않고 이름/크기만) - rar 등 지원 안 하는 형식이면 에러 던짐
 export const getArchiveEntries = async (id: string): Promise<ArchiveEntry[]> => {
   const res = await client.get(`/files/${id}/archive-entries`);

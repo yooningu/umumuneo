@@ -51,6 +51,7 @@ public class FileService {
     private final UserRepository userRepository;
     private final UploadSessionRepository uploadSessionRepository;
     private final FileShareTokenUtil fileShareTokenUtil;
+    private final ThumbnailService thumbnailService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -443,6 +444,24 @@ public class FileService {
         }
 
         return new ShareableFile(resource, file.getMimeType(), file.getName());
+    }
+
+    // NAS 그리드 타일용 작은 썸네일(JPEG) - 없으면 생성해서 캐싱 후 반환. 실패하면(지원 안 하는
+    // 형식 등) null을 반환하고, 컨트롤러가 404로 응답해서 프론트가 아이콘으로 대체하게 함
+    @Transactional(readOnly = true)
+    public ShareableFile getThumbnail(String userId, String fileId) throws MalformedURLException {
+        FileEntity file = findFile(userId, fileId);
+        if (file.getIsDirectory() || !FileEntity.isPreviewable(file.getMimeType())) {
+            return null;
+        }
+
+        Path thumbPath = thumbnailService.getOrCreateThumbnail(userId, file);
+        if (thumbPath == null) return null;
+
+        Resource resource = new UrlResource(thumbPath.toUri());
+        if (!resource.exists()) return null;
+
+        return new ShareableFile(resource, "image/jpeg", file.getName());
     }
 
     // txt 파일 내용 조회 (미리보기에서 간단히 편집할 수 있게)

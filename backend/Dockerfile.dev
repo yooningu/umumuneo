@@ -1,0 +1,9 @@
+# 개발/운영 공용 백엔드 이미지. gradle:8-jdk17 베이스에 ffmpeg만 추가함 -
+# NAS 영상 썸네일(ThumbnailService)이 프레임을 뽑아낼 때 필요함.
+# 소스코드는 docker-compose.yml에서 ./backend를 /workspace로 바인드 마운트해서 쓰므로
+# 이 이미지 자체엔 소스를 COPY하지 않음(라이브 반영을 위해 유지).
+FROM gradle:8-jdk17
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*

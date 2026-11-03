@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { getPreviewBlobUrl } from '../../api/file';
+import { getThumbnailBlobUrl } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasThumbnail.module.css';
 
@@ -8,8 +8,9 @@ interface Props {
   fallback: ReactNode; // 미리보기가 안 되거나 아직 로딩 중일 때 보여줄 파일 종류 아이콘
 }
 
-// 그리드 타일 안에서 이미지/영상/PDF는 실제 내용을 축소해서 보여주고, 그 외는 이모지 아이콘 그대로.
-// 백엔드에 썸네일 생성 기능이 없어서 원본 파일을 그대로 받아와 CSS로 줄이는 방식 (PDF는 embed를 축소).
+// 그리드 타일 안에서 이미지/영상/PDF는 서버가 미리 작게 렌더링해서 캐싱해둔 썸네일을 받아와 보여주고,
+// 그 외(또는 썸네일 생성 실패)는 이모지 아이콘 그대로. 예전엔 원본 파일 전체를 그대로 받아와 CSS로
+// 줄이는 방식이라 영상/PDF가 클수록 그리드를 열 때마다 느려졌었음.
 export default function NasThumbnail({ file, fallback }: Props) {
   const [url, setUrl] = useState<string | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -17,7 +18,7 @@ export default function NasThumbnail({ file, fallback }: Props) {
   useEffect(() => {
     if (!file.previewable) return;
     let cancelled = false;
-    getPreviewBlobUrl(file.id)
+    getThumbnailBlobUrl(file.id)
       .then(u => {
         if (cancelled) {
           window.URL.revokeObjectURL(u);
@@ -26,7 +27,7 @@ export default function NasThumbnail({ file, fallback }: Props) {
         urlRef.current = u;
         setUrl(u);
       })
-      .catch(() => {});
+      .catch(() => {}); // 썸네일 생성 실패(404) 등은 그냥 아이콘으로 대체
     return () => {
       cancelled = true;
       if (urlRef.current) {
@@ -40,20 +41,5 @@ export default function NasThumbnail({ file, fallback }: Props) {
     return <span className={styles.fallbackIcon}>{fallback}</span>;
   }
 
-  const mime = file.mimeType ?? '';
-
-  if (mime.startsWith('image/')) {
-    return <img src={url} alt={file.name} className={styles.thumbImg} />;
-  }
-  if (mime.startsWith('video/')) {
-    return <video src={url} muted preload="metadata" className={styles.thumbVideo} />;
-  }
-  if (mime === 'application/pdf') {
-    return (
-      <div className={styles.thumbPdfClip}>
-        <embed src={url} type="application/pdf" className={styles.thumbPdfEmbed} />
-      </div>
-    );
-  }
-  return <span className={styles.fallbackIcon}>{fallback}</span>;
+  return <img src={url} alt={file.name} className={styles.thumbImg} />;
 }

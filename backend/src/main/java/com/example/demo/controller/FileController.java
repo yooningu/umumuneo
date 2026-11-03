@@ -201,6 +201,20 @@ public class FileController {
                 .body(region);
     }
 
+    // GET /api/v1/files/{id}/thumbnail (NAS 그리드 타일용 작은 미리보기 - 원본 대신 캐싱된 썸네일을 내려줌)
+    @GetMapping("/{id}/thumbnail")
+    public ResponseEntity<Resource> getThumbnail(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id
+    ) throws IOException {
+        FileService.ShareableFile thumb = fileService.getThumbnail(userId, id);
+        if (thumb == null) return ResponseEntity.notFound().build();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(thumb.resource());
+    }
+
     // GET /api/v1/files/{id}/content (txt 파일 내용 - 미리보기에서 간단 편집용)
     // 한글 등이 깨지지 않도록 UTF-8을 명시 (기본 StringHttpMessageConverter는 ISO-8859-1을 씀)
     @GetMapping(value = "/{id}/content", produces = "text/plain;charset=UTF-8")
