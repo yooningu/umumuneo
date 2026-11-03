@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, type DragEvent } from 'react';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong, FaStar } from 'react-icons/fa6';
 import { BsDownload, BsPencil, BsTrash } from 'react-icons/bs';
-import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile } from '../../api/file';
+import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile, copyFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
 import { getFileIcon } from '../../utils/fileIcon';
+import { attachLongPress } from '../../utils/longPress';
 import type { FileItem } from '../../types';
 import NasThumbnail from './NasThumbnail';
 import NasPreviewModal from './NasPreviewModal';
@@ -86,12 +87,17 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   const [dropTargetId, setDropTargetId] = useState<string | null>(null); // 타일 드래그 중 올려놓은 폴더 타일
   const [editingId, setEditingId] = useState<string | null>(null); // 이름을 바로 타이핑 중인 타일(새 폴더 생성 직후 / 이름 변경)
   const [editingValue, setEditingValue] = useState('');
+  const [clipboard, setClipboard] = useState<{ ids: string[]; mode: 'copy' | 'cut' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const tileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragBaseSelection = useRef<Set<string>>(new Set());
   const dragAdditive = useRef(false);
   const fileDragCounter = useRef(0);
+  // 터치 드래그 핸들러(아래쪽 useEffect, document 레벨이라 리렌더마다 새로 안 붙임)가 최신
+  // selected 값을 읽을 수 있게 거울처럼 복사해둠
+  const selectedRef = useRef<Set<string>>(selected);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
 
   // 업로드 큐에서 파일 하나가 다 올라갈 때마다(큐가 순서대로 처리하는 중이라 여러 번 올 수 있음)
   // 지금 보고 있는 목록을 새로고침한다
@@ -186,9 +192,129 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     setSelected(ids);
   }, [dragStart, dragCurrent]);
 
+  // 터치 전용 드래그 - 네이티브 HTML5 드래그(draggable)는 터치에서 거의 지원이 안 돼서
+  // 따로 구현함. 빈 공간에서 시작하면 위 사각형 선택(dragStart/dragCurrent)을 그대로
+  // 터치로 구동하고, 타일 위에서 시작하면 그 파일(들)을 끌어서 폴더 위에 놓는 이동으로 처리함.
+  // 움직임이 작아서(MOVE_THRESHOLD 이내) 아직 선택/이동 중 뭔지 안 정해졌으면 그냥 탭으로 두고
+  // (길게 누르기는 attachLongPress가, 짧은 탭은 onClick/더블탭이 알아서 처리함) 끼어들지 않음.
+  useEffect(() => {
+    const MOVE_THRESHOLD = 10;
+    let mode: 'idle' | 'maybe' | 'select' | 'move' = 'idle';
+    let origin: { x: number; y: number } | null = null;
+    let moveIds: string[] = [];
+    let currentDropTarget: string | null = null;
+
+    const reset = () => {
+      mode = 'idle';
+      origin = null;
+      moveIds = [];
+      currentDropTarget = null;
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { reset(); return; }
+      const touch = e.touches[0];
+      const target = e.target as HTMLElement;
+      // 파일 그리드/리스트 영역 밖(헤더, 사이드바 등)에서 시작한 터치는 무시 - 마우스 버전이
+      // .grid/.list 자신에게만 리스너를 다는 것과 똑같이 범위를 맞춤
+      if (!target.closest('[data-nas-grid-area]')) { reset(); return; }
+      const tileEl = target.closest<HTMLElement>('[data-nas-tile-id]');
+      origin = { x: touch.clientX, y: touch.clientY };
+      mode = 'maybe';
+      if (tileEl) {
+        const fileId = tileEl.dataset.nasTileId!;
+        moveIds = selectedRef.current.has(fileId) ? [...selectedRef.current] : [fileId];
+      } else {
+        moveIds = [];
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (mode === 'idle' || !origin) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      const dx = touch.clientX - origin.x;
+      const dy = touch.clientY - origin.y;
+
+      if (mode === 'maybe') {
+        if (Math.abs(dx) < MOVE_THRESHOLD && Math.abs(dy) < MOVE_THRESHOLD) return;
+        mode = moveIds.length > 0 ? 'move' : 'select';
+        if (mode === 'select') {
+          dragAdditive.current = false;
+          dragBaseSelection.current = new Set();
+          setSelected(new Set());
+          setDragStart(origin);
+        }
+      }
+
+      e.preventDefault(); // 선택/이동 드래그로 확정되면 그때부터 화면 스크롤을 막음
+      if (mode === 'select') {
+        setDragCurrent({ x: touch.clientX, y: touch.clientY });
+      } else {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const folderEl = el?.closest<HTMLElement>('[data-nas-tile-id]');
+        const folderId = folderEl?.dataset.nasTileId;
+        const folder = folderId ? files.find(f => f.id === folderId) : undefined;
+        const valid = folder?.isDirectory && !moveIds.includes(folder.id) ? folder.id : null;
+        if (valid !== currentDropTarget) {
+          currentDropTarget = valid;
+          setDropTargetId(valid);
+        }
+      }
+    };
+
+    const onTouchEnd = async (e: TouchEvent) => {
+      if (mode === 'move') {
+        e.preventDefault();
+        const targetId = currentDropTarget;
+        setDropTargetId(null);
+        if (targetId) {
+          try {
+            await Promise.all(moveIds.map(id => moveFile(id, targetId)));
+            setSelected(new Set());
+            onChanged();
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      } else if (mode === 'select') {
+        e.preventDefault();
+        setDragStart(null);
+        setDragCurrent(null);
+      }
+      reset();
+    };
+
+    const onTouchCancel = () => reset();
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchCancel);
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchCancel);
+    };
+  }, [files, onChanged]);
+
   const handleOpen = (f: FileItem) => {
     if (f.isDirectory) { onOpenFolder(f.id, f.name); return; }
     setPreviewFile(f);
+  };
+
+  // 모바일(터치)엔 더블클릭이 없어서, 같은 타일을 300ms 안에 두 번 터치하면 열리게 함
+  const lastTapRef = useRef<{ id: string; time: number } | null>(null);
+  const handleTileTouchEnd = (f: FileItem) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && last.id === f.id && now - last.time < 300) {
+      lastTapRef.current = null;
+      handleOpen(f);
+    } else {
+      lastTapRef.current = { id: f.id, time: now };
+    }
   };
 
   // 타일을 드래그해서 다른 폴더 타일 위에 놓으면 그 폴더로 이동시킨다.
@@ -342,25 +468,77 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     setPreviewFile(target);
   };
 
+  // 잘라내기/복사/붙여넣기 - 복사는 여러 번 붙여넣을 수 있게 클립보드를 유지하고,
+  // 잘라내기는 한 번 붙여넣으면(이동되면) 비움
+  const handleCut = () => {
+    if (selected.size === 0) return;
+    setClipboard({ ids: [...selected], mode: 'cut' });
+  };
+
+  const handleCopy = () => {
+    if (selected.size === 0) return;
+    setClipboard({ ids: [...selected], mode: 'copy' });
+  };
+
+  const handlePaste = async () => {
+    if (!clipboard) return;
+    try {
+      if (clipboard.mode === 'copy') {
+        await Promise.all(clipboard.ids.map(id => copyFile(id, parentId)));
+      } else {
+        await Promise.all(clipboard.ids.map(id => moveFile(id, parentId)));
+        setClipboard(null);
+      }
+      onChanged();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // PC에서 Ctrl/Cmd+X/C/V로도 되게 함 - 다른 입력창(검색/이름변경 등)에 포커스 있을 때는
+  // 그 입력창 자체의 복사/붙여넣기를 방해하지 않도록 건너뜀
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === 'x' || e.key === 'X') handleCut();
+      else if (e.key === 'c' || e.key === 'C') handleCopy();
+      else if (e.key === 'v' || e.key === 'V') handlePaste();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selected, clipboard, parentId]);
+
+  // 우클릭(또는 모바일에서 길게 누르기)한 지점 기준으로 메뉴를 띄움 - 타일이면 그 파일 메뉴,
+  // 빈 공간이면 전체 메뉴
+  const openMenuAt = (x: number, y: number, originEl: HTMLElement) => {
+    const tileEl = originEl.closest<HTMLElement>('[data-nas-tile-id]');
+    const fileId = tileEl?.dataset.nasTileId;
+    const f = fileId ? files.find(x2 => x2.id === fileId) : undefined;
+    if (f) {
+      setSelected(prev => (prev.has(f.id) ? prev : new Set([f.id])));
+      setContextMenu({ x, y, mode: 'file' });
+    } else {
+      setContextMenu({ x, y, mode: 'empty' });
+    }
+  };
+
   // 브라우저 기본 우클릭 메뉴는 막고 우리 메뉴를 띄움. .grid/타일 각각에 onContextMenu를 거는 대신
   // document 레벨에서 한 번에 가로채서, 레이아웃이 실제로 어디까지 차지하는지와 상관없이
   // 나스 페이지에 있는 동안은 화면 어디서 우클릭해도 확실히 걸리게 함.
+  // 모바일(터치)에는 우클릭이 없어서, 같은 위치에 길게 누르기(long-press)도 똑같이 연결해둠.
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      const target = e.target as HTMLElement;
-      const tileEl = target.closest<HTMLElement>('[data-nas-tile-id]');
-      const fileId = tileEl?.dataset.nasTileId;
-      const f = fileId ? files.find(x => x.id === fileId) : undefined;
-      if (f) {
-        setSelected(prev => (prev.has(f.id) ? prev : new Set([f.id])));
-        setContextMenu({ x: e.clientX, y: e.clientY, mode: 'file' });
-      } else {
-        setContextMenu({ x: e.clientX, y: e.clientY, mode: 'empty' });
-      }
+      openMenuAt(e.clientX, e.clientY, e.target as HTMLElement);
     };
     document.addEventListener('contextmenu', handleContextMenu);
-    return () => document.removeEventListener('contextmenu', handleContextMenu);
+    const detachLongPress = attachLongPress(document, openMenuAt);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      detachLongPress();
+    };
   }, [files]);
 
   const singleSelectedFile = selected.size === 1 ? files.find(f => f.id === [...selected][0]) : undefined;
@@ -368,6 +546,8 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   const fileMenuItems: ContextMenuItem[] = [
     { label: '상세 정보', onClick: handleShowDetails, disabled: !singleSelectedFile || singleSelectedFile.isDirectory },
     { label: '다운로드', onClick: handleDownloadSelected },
+    { label: '잘라내기', onClick: handleCut },
+    { label: '복사', onClick: handleCopy },
     { label: '즐겨찾기', onClick: handleToggleFavorite },
     { label: '이름 변경', onClick: handleRename, disabled: selected.size !== 1 },
     { label: '삭제', onClick: handleDelete, danger: true },
@@ -377,6 +557,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     { label: '새 폴더 만들기', onClick: handleNewFolder },
     { label: '파일 업로드', onClick: () => fileInputRef.current?.click() },
     { label: '폴더 업로드', onClick: () => folderInputRef.current?.click() },
+    { label: '붙여넣기', onClick: handlePaste, disabled: !clipboard },
   ];
 
   return (
@@ -418,12 +599,14 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
             </span>
           ))}
         </div>
-        <input
-          className={styles.searchInput}
-          placeholder="파일 검색"
-          value={search}
-          onChange={e => onSearchChange(e.target.value)}
-        />
+        {selected.size === 0 && (
+          <input
+            className={styles.searchInput}
+            placeholder="파일 검색"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+          />
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -490,7 +673,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
         </div>
       </div>
 
-      <div className={viewMode === 'grid' ? styles.grid : styles.list} onMouseDown={handleGridMouseDown}>
+      <div data-nas-grid-area className={viewMode === 'grid' ? styles.grid : styles.list} onMouseDown={handleGridMouseDown}>
         {loading && viewMode === 'grid' ? (
           Array.from({ length: 12 }, (_, i) => <NasTileSkeleton key={i} />)
         ) : visible.length === 0 ? (
@@ -507,6 +690,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
               className={`${styles.tile} ${selected.has(f.id) ? styles.tileSelected : ''} ${dropTargetId === f.id ? styles.tileDropTarget : ''}`.trim()}
               onClick={e => handleTileClick(e, f)}
               onDoubleClick={() => handleOpen(f)}
+              onTouchEnd={() => handleTileTouchEnd(f)}
               draggable
               onDragStart={e => handleTileDragStart(e, f)}
               onDragOver={f.isDirectory ? (e => handleFolderDragOver(e, f)) : undefined}
@@ -548,6 +732,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
               className={`${styles.listRow} ${selected.has(f.id) ? styles.listRowSelected : ''} ${dropTargetId === f.id ? styles.listRowDropTarget : ''}`.trim()}
               onClick={e => handleTileClick(e, f)}
               onDoubleClick={() => handleOpen(f)}
+              onTouchEnd={() => handleTileTouchEnd(f)}
               draggable
               onDragStart={e => handleTileDragStart(e, f)}
               onDragOver={f.isDirectory ? (e => handleFolderDragOver(e, f)) : undefined}

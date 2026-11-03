@@ -397,6 +397,65 @@ public class FileService {
         fileRepository.save(file);
     }
 
+    // 파일/폴더 복사(붙여넣기 "복사" 모드) - 디렉토리면 재귀적으로 전체 복사, 물리 파일도 새
+    // 이름으로 복제함. 이름 충돌은 신경 안 씀(같은 폴더 안에 이름이 겹쳐도 허용하는 기존 정책과 동일)
+    @Transactional
+    public void copyFile(String userId, String fileId, String targetParentId) throws IOException {
+        FileEntity source = findFile(userId, fileId);
+        FileEntity targetParent = null;
+        if (targetParentId != null) {
+            targetParent = findFile(userId, targetParentId);
+            if (!targetParent.getIsDirectory()) {
+                throw new RuntimeException("폴더가 아닌 곳으로는 복사할 수 없습니다.");
+            }
+        }
+        checkStorageQuota(userId, calculateTotalSize(source));
+        copyRecursive(source, targetParent, userId);
+    }
+
+    private long calculateTotalSize(FileEntity file) {
+        if (!file.getIsDirectory()) {
+            return file.getSizeBytes() != null ? file.getSizeBytes() : 0;
+        }
+        long total = 0;
+        for (FileEntity child : file.getChildren()) {
+            total += calculateTotalSize(child);
+        }
+        return total;
+    }
+
+    private void copyRecursive(FileEntity source, FileEntity newParent, String userId) throws IOException {
+        FileEntity copy = new FileEntity();
+        copy.setUser(source.getUser());
+        copy.setParent(newParent);
+        copy.setName(source.getName());
+        copy.setIsDirectory(source.getIsDirectory());
+        copy.setIsFavorite(false);
+        copy.setSource(source.getSource());
+        copy.setMimeType(source.getMimeType());
+        copy.setExtension(source.getExtension());
+
+        if (!source.getIsDirectory() && source.getStoragePath() != null) {
+            Path original = Paths.get(source.getStoragePath());
+            String ext = source.getExtension();
+            String storedName = UUID.randomUUID() + (ext == null || ext.isEmpty() ? "" : "." + ext);
+            Path userDir = Paths.get(uploadDir, userId);
+            Files.createDirectories(userDir);
+            Path target = userDir.resolve(storedName);
+            Files.copy(original, target, StandardCopyOption.REPLACE_EXISTING);
+            copy.setStoragePath(target.toString());
+            copy.setSizeBytes(source.getSizeBytes());
+        }
+
+        fileRepository.save(copy);
+
+        if (source.getIsDirectory()) {
+            for (FileEntity child : source.getChildren()) {
+                copyRecursive(child, copy, userId);
+            }
+        }
+    }
+
     // 즐겨찾기 토글
     @Transactional
     public void toggleFavorite(String userId, String fileId) {

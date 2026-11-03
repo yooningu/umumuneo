@@ -235,6 +235,14 @@
   color: var(--white);
 }
 
+/* 태블릿 모드 - 메일 목록을 240px로 줄임 (리스트라 그리드 제약 없는 홈 미니캘린더보다 더 좁혀도 됨) */
+@media (min-width: 768px) and (max-width: 1203px) {
+  .listPane {
+    width: 240px;
+    min-width: 240px;
+  }
+}
+
 @media (max-width: 767px) {
   .container {
     flex-direction: column;

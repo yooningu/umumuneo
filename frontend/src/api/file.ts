@@ -110,6 +110,11 @@ export const moveFile = async (id: string, parentId: string | null): Promise<voi
   await client.patch(`/files/${id}/move`, { parentId });
 };
 
+// 다른 폴더에 복사(붙여넣기 "복사" 모드) - 디렉토리면 안의 내용까지 전부 복제됨
+export const copyFile = async (id: string, parentId: string | null): Promise<void> => {
+  await client.post(`/files/${id}/copy`, { parentId });
+};
+
 // 썸네일/큰 미리보기용 - 인증 헤더가 필요해서 <img src="..."> 로 바로 못 쓰고,
 // blob으로 받아서 object URL을 만들어야 함 (다 쓰면 호출부에서 revokeObjectURL로 정리해야 함)
 export const getPreviewBlobUrl = async (id: string): Promise<string> => {

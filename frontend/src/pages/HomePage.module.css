@@ -48,31 +48,43 @@
   border-radius: 16px;
 }
 
-@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+/* 태블릿 모드에선 챗봇을 숨기고, 그 자리에 미니캘린더 아래로 일정 리스트가 꽉 채우도록 세로로 쌓음.
+   폭도 챗봇이 없어진 만큼 더 줄여서 미니캘린더 하나 들어갈 정도로만 잡음.
+   상한선 1203px는 데스크탑 모드(sidePane 660px 고정)일 때 주간표가 3칸 밑으로 안 내려가는
+   최소 창 너비(실측 1204px) 바로 아래 지점 - 그 밑으로는 주간표를 지켜주려고 태블릿 레이아웃으로 바뀜 */
+@media (min-width: 825px) and (max-width: 1203px) {
   .sidePane {
-    min-width: 400px;
-    width: 400px;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-  .sidePane {
-    min-width: 400px;
-    width: 400px;
+    min-width: 280px;
+    width: 280px;
   }
 
   .topSide {
-    height: 400px;
-    min-height: 400px;
+    flex: 1;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
   }
 
   .miniCalendar {
-    width: 240px;
-    min-width: 240px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .scheduleList {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .chatPane {
+    display: none;
   }
 }
 
-@media (min-width: 1025px) {
+/* 홈 화면 전용 모바일 기준 - 레이아웃은 아직 미정이라 자리만 잡아둠 */
+@media (max-width: 824px) {
+}
+
+@media (min-width: 1204px) {
   .sidePane {
     width: 660px;
     min-width: 660px;

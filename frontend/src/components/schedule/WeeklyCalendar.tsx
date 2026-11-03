@@ -4,6 +4,7 @@ import { getHolidays } from '../../api/holiday';
 import { getTimetables } from '../../api/timetable';
 import type { Schedule, Timetable } from '../../types';
 import { toDateStr } from '../../utils/date';
+import { attachLongPress } from '../../utils/longPress';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
 import TimetableDetailModal from './TimetableDetailModal';
@@ -132,6 +133,16 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const bgContextMenuItems: ContextMenuItem[] = bgContextMenu
     ? [{ label: '스케줄 추가', onClick: () => onRequestAddSchedule?.(bgContextMenu.dateStr) }]
     : [];
+
+  // 모바일(터치)엔 우클릭이 없어서, 날짜 칸을 길게 누르면 같은 메뉴가 뜨게 함
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    return attachLongPress(el, (x, y, target) => {
+      const dateStr = target.closest<HTMLElement>('[data-daycol-date]')?.dataset.daycolDate;
+      if (dateStr) setBgContextMenu({ x, y, dateStr });
+    });
+  }, []);
 
   // 달력 주 단위가 아니라, 선택한 날짜를 가운데 두고 그만큼(7/5/3일)만 보여줌
   const visibleDates = getCenteredDates(selectedDate, visibleCount);
@@ -366,7 +377,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
               i === selectedVisibleIndex ? styles.selectedCol : '',
             ].join(' ').trim();
             return (
-              <div key={i} className={dayColClassName} onContextMenu={e => handleBgContextMenu(e, dateStr)}>
+              <div key={i} className={dayColClassName} data-daycol-date={dateStr} onContextMenu={e => handleBgContextMenu(e, dateStr)}>
                 {/* 시간표 배경 블록 */}
                 {dayTimetables.map(({ timetable: t, startMin, endMin }) => (
                   <div

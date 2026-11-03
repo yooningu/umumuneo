@@ -5,7 +5,11 @@
   box-sizing: border-box;
   padding: 12PX 16px;
   background-color: var(--white);
-  border-bottom: 1px solid var(--gray4)
+  border-bottom: 1px solid var(--gray4);
+  /* 태블릿 모드처럼 이 컴포넌트 자체가 좁게 렌더링될 때, 날짜 칸 안의 알림 아이콘/일정 점·바
+     같은 고정 px 요소들이 좁아진 칸 대비 상대적으로 커 보이지 않도록 이 요소 자신의 너비를
+     기준으로 반응하게 함 (부모/페이지 브레이크포인트를 몰라도 되게) */
+  container: miniCalendar / inline-size;
 }
 
 .header {
@@ -239,4 +243,44 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 이 컴포넌트 자체 너비가 300px 밑으로 좁아지면(예: 홈 태블릿 모드) 날짜 칸 안의 고정 px
+   요소들을 기존 비율과 비슷하게 같이 줄여서, 좁아진 칸 대비 너무 커 보이거나 서로 겹치지 않게 함 */
+@container miniCalendar (max-width: 300px) {
+  .container {
+    padding: 10px 12px;
+  }
+
+  .dayCell {
+    height: 40px;
+  }
+
+  .dayNumber {
+    width: 18px;
+    height: 18px;
+  }
+
+  .bell {
+    right: -5px;
+    transform: translateY(-50%) scale(0.85);
+  }
+
+  .dotsRow {
+    height: 5px;
+  }
+
+  .dot {
+    width: 3px;
+    height: 3px;
+  }
+
+  .periodBarRow {
+    height: 3px;
+  }
+
+  .legendDot {
+    width: 5px;
+    height: 5px;
+  }
 }

@@ -15,6 +15,7 @@ import UploadProgressWidget from './components/common/UploadProgressWidget';
 import { getMe } from './api/user';
 import { refreshAccessToken } from './api/client';
 import { applyTheme } from './utils/theme';
+import { useKeyboardInset } from './hooks/useKeyboardInset';
 import styles from './App.module.css';
 
 // 왼쪽 고정 사이드바 + 페이지 레이아웃
@@ -113,6 +114,7 @@ function useGlobalScrollbarHover() {
 
 export default function App() {
   useGlobalScrollbarHover();
+  useKeyboardInset();
 
   return (
     <BrowserRouter>

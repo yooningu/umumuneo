@@ -238,6 +238,12 @@
   gap: 12px;
   padding: 16px;
   align-content: start;
+  /* 터치로 드래그(다중 선택/파일 이동)할 때 브라우저가 먼저 화면 스크롤로 가로채지 않게 함 -
+     자바스크립트로 직접 제스처를 처리하므로 기본 터치 동작은 꺼둠 */
+  touch-action: none;
+  /* 드래그로 영역 선택할 때 브라우저 기본 텍스트 선택(파란 하이라이트)이 같이 일어나지 않게 함 */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .empty {
@@ -257,6 +263,7 @@
   cursor: pointer;
   border: 1px solid transparent;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 .tile:hover {
@@ -324,6 +331,9 @@
   display: flex;
   flex-direction: column;
   padding: 4px 8px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .listRow {
@@ -335,6 +345,7 @@
   cursor: pointer;
   border: 1px solid transparent;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 .listRow:hover {

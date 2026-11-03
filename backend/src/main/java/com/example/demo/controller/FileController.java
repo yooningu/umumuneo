@@ -156,6 +156,17 @@ public class FileController {
         return ResponseEntity.ok().build();
     }
 
+    // POST /api/v1/files/{id}/copy (복사 붙여넣기 - 디렉토리면 안의 내용까지 전부 복제)
+    @PostMapping("/{id}/copy")
+    public ResponseEntity<Void> copy(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id,
+            @RequestBody FileRequest.Move request
+    ) throws IOException {
+        fileService.copyFile(userId, id, request.getParentId());
+        return ResponseEntity.ok().build();
+    }
+
     // GET /api/v1/files/{id}/download (항상 다운로드 - 브라우저가 열지 않고 저장함)
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadFile(

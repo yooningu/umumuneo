@@ -31,7 +31,17 @@
   flex-direction: column;
 }
 
-@media (max-width: 767px) {
+/* 태블릿 모드 - 사이드 패널을 240px로 줄임 (홈 화면 미니캘린더는 7칸 그리드라 280px가
+   한계지만, 여긴 그냥 세로로 쌓이는 리스트라 더 좁혀도 괜찮음) */
+@media (min-width: 904px) and (max-width: 1203px) {
+  .sidePane {
+    width: 240px;
+    min-width: 240px;
+  }
+}
+
+/* 일정 페이지 전용 모바일 기준 - 904px 미만부터 세로로 쌓음 */
+@media (max-width: 903px) {
   .container {
     padding: 12px;
   }
