@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -44,7 +45,12 @@ public class AuthService {
     private String deviceTokenOwnerId;
 
     // 카카오 로그인
-    @Transactional
+    // 주의: 일부러 @Transactional을 안 붙임 - 이 메서드 안에서 카카오 토큰 발급/유저정보 조회/
+    // 동의 스코프 조회/카카오톡 알림 발송까지 외부 API를 여러 번 순차 호출하는데, 트랜잭션으로
+    // 묶으면 그 외부 호출들이 끝날 때까지 DB 커넥션 하나를 계속 붙잡고 있게 됨(DB 작업 자체는
+    // 수 ms면 끝나는데도). 로그인이 몰리거나 외부 API가 느려지면 커넥션 풀이 고갈돼서 로그인과
+    // 무관한 다른 요청들까지 다 같이 느려지는 문제가 있었음. 아래 DB 호출(save/findBy...)들은
+    // Spring Data JPA가 각각 알아서 자기 트랜잭션으로 처리하니 전체를 묶을 필요가 없음
     public AuthResponse.Login kakaoLogin(String code, boolean rememberMe, String userAgent, String ipAddress) {
         // 1. 인가코드 → 카카오 토큰 발급
         Map<String, Object> tokens = kakaoClient.getTokens(code);
@@ -102,14 +108,14 @@ public class AuthService {
         session.setUser(user);
         session.setDeviceLabel(deviceLabel);
         session.setIpAddress(ipAddress);
-        GeoLocationClient.GeoLocation geo = geoLocationClient.lookup(ipAddress);
-        if (geo != null) {
-            session.setCountry(geo.country());
-            session.setCity(geo.city());
-        }
         session.setRememberMe(rememberMe);
         session.setLastUsedAt(LocalDateTime.now());
         session = loginSessionRepository.save(session);
+
+        // 국가/도시 조회(외부 API 호출)는 로그인 응답을 기다리게 하지 않도록 백그라운드에서 처리 -
+        // 타임아웃을 짧게 걸어뒀어도(GeoLocationClient) 아예 로그인 흐름과 분리해두는 게 더 안전함
+        String sessionIdForGeo = session.getId();
+        CompletableFuture.runAsync(() -> updateSessionLocation(sessionIdForGeo, ipAddress));
 
         // 5. 자체 JWT 토큰 생성 ("로그인 상태 유지" 체크했으면 refresh token은 만료시간 없이)
         String accessToken = jwtUtil.generateAccessToken(user.getId(), session.getId());
@@ -148,6 +154,19 @@ public class AuthService {
 
         // talkMessageAgreed 필드는 "필요한 카카오 동의(메시지+캘린더)를 모두 마쳤는지"를 의미함
         return new AuthResponse.Login(accessToken, refreshToken, allAgreed, agreementUrl, agreedScopes);
+    }
+
+    // kakaoLogin에서 비동기로 호출됨 - 로그인 응답과 분리된 별도 트랜잭션(findById/save 각각 알아서
+    // 트랜잭션 처리됨)이라 @Transactional을 따로 안 붙여도 됨. 실패해도 세션 자체는 이미
+    // 만들어져 있으니 국가/도시만 빈 채로 남고 로그인엔 영향 없음
+    private void updateSessionLocation(String sessionId, String ipAddress) {
+        GeoLocationClient.GeoLocation geo = geoLocationClient.lookup(ipAddress);
+        if (geo == null) return;
+        loginSessionRepository.findById(sessionId).ifPresent(s -> {
+            s.setCountry(geo.country());
+            s.setCity(geo.city());
+            loginSessionRepository.save(s);
+        });
     }
 
     // Access Token 재발급
