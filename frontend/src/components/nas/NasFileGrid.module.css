@@ -144,6 +144,23 @@
   cursor: default;
 }
 
+.iconBtnActive {
+  background-color: var(--brand);
+  border-color: var(--brand);
+  color: var(--white);
+}
+
+/* 선택바의 "여러 개 선택" 동그라미 토글 - PC는 Ctrl+클릭이 있어서 숨김 */
+.selectModeToggleBtn {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .selectModeToggleBtn {
+    display: flex;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -239,10 +256,9 @@
   gap: 12px;
   padding: 16px;
   align-content: start;
-  /* 터치로 드래그(다중 선택/파일 이동)할 때 브라우저가 먼저 화면 스크롤로 가로채지 않게 함 -
-     자바스크립트로 직접 제스처를 처리하므로 기본 터치 동작은 꺼둠 */
-  touch-action: none;
-  /* 드래그로 영역 선택할 때 브라우저 기본 텍스트 선택(파란 하이라이트)이 같이 일어나지 않게 함 */
+  /* 빈 공간에서는 평소처럼 세로 스크롤이 되어야 함 - 타일 위에서 끌 때만(.tile의 touch-action:none)
+     커스텀 드래그(폴더로 이동)가 스크롤을 가로챔 */
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -256,6 +272,7 @@
 }
 
 .tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -267,6 +284,33 @@
   touch-action: none;
   height: auto;
   width: 84px;
+}
+
+/* 모바일 "선택" 모드가 켜졌을 때만 타일마다 보이는 선택 동그라미(오른쪽 위) - PC의 Ctrl+클릭 대체 */
+.selectCircle {
+  display: flex;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--gray3);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  z-index: 2;
+}
+
+.selectCircleChecked {
+  background-color: var(--brand);
+  color: var(--white);
+  font-size: 12px;
 }
 
 .tile:hover {
@@ -339,7 +383,7 @@
   display: flex;
   flex-direction: column;
   padding: 4px 8px;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }

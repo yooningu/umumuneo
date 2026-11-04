@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type DragEvent } from 'react';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong, FaStar } from 'react-icons/fa6';
 import { BsDownload, BsPencil, BsTrash } from 'react-icons/bs';
+import { FaRegCheckCircle, FaCheck } from 'react-icons/fa';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile, copyFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
 import { getFileIcon } from '../../utils/fileIcon';
@@ -88,6 +89,10 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   const [editingId, setEditingId] = useState<string | null>(null); // 이름을 바로 타이핑 중인 타일(새 폴더 생성 직후 / 이름 변경)
   const [editingValue, setEditingValue] = useState('');
   const [clipboard, setClipboard] = useState<{ ids: string[]; mode: 'copy' | 'cut' } | null>(null);
+  // 모바일 전용 "선택" 모드 - 1개 선택된 뒤 뜨는 선택바의 동그라미 버튼으로 켜고 끔.
+  // 켜져 있으면 다른 파일을 탭할 때마다(길게 누르기 없이도) PC의 Ctrl+클릭처럼 선택에 추가/제외됨
+  const [selectMode, setSelectMode] = useState(false);
+  const toggleSelectMode = () => setSelectMode(prev => !prev);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const tileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -143,11 +148,8 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
 
   // Shift+클릭 범위선택의 기준점(마지막으로 "새로" 찍은 지점) - 윈도우 탐색기처럼
   const selectionAnchorRef = useRef<string | null>(null);
-  // 모바일에서 길게 눌러 메뉴를 띄운 뒤부터는, 평범한 탭도 Ctrl+클릭처럼 선택을 토글하게 함
-  // (터치엔 Ctrl 키가 없어서 대신 "길게 누르기"로 다중 선택 모드에 들어가는 셈)
-  const multiSelectModeRef = useRef(false);
   useEffect(() => {
-    if (selected.size === 0) multiSelectModeRef.current = false;
+    if (selected.size === 0) setSelectMode(false);
   }, [selected]);
 
   // 기본은 한 개만 선택(새로 클릭하면 교체), Ctrl/Cmd+클릭이면 윈도우처럼 중첩 선택(토글),
@@ -245,14 +247,13 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     setSelected(ids);
   }, [dragStart, dragCurrent]);
 
-  // 터치 전용 드래그 - 네이티브 HTML5 드래그(draggable)는 터치에서 거의 지원이 안 돼서
-  // 따로 구현함. 빈 공간에서 시작하면 위 사각형 선택(dragStart/dragCurrent)을 그대로
-  // 터치로 구동하고, 타일 위에서 시작하면 그 파일(들)을 끌어서 폴더 위에 놓는 이동으로 처리함.
-  // 움직임이 작아서(MOVE_THRESHOLD 이내) 아직 선택/이동 중 뭔지 안 정해졌으면 그냥 탭으로 두고
-  // (길게 누르기는 attachLongPress가, 짧은 탭은 onClick/더블탭이 알아서 처리함) 끼어들지 않음.
+  // 터치 전용 드래그 - 네이티브 HTML5 드래그(draggable)는 터치에서 거의 지원이 안 돼서 따로
+  // 구현함. 타일 위에서 시작했을 때만 그 파일(들)을 끌어서 폴더 위에 놓는 이동으로 처리하고,
+  // 빈 공간에서 시작한 터치는 그냥 평소 스크롤로 둠(드래그로 여러 개 선택하는 기능은 뺌 -
+  // 모바일 다중 선택은 선택바의 동그라미 토글로만 함).
   useEffect(() => {
     const MOVE_THRESHOLD = 10;
-    let mode: 'idle' | 'maybe' | 'select' | 'move' = 'idle';
+    let mode: 'idle' | 'maybe' | 'move' = 'idle';
     let origin: { x: number; y: number } | null = null;
     let moveIds: string[] = [];
     let currentDropTarget: string | null = null;
@@ -268,51 +269,40 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       if (e.touches.length !== 1) { reset(); return; }
       const touch = e.touches[0];
       const target = e.target as HTMLElement;
-      // 파일 그리드/리스트 영역 밖(헤더, 사이드바 등)에서 시작한 터치는 무시 - 마우스 버전이
-      // .grid/.list 자신에게만 리스너를 다는 것과 똑같이 범위를 맞춤
       if (!target.closest('[data-nas-grid-area]')) { reset(); return; }
       const tileEl = target.closest<HTMLElement>('[data-nas-tile-id]');
+      if (!tileEl) { reset(); return; } // 빈 공간에서 시작한 터치는 커스텀 드래그 대상이 아님
       origin = { x: touch.clientX, y: touch.clientY };
       mode = 'maybe';
-      if (tileEl) {
-        const fileId = tileEl.dataset.nasTileId!;
-        moveIds = selectedRef.current.has(fileId) ? [...selectedRef.current] : [fileId];
-      } else {
-        moveIds = [];
-      }
+      const fileId = tileEl.dataset.nasTileId!;
+      moveIds = selectedRef.current.has(fileId) ? [...selectedRef.current] : [fileId];
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (mode === 'idle' || !origin) return;
       const touch = e.touches[0];
       if (!touch) return;
+      // 타일 위에서 시작한 터치는 (아직 이동 중인지 확정 안 됐어도) 바로바로 preventDefault 해서
+      // 스크롤을 처음부터 막아야 함 - threshold를 넘은 뒤에야 처음 호출하면 브라우저가 이미
+      // "이건 스크롤이다"라고 판단을 끝내버려서, 그 뒤에 불러도 씹혀버림 (크롬 devtools 콘솔에
+      // "Ignored attempt to cancel a touchmove event... scrolling is in progress"로 뜨는 게 이 증상)
+      e.preventDefault();
       const dx = touch.clientX - origin.x;
       const dy = touch.clientY - origin.y;
 
       if (mode === 'maybe') {
         if (Math.abs(dx) < MOVE_THRESHOLD && Math.abs(dy) < MOVE_THRESHOLD) return;
-        mode = moveIds.length > 0 ? 'move' : 'select';
-        if (mode === 'select') {
-          dragAdditive.current = false;
-          dragBaseSelection.current = new Set();
-          setSelected(new Set());
-          setDragStart(origin);
-        }
+        mode = 'move';
       }
 
-      e.preventDefault(); // 선택/이동 드래그로 확정되면 그때부터 화면 스크롤을 막음
-      if (mode === 'select') {
-        setDragCurrent({ x: touch.clientX, y: touch.clientY });
-      } else {
-        const el = document.elementFromPoint(touch.clientX, touch.clientY);
-        const folderEl = el?.closest<HTMLElement>('[data-nas-tile-id]');
-        const folderId = folderEl?.dataset.nasTileId;
-        const folder = folderId ? files.find(f => f.id === folderId) : undefined;
-        const valid = folder?.isDirectory && !moveIds.includes(folder.id) ? folder.id : null;
-        if (valid !== currentDropTarget) {
-          currentDropTarget = valid;
-          setDropTargetId(valid);
-        }
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const folderEl = el?.closest<HTMLElement>('[data-nas-tile-id]');
+      const folderId = folderEl?.dataset.nasTileId;
+      const folder = folderId ? files.find(f => f.id === folderId) : undefined;
+      const valid = folder?.isDirectory && !moveIds.includes(folder.id) ? folder.id : null;
+      if (valid !== currentDropTarget) {
+        currentDropTarget = valid;
+        setDropTargetId(valid);
       }
     };
 
@@ -330,10 +320,6 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
             console.error(err);
           }
         }
-      } else if (mode === 'select') {
-        e.preventDefault();
-        setDragStart(null);
-        setDragCurrent(null);
       }
       reset();
     };
@@ -357,9 +343,8 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     setPreviewFile(f);
   };
 
-  // 모바일(터치)엔 더블클릭/Ctrl+클릭이 없어서:
-  // - 같은 타일을 300ms 안에 두 번 터치하면 열림(더블클릭 대체)
-  // - 길게 눌러서 다중 선택 모드에 들어간 뒤부턴, 평범한 탭 하나하나가 선택을 토글함(Ctrl+클릭 대체)
+  // 모바일(터치)엔 더블클릭이 없어서 같은 타일을 300ms 안에 두 번 터치하면 열림(더블클릭 대체).
+  // 선택바의 동그라미로 선택 모드를 켠 뒤부턴, 평범한 탭 하나하나가 선택을 토글함(Ctrl+클릭 대체)
   const lastTapRef = useRef<{ id: string; time: number } | null>(null);
   const handleTileTouchEnd = (e: React.TouchEvent, f: FileItem) => {
     const now = Date.now();
@@ -371,10 +356,27 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       return;
     }
     lastTapRef.current = { id: f.id, time: now };
-    if (multiSelectModeRef.current) {
+    // 선택바의 동그라미로 선택 모드를 켠 상태에서만 평범한 탭이 PC의 Ctrl+클릭처럼 선택을 토글함
+    if (selectMode) {
       e.preventDefault();
       toggleSelect(f.id);
     }
+  };
+
+  // 모바일 전용 선택 동그라미(타일 오른쪽 위) - PC의 Ctrl+클릭과 같은 역할: 이걸 누르면
+  // 길게 누르기 없이도 바로 개별 파일을 추가/해제로 다중 선택할 수 있음. 타일 자체의
+  // 클릭/터치(열기, 단일 선택으로 교체)로 안 번지게 버블링을 막아야 함
+  const handleSelectCircleClick = (e: React.MouseEvent, f: FileItem) => {
+    e.stopPropagation();
+    toggleSelect(f.id);
+  };
+  const handleSelectCircleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+  };
+  const handleSelectCircleTouchEnd = (e: React.TouchEvent, f: FileItem) => {
+    e.stopPropagation();
+    e.preventDefault();
+    toggleSelect(f.id);
   };
 
   // 타일을 드래그해서 다른 폴더 타일 위에 놓으면 그 폴더로 이동시킨다.
@@ -426,9 +428,13 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     enqueueUpload(entries, parentId ?? undefined).catch(console.error);
   };
 
-  // 드래그앤드롭 - 브라우저 기본 동작(파일을 열어버림)을 막아야 드롭이 동작함
+  // 드래그앤드롭 - 브라우저 기본 동작(파일을 열어버림)을 막아야 드롭이 동작함.
+  // 타일(NAS_IDS_MIME) 드래그는 여기서 다루는 "OS 파일을 끌어다 업로드"가 아니므로 전부 무시함 -
+  // 안 그러면 파일 타일(특히 썸네일 <img>가 있는 경우)을 끌어서 빈 공간에 놓았을 때, 브라우저가
+  // 그 이미지 자체를 "드롭된 파일"로 인식해서 엉뚱하게 업로드가 되어버림
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
+    if (e.dataTransfer.types.includes(NAS_IDS_MIME)) return;
     if (!e.dataTransfer.types.includes('Files')) return;
     fileDragCounter.current++;
     setIsFileDragging(true);
@@ -443,6 +449,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   };
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
+    if (e.dataTransfer.types.includes(NAS_IDS_MIME)) return;
     fileDragCounter.current = 0;
     setIsFileDragging(false);
     collectDroppedEntries(e.dataTransfer)
@@ -594,9 +601,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       openMenuAt(e.clientX, e.clientY, e.target as HTMLElement);
     };
     document.addEventListener('contextmenu', handleContextMenu);
-    // 길게 누르기로 메뉴가 뜨면 그때부터 "다중 선택 모드" 시작 - 이후 평범한 탭들이 토글로 동작함
     const detachLongPress = attachLongPress(document, (x, y, el) => {
-      multiSelectModeRef.current = true;
       openMenuAt(x, y, el);
     });
     return () => {
@@ -691,6 +696,15 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
         {selected.size > 0 && (
           <div className={styles.selectionBar}>
             <span className={styles.selectionCount}>{selected.size}개 선택됨</span>
+            {/* 모바일 전용 - 켜두면 다른 파일을 탭할 때마다 PC의 Ctrl+클릭처럼 선택에 추가/제외됨
+                (꺼져 있으면 탭 한 번에 그 파일 하나로 선택이 바뀜). PC에선 Ctrl+클릭이 있어서 숨김 */}
+            <button
+              className={`${styles.iconBtn} ${styles.selectModeToggleBtn} ${selectMode ? styles.iconBtnActive : ''}`.trim()}
+              onClick={toggleSelectMode}
+              title="여러 개 선택"
+            >
+              {selectMode ? <FaCheck /> : <FaRegCheckCircle />}
+            </button>
             <button className={styles.iconBtn} onClick={handleDownloadSelected} title="다운로드"><BsDownload /></button>
             <button className={styles.iconBtn} onClick={handleToggleFavorite} title="즐겨찾기"><FaStar /></button>
             <button className={styles.iconBtn} onClick={handleRename} disabled={selected.size !== 1} title="이름 변경"><BsPencil /></button>
@@ -761,6 +775,18 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
               onDragLeave={f.isDirectory ? (e => handleFolderDragLeave(e, f)) : undefined}
               onDrop={f.isDirectory ? (e => handleFolderDrop(e, f)) : undefined}
             >
+              {selectMode && (
+                <button
+                  type="button"
+                  className={`${styles.selectCircle} ${selected.has(f.id) ? styles.selectCircleChecked : ''}`.trim()}
+                  onClick={e => handleSelectCircleClick(e, f)}
+                  onTouchStart={handleSelectCircleTouchStart}
+                  onTouchEnd={e => handleSelectCircleTouchEnd(e, f)}
+                  aria-label={selected.has(f.id) ? '선택 해제' : '선택'}
+                >
+                  {selected.has(f.id) ? <FaCheck /> : <FaRegCheckCircle />}
+                </button>
+              )}
               <div className={styles.tileIcon}>
                 <NasThumbnail file={f} fallback={getFileIcon(f)} />
                 {f.isFavorite && <span className={styles.favBadge}><FaStar /></span>}
