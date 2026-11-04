@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSchedules } from '../../api/schedule';
-import { getHolidays } from '../../api/holiday';
+import { getHolidaysCached } from '../../state/holidayCache';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import { PiAlarmFill } from 'react-icons/pi';
@@ -45,7 +45,7 @@ export default function MonthCalendar({ selectedDate, onDateSelect, refreshKey }
 
   // 공휴일(빨간날)
   useEffect(() => {
-    getHolidays(year, month + 1)
+    getHolidaysCached(year, month + 1)
       .then(list => setHolidays(new Map(list.map(h => [h.date, h.name]))))
       .catch(console.error);
   }, [year, month]);

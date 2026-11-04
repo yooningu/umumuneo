@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSchedules } from '../../api/schedule';
-import { getHolidays } from '../../api/holiday';
+import { getHolidaysCached } from '../../state/holidayCache';
 import type { Schedule } from '../../types';
 import { toDateStr } from '../../utils/date';
 import styles from './MiniCalendar.module.css';
@@ -67,7 +67,7 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
 
   // 공휴일(빨간날) - 월이 바뀔 때만 새로 조회
   useEffect(() => {
-    getHolidays(year, month + 1)
+    getHolidaysCached(year, month + 1)
       .then(list => setHolidays(new Map(list.map(h => [h.date, h.name]))))
       .catch(console.error);
   }, [year, month]);

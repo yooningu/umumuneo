@@ -20,4 +20,10 @@ export default defineConfig({
     // (외부에 완전히 노출되는 것도 아니고, 앞단이 Cloudflare + JWT 인증이라 실질적 위험은 낮음)
     allowedHosts: true,
   },
+  // vite preview(프로덕션 빌드 결과물을 서빙하는 명령)는 server와 설정을 공유하지 않고 따로 읽음 -
+  // 위와 똑같은 이유로 host/allowedHosts를 여기도 똑같이 열어줘야 배포 환경(Cloudflare Tunnel)에서 접근됨
+  preview: {
+    host: true,
+    allowedHosts: true,
+  },
 })

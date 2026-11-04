@@ -54,6 +54,10 @@ jobs:
           docker exec spring-dev sh -c "pkill -9 -f 'com.example.demo.DemoApplication' 2>/dev/null; true"
           docker exec -d spring-dev sh -c "cd /workspace && ./gradlew bootRun > /tmp/backend.log 2>&1"
 
-          # 프론트엔드: vite 개발서버만 종료 후 재기동
+          # 프론트엔드: 프로덕션 빌드 후 그 결과물(dist)을 정적으로 서빙함.
+          # 예전엔 개발 서버(vite dev)를 운영에도 그대로 써서, 페이지 하나 열 때마다 수십 개
+          # 파일이 번들링 안 된 채로 각각 네트워크 요청이 나가 느렸음(.tsx 파일 하나하나가
+          # 개별 HTTP 요청) - 빌드하면 압축/번들링된 소수의 파일로 줄어듦
           docker exec react-dev sh -c "pkill -9 -f vite 2>/dev/null; true"
-          docker exec -d react-dev sh -c "cd /workspace && npm install && npm run dev -- --host > /tmp/frontend.log 2>&1"
+          docker exec react-dev sh -c "cd /workspace && npm install && npm run build"
+          docker exec -d react-dev sh -c "cd /workspace && npx vite preview --host --port 5173 > /tmp/frontend.log 2>&1"

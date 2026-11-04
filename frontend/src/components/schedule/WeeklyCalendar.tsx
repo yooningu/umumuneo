@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
 import { getSchedules } from '../../api/schedule';
-import { getHolidays } from '../../api/holiday';
+import { getHolidaysCached } from '../../state/holidayCache';
 import { getTimetables } from '../../api/timetable';
 import type { Schedule, Timetable } from '../../types';
 import { toDateStr } from '../../utils/date';
@@ -174,7 +174,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
     const months = new Set(visibleDates.map(d => `${d.getFullYear()}-${d.getMonth() + 1}`));
     Promise.all([...months].map(m => {
       const [y, mo] = m.split('-').map(Number);
-      return getHolidays(y, mo);
+      return getHolidaysCached(y, mo);
     }))
       .then(results => setHolidays(new Map(results.flat().map(h => [h.date, h.name]))))
       .catch(console.error);
