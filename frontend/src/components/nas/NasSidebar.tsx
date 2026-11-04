@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getFiles, getStorageUsage, downloadFile } from '../../api/file';
+import { getFiles, getStorageUsage, getFolderPath } from '../../api/file';
 import type { FileItem } from '../../types';
 import styles from './NasSidebar.module.css';
 
@@ -16,6 +16,7 @@ const CATEGORIES: { source: FileSource | null; label: string; icon: string }[] =
 interface Props {
   refreshKey: number;
   onOpenFolder: (id: string, name: string) => void;
+  onNavigateToFolderPath: (ancestors: FileItem[]) => void;
   sourceFilter: FileSource | null;
   onSelectSource: (source: FileSource | null) => void;
 }
@@ -39,7 +40,7 @@ function usageBarClass(percent: number, styles: Record<string, string>): string 
   return styles.storageBarFillRed;
 }
 
-export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onSelectSource }: Props) {
+export default function NasSidebar({ refreshKey, onOpenFolder, onNavigateToFolderPath, sourceFilter, onSelectSource }: Props) {
   const [favorites, setFavorites] = useState<FileItem[]>([]);
   const [usedBytes, setUsedBytes] = useState(0);
 
@@ -50,9 +51,18 @@ export default function NasSidebar({ refreshKey, onOpenFolder, sourceFilter, onS
 
   const percent = Math.min(100, (usedBytes / DISPLAY_LIMIT_BYTES) * 100);
 
-  const handleFavoriteClick = (f: FileItem) => {
-    if (f.isDirectory) onOpenFolder(f.id, f.name);
-    else downloadFile(f.id, f.name).catch(console.error);
+  // 즐겨찾기 클릭 시 다운로드하지 않고, 폴더면 그 폴더로, 파일이면 그 파일이 들어있는 폴더로 이동시킴
+  const handleFavoriteClick = async (f: FileItem) => {
+    if (f.isDirectory) {
+      onOpenFolder(f.id, f.name);
+      return;
+    }
+    try {
+      const ancestors = await getFolderPath(f.id);
+      onNavigateToFolderPath(ancestors);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (

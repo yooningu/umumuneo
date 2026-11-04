@@ -134,6 +134,13 @@ export const getArchiveEntries = async (id: string): Promise<ArchiveEntry[]> => 
   return res.data;
 };
 
+// 이 파일이 들어있는 폴더까지의 전체 경로(루트부터) - 즐겨찾기에서 "그 위치로 이동"할 때
+// breadcrumb(folderStack)을 재구성하는 용도
+export const getFolderPath = async (id: string): Promise<FileItem[]> => {
+  const res = await client.get(`/files/${id}/path`);
+  return res.data;
+};
+
 // 사이드바 "사용중" 용량 - 폴더 구조와 무관한 전체 파일 크기 합계 (getFiles()로는 루트만 집계되므로 따로 조회)
 export const getStorageUsage = async (): Promise<number> => {
   const res = await client.get('/files/usage');

@@ -256,6 +256,16 @@ public class FileController {
         return ResponseEntity.ok(fileService.getArchiveEntries(userId, id));
     }
 
+    // GET /api/v1/files/{id}/path (이 파일이 들어있는 폴더까지의 전체 경로, 루트부터 - 즐겨찾기에서
+    // "그 위치로 이동"할 때 breadcrumb을 재구성하는 용도)
+    @GetMapping("/{id}/path")
+    public ResponseEntity<List<FileResponse>> getFolderPath(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id
+    ) {
+        return ResponseEntity.ok(fileService.getFolderPath(userId, id));
+    }
+
     // DELETE /api/v1/files/{id}
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFile(

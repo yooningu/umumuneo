@@ -8,23 +8,52 @@
   box-sizing: border-box;
 }
 
+/* 좌우 패딩을 .listItem의 패딩(12px 16px)과 맞춰서, 전체선택 체크박스가 각 메일 행의
+   체크박스랑 정확히 같은 가로 위치에 오도록 함 */
 .listHeader {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0 16px;
 }
 
+/* 브라우저 기본 체크박스 대신 테두리 + 체크 표시만 그려서 보여줌 (채워진 배경 없음) */
 .checkbox {
+  appearance: none;
+  -webkit-appearance: none;
   flex-shrink: 0;
+  align-self: center;
   width: 17px;
   height: 17px;
+  margin: 0;
+  border: 1.5px solid var(--gray3);
+  border-radius: 4px;
+  background-color: transparent;
   cursor: pointer;
-  accent-color: var(--brand);
+  position: relative;
 }
 
+.checkbox:checked {
+  border-color: var(--brand);
+}
+
+.checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--brand);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* 전체 폭을 차지하지 않고 오른쪽에 살짝만 보이는 정도로 좁게 두고, 오른쪽으로 밀어둠 */
 .searchInput {
-  flex: 1;
+  flex: 0 1 180px;
+  margin-left: auto;
   padding: 9px 14px;
   border: none;
   border-radius: 10px;
@@ -34,17 +63,39 @@
   box-sizing: border-box;
 }
 
-.deleteSelectedBtn {
+.headerActions {
   flex-shrink: 0;
-  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--gray3);
   border-radius: 8px;
-  background-color: var(--red);
-  color: var(--white);
+  background-color: var(--white);
+  color: var(--gray2);
   font-size: var(--font-s);
   font-weight: var(--font-weight-semibold);
-  padding: 9px 14px;
+  white-space: nowrap;
   cursor: pointer;
   box-shadow: var(--shadow-raised);
+}
+
+.headerActionBtn:hover:not(:disabled) {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.headerActionBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
 }
 
 .listScroll {
@@ -66,10 +117,12 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  height: 84px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--gray4);
   cursor: pointer;
   box-sizing: border-box;
+  overflow: hidden;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
@@ -148,29 +201,57 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 4px;
 }
 
-.pagination button {
-  border: 1px solid var(--gray3);
-  border-radius: 8px;
-  background-color: var(--white);
-  color: var(--gray1);
-  font-size: var(--font-s);
-  padding: 7px 14px;
+.pageNavBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray3);
+  font-size: 28px;
   cursor: pointer;
-  box-shadow: var(--shadow-raised);
 }
 
-.pagination button:disabled {
-  opacity: 0.4;
+.pageNavBtn:hover:not(:disabled) {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.pageNavBtn:disabled {
+  opacity: 0.35;
   cursor: default;
-  box-shadow: none;
 }
 
-.pageInfo {
-  font-size: var(--font-s);
+.pageNumBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
   color: var(--gray2);
+  font-size: var(--font-s);
+  cursor: pointer;
+}
+
+.pageNumBtn:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.pageNumBtnActive {
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: var(--font-weight-semibold);
 }
 
 .empty {

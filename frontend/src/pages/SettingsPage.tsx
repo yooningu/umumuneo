@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMe, updateMe, deleteMe } from '../api/user';
 import { getSessions, revokeSession, revokeAllSessions } from '../api/auth';
+import { getBlockedSenders, unblockSender } from '../api/mail';
 import { applyTheme, type Theme } from '../utils/theme';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import type { User, SessionInfo } from '../types';
+import type { User, SessionInfo, BlockedSender } from '../types';
 import styles from './SettingsPage.module.css';
 
 function formatRelative(dateStr: string): string {
@@ -35,6 +36,8 @@ export default function SettingsPage() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
   const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [blockedSenders, setBlockedSenders] = useState<BlockedSender[]>([]);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
   useEffect(() => {
     getMe()
@@ -44,7 +47,20 @@ export default function SettingsPage() {
       })
       .catch(console.error);
     getSessions().then(setSessions).catch(console.error);
+    getBlockedSenders().then(setBlockedSenders).catch(console.error);
   }, []);
+
+  const handleUnblock = async (blocked: BlockedSender) => {
+    setUnblockingId(blocked.id);
+    try {
+      await unblockSender(blocked.id);
+      setBlockedSenders(prev => prev.filter(b => b.id !== blocked.id));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUnblockingId(null);
+    }
+  };
 
   const goToLogin = () => {
     localStorage.removeItem('accessToken');
@@ -174,6 +190,26 @@ export default function SettingsPage() {
             </button>
           )}
         </div>
+
+        {blockedSenders.length > 0 && (
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>차단한 보낸사람</div>
+            {blockedSenders.map(blocked => (
+              <div key={blocked.id} className={styles.sessionRow}>
+                <div className={styles.sessionInfo}>
+                  <span className={styles.sessionLabel}>{blocked.address}</span>
+                </div>
+                <button
+                  className={styles.secondaryBtn}
+                  onClick={() => handleUnblock(blocked)}
+                  disabled={unblockingId === blocked.id}
+                >
+                  차단 해제
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className={styles.section}>
           <div className={styles.sectionTitle}>계정</div>

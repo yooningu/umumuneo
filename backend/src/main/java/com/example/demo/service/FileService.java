@@ -669,6 +669,21 @@ public class FileService {
     }
 
     // 파일 조회 + 권한 확인
+    // 이 파일이 들어있는 폴더까지의 전체 경로(루트부터 순서대로) - 즐겨찾기에서 "그 위치로 이동"할 때
+    // breadcrumb(folderStack)을 재구성하기 위해 씀. 파일 자신은 포함하지 않고, 바로 담긴 폴더가 마지막 원소.
+    // 루트 바로 아래에 있으면(부모가 없으면) 빈 리스트를 반환함
+    @Transactional(readOnly = true)
+    public List<FileResponse> getFolderPath(String userId, String fileId) {
+        FileEntity file = findFile(userId, fileId);
+        List<FileEntity> ancestors = new ArrayList<>();
+        FileEntity cursor = file.getParent();
+        while (cursor != null) {
+            ancestors.add(0, cursor);
+            cursor = cursor.getParent();
+        }
+        return ancestors.stream().map(FileResponse::new).toList();
+    }
+
     private FileEntity findFile(String userId, String fileId) {
         FileEntity file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));

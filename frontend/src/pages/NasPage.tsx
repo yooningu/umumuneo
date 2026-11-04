@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import NasFileGrid from '../components/nas/NasFileGrid';
 import NasSidebar from '../components/nas/NasSidebar';
+import type { FileItem } from '../types';
 import styles from './NasPage.module.css';
 
 type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
@@ -48,6 +49,15 @@ export default function NasPage() {
     setSearch('');
   };
 
+  // 즐겨찾기에서 파일을 고르면 다운로드하지 않고, 그 파일이 들어있는 폴더로 바로 이동시킴.
+  // ancestors는 루트부터 순서대로(파일 자신은 미포함) - 그대로 folderStack으로 씀
+  const navigateToFolderPath = (ancestors: FileItem[]) => {
+    setSourceFilter(null);
+    setSearch('');
+    setFolderStack(ancestors.map(a => ({ id: a.id, name: a.name })));
+    setParentId(ancestors.length > 0 ? ancestors[ancestors.length - 1].id : null);
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.body}>
@@ -55,6 +65,7 @@ export default function NasPage() {
           <NasSidebar
             refreshKey={refreshKey}
             onOpenFolder={openFolder}
+            onNavigateToFolderPath={navigateToFolderPath}
             sourceFilter={sourceFilter}
             onSelectSource={selectSource}
           />

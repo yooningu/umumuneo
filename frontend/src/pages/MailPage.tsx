@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { IoArrowBack } from 'react-icons/io5';
+import { FaAngleLeft, FaAngleRight, FaAnglesLeft, FaAnglesRight } from 'react-icons/fa6';
 import { BsTrash } from 'react-icons/bs';
-import { getMails, getMailDetail, deleteMail } from '../api/mail';
+import { getMails, getMailDetail, deleteMail, setMailRead, blockSender } from '../api/mail';
 import { downloadFile, getPreviewBlobUrl } from '../api/file';
 import Skeleton from '../components/common/Skeleton';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -9,6 +10,20 @@ import type { MailItem, MailDetail, MailAttachment } from '../types';
 import styles from './MailPage.module.css';
 
 const PAGE_SIZE = 20;
+const MAX_VISIBLE_PAGES = 5;
+
+// 페이지네이션에 보여줄 페이지 번호들 - 현재 페이지를 가운데 두고 최대 5개까지,
+// 끝쪽에 가까우면 그만큼 반대쪽으로 더 보여줌 (항상 5개를 채우려고 시도)
+function getPageNumbers(current: number, total: number): number[] {
+  if (total <= MAX_VISIBLE_PAGES) return Array.from({ length: total }, (_, i) => i);
+  let start = Math.max(0, current - Math.floor(MAX_VISIBLE_PAGES / 2));
+  let end = start + MAX_VISIBLE_PAGES - 1;
+  if (end > total - 1) {
+    end = total - 1;
+    start = end - MAX_VISIBLE_PAGES + 1;
+  }
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
 
 // 로딩 중에 실제 메일 항목(보낸사람/날짜 + 제목 + 미리보기) 모양으로 보여줄 스켈레톤
 function MailListSkeleton() {
@@ -137,6 +152,7 @@ export default function MailPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
+  const [confirmBlock, setConfirmBlock] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -200,6 +216,35 @@ export default function MailPage() {
       });
       if (openMailId && ids.includes(openMailId)) closeMail();
       setRefreshKey(k => k + 1);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 선택된 메일들이 전부 읽음 상태면 안읽음으로, 하나라도 안읽음이 있으면 전부 읽음으로 전환
+  const handleToggleReadSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const selected = mails.filter(m => selectedIds.has(m.id));
+    const nextRead = !selected.every(m => m.isRead);
+    try {
+      await Promise.all([...selectedIds].map(id => setMailRead(id, nextRead)));
+      setMails(prev => prev.map(m => (selectedIds.has(m.id) ? { ...m, isRead: nextRead } : m)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 선택된 메일들의 보낸사람 주소(중복 제거)를 전부 차단
+  const selectedSenderAddresses = () =>
+    [...new Set(mails.filter(m => selectedIds.has(m.id)).map(m => m.fromAddress))];
+
+  const confirmBlockNow = async () => {
+    setConfirmBlock(false);
+    const addresses = selectedSenderAddresses();
+    if (addresses.length === 0) return;
+    try {
+      await Promise.all(addresses.map(addr => blockSender(addr)));
+      setSelectedIds(new Set());
     } catch (e) {
       console.error(e);
     }
@@ -274,6 +319,32 @@ export default function MailPage() {
           onChange={toggleSelectAll}
           title="전체 선택"
         />
+        <div className={styles.headerActions}>
+          <button
+            className={styles.headerActionBtn}
+            onClick={handleToggleReadSelected}
+            disabled={selectedIds.size === 0}
+            title="읽음/안읽음 전환"
+          >
+            읽음
+          </button>
+          <button
+            className={styles.headerActionBtn}
+            onClick={() => setConfirmDeleteIds([...selectedIds])}
+            disabled={selectedIds.size === 0}
+            title="삭제"
+          >
+            삭제
+          </button>
+          <button
+            className={styles.headerActionBtn}
+            onClick={() => setConfirmBlock(true)}
+            disabled={selectedIds.size === 0}
+            title="보낸사람 차단"
+          >
+            차단
+          </button>
+        </div>
         <input
           className={styles.searchInput}
           type="text"
@@ -281,25 +352,17 @@ export default function MailPage() {
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
         />
-        {selectedIds.size > 0 && (
-          <button
-            className={styles.deleteSelectedBtn}
-            onClick={() => setConfirmDeleteIds([...selectedIds])}
-          >
-            삭제 ({selectedIds.size})
-          </button>
-        )}
       </div>
 
       <div className={styles.listScroll}>
-        {loading && Array.from({ length: 6 }, (_, i) => <MailListSkeleton key={i} />)}
+        {loading && Array.from({ length: PAGE_SIZE }, (_, i) => <MailListSkeleton key={i} />)}
         {!loading && mails.length === 0 && (
           <div className={styles.empty}>{search ? '검색 결과가 없어요.' : '받은 메일이 없어요.'}</div>
         )}
         {!loading && mails.map(mail => (
           <div
             key={mail.id}
-            className={`${styles.listItem} ${mail.isRead ? styles.listItemRead : ''}`.trim()}
+            className={styles.listItem}
             onClick={() => openMail(mail.id)}
           >
             <input
@@ -309,7 +372,9 @@ export default function MailPage() {
               onChange={() => toggleSelect(mail.id)}
               onClick={e => e.stopPropagation()}
             />
-            <div className={styles.listItemContent}>
+            {/* 체크박스는 선택 표시라 읽음 상태랑 무관하게 항상 선명하게 보여야 해서,
+                연하게 표시하는 효과는 글자 영역에만 줌 */}
+            <div className={`${styles.listItemContent} ${mail.isRead ? styles.listItemRead : ''}`.trim()}>
               <div className={styles.listItemTop}>
                 <span className={styles.listItemFrom}>{highlightMatch(mail.fromAddress, search)}</span>
                 <span className={styles.listItemDate}>{formatDate(mail.receivedAt)}</span>
@@ -326,11 +391,29 @@ export default function MailPage() {
         ))}
       </div>
 
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <div className={styles.pagination}>
-          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>이전</button>
-          <span className={styles.pageInfo}>{page + 1} / {totalPages}</span>
-          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>다음</button>
+          <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(0)} title="처음">
+            <FaAnglesLeft />
+          </button>
+          <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(p => p - 1)} title="이전">
+            <FaAngleLeft />
+          </button>
+          {getPageNumbers(page, totalPages).map(p => (
+            <button
+              key={p}
+              className={`${styles.pageNumBtn} ${p === page ? styles.pageNumBtnActive : ''}`.trim()}
+              onClick={() => setPage(p)}
+            >
+              {p + 1}
+            </button>
+          ))}
+          <button className={styles.pageNavBtn} disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} title="다음">
+            <FaAngleRight />
+          </button>
+          <button className={styles.pageNavBtn} disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)} title="마지막">
+            <FaAnglesRight />
+          </button>
         </div>
       )}
 
@@ -340,6 +423,15 @@ export default function MailPage() {
           danger
           onConfirm={confirmDeleteNow}
           onCancel={() => setConfirmDeleteIds(null)}
+        />
+      )}
+
+      {confirmBlock && (
+        <ConfirmDialog
+          message={`보낸사람 ${selectedSenderAddresses().length}명을 차단할까요? 앞으로 이 주소에서 오는 메일은 받지 않아요.`}
+          danger
+          onConfirm={confirmBlockNow}
+          onCancel={() => setConfirmBlock(false)}
         />
       )}
     </div>

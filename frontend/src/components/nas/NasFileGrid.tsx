@@ -18,7 +18,7 @@ import styles from './NasFileGrid.module.css';
 function NasTileSkeleton() {
   return (
     <div className={styles.tile}>
-      <Skeleton width={36} height={36} borderRadius={8} />
+      <Skeleton width={40} height={40} borderRadius={8} />
     </div>
   );
 }
@@ -153,6 +153,12 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   // 기본은 한 개만 선택(새로 클릭하면 교체), Ctrl/Cmd+클릭이면 윈도우처럼 중첩 선택(토글),
   // Shift+클릭이면 마지막으로 선택한 지점부터 지금 클릭한 지점까지 전부 선택(윈도우 탐색기처럼)
   const handleTileClick = (e: React.MouseEvent, f: FileItem) => {
+    // 드래그 선택이 막 끝난 뒤 마우스가 타일 위에서 떨어지면서 딸려오는 click이면,
+    // 방금 만든 다중 선택을 이 한 타일로 덮어쓰지 않도록 무시함
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
     if (e.shiftKey && selectionAnchorRef.current) {
       const ids = visible.map(x => x.id);
       const anchorIdx = ids.indexOf(selectionAnchorRef.current);
@@ -171,8 +177,17 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     selectionAnchorRef.current = f.id;
   };
 
-  // 빈 공간을 탭/클릭하면 선택 해제 (모바일에서 다중 선택 모드를 빠져나가는 용도도 겸함)
+  // 드래그 선택이 실제로 움직였는지(사각형 선택이 일어났는지) 기록 - 이게 true면 마우스를 뗀 뒤에
+  // 뒤따라오는 click 이벤트가 방금 만든 선택을 즉시 지워버리지 않도록 그 클릭 한 번을 무시함
+  const dragMovedRef = useRef(false);
+
+  // 빈 공간을 탭/클릭하면 선택 해제 (모바일에서 다중 선택 모드를 빠져나가는 용도도 겸함).
+  // 단, 방금 드래그 선택이 끝난 직후의 click이면 무시 - 아니면 선택한 순간 바로 풀려버림
   const handleGridClick = (e: React.MouseEvent) => {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
     const target = e.target as HTMLElement;
     if (target.closest('[data-nas-tile-id]')) return;
     setSelected(new Set());
@@ -187,6 +202,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     dragAdditive.current = e.ctrlKey || e.metaKey;
     dragBaseSelection.current = dragAdditive.current ? new Set(selected) : new Set();
     if (!dragAdditive.current) setSelected(new Set());
+    dragMovedRef.current = false;
     setDragStart({ x: e.clientX, y: e.clientY });
     setDragCurrent({ x: e.clientX, y: e.clientY });
   };
@@ -194,7 +210,13 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
   // 드래그 중엔 document 전체에서 이동/놓기를 추적 (그리드 바깥으로 나가도 계속 따라가야 하므로)
   useEffect(() => {
     if (!dragStart) return;
-    const handleMove = (e: MouseEvent) => setDragCurrent({ x: e.clientX, y: e.clientY });
+    const MOVE_THRESHOLD = 4;
+    const handleMove = (e: MouseEvent) => {
+      if (Math.abs(e.clientX - dragStart.x) > MOVE_THRESHOLD || Math.abs(e.clientY - dragStart.y) > MOVE_THRESHOLD) {
+        dragMovedRef.current = true;
+      }
+      setDragCurrent({ x: e.clientX, y: e.clientY });
+    };
     const handleUp = () => { setDragStart(null); setDragCurrent(null); };
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);

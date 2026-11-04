@@ -117,6 +117,11 @@ export interface Page<T> {
   totalPages: number;
   number: number; // 현재 페이지(0부터 시작)
 }
+export interface BlockedSender {
+  id: string;
+  address: string;
+  createdAt: string;
+}
 export interface MailDetail {
   id: string;
   fromAddress: string;

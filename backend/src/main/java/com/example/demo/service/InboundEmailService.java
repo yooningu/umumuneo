@@ -2,11 +2,14 @@ package com.example.demo.service;
 
 import com.example.demo.dto.request.EmailAttachmentRequest;
 import com.example.demo.dto.request.InboundEmailRequest;
+import com.example.demo.dto.response.BlockedSenderResponse;
 import com.example.demo.dto.response.InboundEmailDetailResponse;
 import com.example.demo.dto.response.InboundEmailResponse;
+import com.example.demo.entity.BlockedSender;
 import com.example.demo.entity.FileEntity;
 import com.example.demo.entity.InboundEmail;
 import com.example.demo.entity.User;
+import com.example.demo.repository.BlockedSenderRepository;
 import com.example.demo.repository.InboundEmailRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,7 @@ public class InboundEmailService {
     private static final long MAX_ATTACHMENT_BYTES = 25L * 1024 * 1024; // 25MB
 
     private final InboundEmailRepository inboundEmailRepository;
+    private final BlockedSenderRepository blockedSenderRepository;
     private final UserRepository userRepository;
     private final KakaoNotificationService kakaoNotificationService;
     private final FileService fileService;
@@ -47,6 +51,13 @@ public class InboundEmailService {
         if (request.getTo() != null && request.getTo().contains("@")) {
             String alias = request.getTo().substring(0, request.getTo().indexOf('@')).trim().toLowerCase();
             recipient = userRepository.findByEmailAlias(alias).orElse(null);
+        }
+
+        // 받는 사람이 이 보낸사람을 차단했으면 메일 자체를 저장하지 않고 조용히 버림
+        if (recipient != null && request.getFrom() != null
+                && blockedSenderRepository.existsByUserIdAndAddress(recipient.getId(), request.getFrom().trim().toLowerCase())) {
+            log.info("차단된 발신자({})의 메일이라 저장하지 않음", request.getFrom());
+            return;
         }
 
         InboundEmail email = new InboundEmail();
@@ -153,6 +164,44 @@ public class InboundEmailService {
     public void deleteEmail(String userId, String emailId) {
         InboundEmail email = findOwnedEmail(userId, emailId);
         inboundEmailRepository.delete(email);
+    }
+
+    // 목록에서 직접 읽음/안읽음 상태를 바꿀 때 씀 (상세를 열지 않고도 전환 가능)
+    @Transactional
+    public void setRead(String userId, String emailId, boolean isRead) {
+        InboundEmail email = findOwnedEmail(userId, emailId);
+        email.setIsRead(isRead);
+        inboundEmailRepository.save(email);
+    }
+
+    // 보낸사람 주소를 차단함 - 이후 그 주소에서 오는 메일은 receive()에서 저장되지 않고 버려짐.
+    // 이미 받은 메일은 그대로 남아있음(소급 삭제는 안 함)
+    @Transactional
+    public void blockSender(String userId, String address) {
+        String normalized = address.trim().toLowerCase();
+        if (blockedSenderRepository.existsByUserIdAndAddress(userId, normalized)) return;
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+        BlockedSender blocked = new BlockedSender();
+        blocked.setUser(user);
+        blocked.setAddress(normalized);
+        blockedSenderRepository.save(blocked);
+    }
+
+    // 설정 > 차단 목록
+    @Transactional(readOnly = true)
+    public List<BlockedSenderResponse> listBlockedSenders(String userId) {
+        return blockedSenderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(BlockedSenderResponse::new)
+                .toList();
+    }
+
+    // 차단 해제 - 본인 것만 가능
+    @Transactional
+    public void unblockSender(String userId, String blockedId) {
+        BlockedSender blocked = blockedSenderRepository.findByIdAndUserId(blockedId, userId)
+                .orElseThrow(() -> new RuntimeException("차단 목록에서 찾을 수 없습니다."));
+        blockedSenderRepository.delete(blocked);
     }
 
     private InboundEmail findOwnedEmail(String userId, String emailId) {
