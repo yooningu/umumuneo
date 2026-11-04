@@ -1,43 +1,59 @@
 .container {
   display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
   padding: 16px;
-  gap: 16px;
+  gap: 12px;
   box-sizing: border-box;
-}
-
-.listPane {
-  width: 320px;
-  min-width: 240px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background-color: var(--white);
-  border: 1px solid var(--gray3);
-  border-radius: 16px;
 }
 
 .listHeader {
   flex-shrink: 0;
-  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--brand);
 }
 
 .searchInput {
-  width: 100%;
-  padding: 7px 12px;
+  flex: 1;
+  padding: 9px 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background-color: var(--gray5);
   font-size: var(--font-m);
   outline: none;
   box-sizing: border-box;
 }
 
+.deleteSelectedBtn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--red);
+  color: var(--white);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  padding: 9px 14px;
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
 .listScroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  background-color: var(--white);
+  border: 1px solid var(--gray3);
+  border-radius: 16px;
 }
 
 .highlight {
@@ -47,24 +63,38 @@
 }
 
 .listItem {
-  display: block;
-  width: calc(100% - 16px);
-  margin: 4px 8px;
-  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  background-color: transparent;
+  border-bottom: 1px solid var(--gray4);
   cursor: pointer;
   box-sizing: border-box;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.listItem:last-child {
+  border-bottom: none;
 }
 
 .listItem:hover {
   background-color: var(--gray5);
 }
 
-.listItemActive {
-  background-color: var(--gray4);
+/* 읽은 메일은 연하게 표시 */
+.listItemRead {
+  opacity: 0.55;
+}
+
+.checkboxCol {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+}
+
+.listItemContent {
+  flex: 1;
+  min-width: 0;
 }
 
 .listItemTop {
@@ -113,14 +143,34 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.detailPane {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  background-color: var(--white);
+.pagination {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.pagination button {
   border: 1px solid var(--gray3);
-  border-radius: 20px;
-  box-sizing: border-box;
+  border-radius: 8px;
+  background-color: var(--white);
+  color: var(--gray1);
+  font-size: var(--font-s);
+  padding: 7px 14px;
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+.pageInfo {
+  font-size: var(--font-s);
+  color: var(--gray2);
 }
 
 .empty {
@@ -137,10 +187,85 @@
   margin-top: 40px;
 }
 
-.detailSubject {
+/* 메일 상세 화면 - 목록을 대체해서 전체 화면을 차지함 */
+.detailTopBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray4);
+}
+
+.backBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--gray3);
+  border-radius: 10px;
+  background-color: var(--white);
+  color: var(--gray2);
   font-size: var(--font-l);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
+.backBtn:hover {
+  background-color: var(--gray4);
+}
+
+.detailTopInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailTopSubject {
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-semibold);
   color: var(--gray1);
-  margin: 0 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.detailTopFrom {
+  font-size: var(--font-s);
+  color: var(--gray3);
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.deleteBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--gray3);
+  border-radius: 10px;
+  background-color: var(--white);
+  color: var(--red);
+  font-size: var(--font-m);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
+.deleteBtn:hover {
+  background-color: var(--red);
+  color: var(--white);
+}
+
+.detailScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 4px;
 }
 
 .detailMeta {
@@ -227,6 +352,7 @@
   border-radius: 6px;
   padding: 4px 10px;
   font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -235,21 +361,8 @@
   color: var(--white);
 }
 
-/* 태블릿 모드 - 메일 목록을 240px로 줄임 (리스트라 그리드 제약 없는 홈 미니캘린더보다 더 좁혀도 됨) */
-@media (min-width: 768px) and (max-width: 1203px) {
-  .listPane {
-    width: 240px;
-    min-width: 240px;
-  }
-}
-
 @media (max-width: 767px) {
   .container {
-    flex-direction: column;
     padding: 12px;
-  }
-  .listPane {
-    width: 100%;
-    max-height: 40vh;
   }
 }

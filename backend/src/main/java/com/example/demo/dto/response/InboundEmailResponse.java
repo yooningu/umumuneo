@@ -17,6 +17,9 @@ public class InboundEmailResponse {
     private final String bodyPreview;
     private final int attachmentCount;
     private final LocalDateTime receivedAt;
+    // Boolean 래퍼로 둠 - primitive boolean이면 Lombok이 isRead()를 만들고 Jackson이 "is" 접두사를
+    // 떼어 JSON 키가 "read"가 돼버려서 프론트 필드명(isRead)이랑 어긋남
+    private final Boolean isRead;
 
     // DB에서 이미 PREVIEW_LENGTH+1자로 잘라서 가져온 프로젝션 기준 - 본문 전체/첨부파일 컬렉션은 안 건드림
     public InboundEmailResponse(InboundEmailListProjection p) {
@@ -28,5 +31,6 @@ public class InboundEmailResponse {
                 (body.length() > PREVIEW_LENGTH ? body.substring(0, PREVIEW_LENGTH) + "…" : body);
         this.attachmentCount = (int) p.getAttachmentCount();
         this.receivedAt = p.getReceivedAt();
+        this.isRead = Boolean.TRUE.equals(p.getIsRead());
     }
 }

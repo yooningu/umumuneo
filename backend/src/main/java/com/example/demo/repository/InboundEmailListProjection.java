@@ -11,4 +11,5 @@ public interface InboundEmailListProjection {
     String getBodyPreview();
     long getAttachmentCount();
     LocalDateTime getReceivedAt();
+    Boolean getIsRead();
 }

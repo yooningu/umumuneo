@@ -47,6 +47,12 @@ public class InboundEmail {
     @Column(name = "received_at", updatable = false)
     private LocalDateTime receivedAt;
 
+    // 이 필드가 생기기 전부터 있던 기존 메일들은 DB에 NULL로 남는데, NOT NULL로 선언하면
+    // Hibernate ddl-auto=update가 컬럼을 추가하는 ALTER TABLE 자체가 기존 행 때문에 실패할 수 있음.
+    // 코드에서는 null을 "안 읽음"(false)과 동일하게 취급한다.
+    @Column(name = "is_read")
+    private Boolean isRead = false;
+
     // 첨부파일은 이제 NAS가 쓰는 FileEntity(files 테이블)에 source=EMAIL로 같이 저장됨
     // (예전엔 별도 EmailAttachment 테이블/디스크 경로를 썼지만 NAS 저장소로 합침)
     @OneToMany(mappedBy = "email", cascade = CascadeType.ALL, orphanRemoval = true)

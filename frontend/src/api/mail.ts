@@ -1,14 +1,18 @@
 import client from './client';
-import type { MailItem, MailDetail } from '../types';
+import type { MailItem, MailDetail, Page } from '../types';
 
-export const getMails = async (): Promise<MailItem[]> => {
-  const res = await client.get('/emails');
+export const getMails = async (params: { page: number; size: number; search?: string }): Promise<Page<MailItem>> => {
+  const res = await client.get('/emails', { params });
   return res.data;
 };
 
 export const getMailDetail = async (id: string): Promise<MailDetail> => {
   const res = await client.get(`/emails/${id}`);
   return res.data;
+};
+
+export const deleteMail = async (id: string): Promise<void> => {
+  await client.delete(`/emails/${id}`);
 };
 
 // 메일 첨부파일은 이제 실제로 NAS 파일(FileEntity)이라서 다운로드/미리보기는

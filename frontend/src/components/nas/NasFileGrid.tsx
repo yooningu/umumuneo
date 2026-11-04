@@ -141,10 +141,41 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     });
   };
 
-  // 기본은 한 개만 선택(새로 클릭하면 교체), Ctrl/Cmd+클릭이면 윈도우처럼 중첩 선택(토글)
+  // Shift+클릭 범위선택의 기준점(마지막으로 "새로" 찍은 지점) - 윈도우 탐색기처럼
+  const selectionAnchorRef = useRef<string | null>(null);
+  // 모바일에서 길게 눌러 메뉴를 띄운 뒤부터는, 평범한 탭도 Ctrl+클릭처럼 선택을 토글하게 함
+  // (터치엔 Ctrl 키가 없어서 대신 "길게 누르기"로 다중 선택 모드에 들어가는 셈)
+  const multiSelectModeRef = useRef(false);
+  useEffect(() => {
+    if (selected.size === 0) multiSelectModeRef.current = false;
+  }, [selected]);
+
+  // 기본은 한 개만 선택(새로 클릭하면 교체), Ctrl/Cmd+클릭이면 윈도우처럼 중첩 선택(토글),
+  // Shift+클릭이면 마지막으로 선택한 지점부터 지금 클릭한 지점까지 전부 선택(윈도우 탐색기처럼)
   const handleTileClick = (e: React.MouseEvent, f: FileItem) => {
-    if (e.ctrlKey || e.metaKey) toggleSelect(f.id);
-    else setSelected(new Set([f.id]));
+    if (e.shiftKey && selectionAnchorRef.current) {
+      const ids = visible.map(x => x.id);
+      const anchorIdx = ids.indexOf(selectionAnchorRef.current);
+      const clickedIdx = ids.indexOf(f.id);
+      if (anchorIdx !== -1 && clickedIdx !== -1) {
+        const [start, end] = anchorIdx < clickedIdx ? [anchorIdx, clickedIdx] : [clickedIdx, anchorIdx];
+        setSelected(new Set(ids.slice(start, end + 1)));
+        return;
+      }
+    }
+    if (e.ctrlKey || e.metaKey) {
+      toggleSelect(f.id);
+    } else {
+      setSelected(new Set([f.id]));
+    }
+    selectionAnchorRef.current = f.id;
+  };
+
+  // 빈 공간을 탭/클릭하면 선택 해제 (모바일에서 다중 선택 모드를 빠져나가는 용도도 겸함)
+  const handleGridClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-nas-tile-id]')) return;
+    setSelected(new Set());
   };
 
   // 빈 공간에서 마우스를 누르면 드래그 선택(사각형) 시작. 타일 위에서 누른 거면
@@ -304,16 +335,23 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
     setPreviewFile(f);
   };
 
-  // 모바일(터치)엔 더블클릭이 없어서, 같은 타일을 300ms 안에 두 번 터치하면 열리게 함
+  // 모바일(터치)엔 더블클릭/Ctrl+클릭이 없어서:
+  // - 같은 타일을 300ms 안에 두 번 터치하면 열림(더블클릭 대체)
+  // - 길게 눌러서 다중 선택 모드에 들어간 뒤부턴, 평범한 탭 하나하나가 선택을 토글함(Ctrl+클릭 대체)
   const lastTapRef = useRef<{ id: string; time: number } | null>(null);
-  const handleTileTouchEnd = (f: FileItem) => {
+  const handleTileTouchEnd = (e: React.TouchEvent, f: FileItem) => {
     const now = Date.now();
     const last = lastTapRef.current;
     if (last && last.id === f.id && now - last.time < 300) {
       lastTapRef.current = null;
+      e.preventDefault();
       handleOpen(f);
-    } else {
-      lastTapRef.current = { id: f.id, time: now };
+      return;
+    }
+    lastTapRef.current = { id: f.id, time: now };
+    if (multiSelectModeRef.current) {
+      e.preventDefault();
+      toggleSelect(f.id);
     }
   };
 
@@ -534,7 +572,11 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
       openMenuAt(e.clientX, e.clientY, e.target as HTMLElement);
     };
     document.addEventListener('contextmenu', handleContextMenu);
-    const detachLongPress = attachLongPress(document, openMenuAt);
+    // 길게 누르기로 메뉴가 뜨면 그때부터 "다중 선택 모드" 시작 - 이후 평범한 탭들이 토글로 동작함
+    const detachLongPress = attachLongPress(document, (x, y, el) => {
+      multiSelectModeRef.current = true;
+      openMenuAt(x, y, el);
+    });
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       detachLongPress();
@@ -673,7 +715,7 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
         </div>
       </div>
 
-      <div data-nas-grid-area className={viewMode === 'grid' ? styles.grid : styles.list} onMouseDown={handleGridMouseDown}>
+      <div data-nas-grid-area className={viewMode === 'grid' ? styles.grid : styles.list} onMouseDown={handleGridMouseDown} onClick={handleGridClick}>
         {loading && viewMode === 'grid' ? (
           Array.from({ length: 12 }, (_, i) => <NasTileSkeleton key={i} />)
         ) : visible.length === 0 ? (
@@ -687,10 +729,10 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
                 if (el) tileRefs.current.set(f.id, el);
                 else tileRefs.current.delete(f.id);
               }}
-              className={`${styles.tile} ${selected.has(f.id) ? styles.tileSelected : ''} ${dropTargetId === f.id ? styles.tileDropTarget : ''}`.trim()}
+              className={`${styles.tile} ${selected.has(f.id) ? styles.tileSelected : ''} ${dropTargetId === f.id ? styles.tileDropTarget : ''} ${clipboard?.mode === 'cut' && clipboard.ids.includes(f.id) ? styles.tileCut : ''}`.trim()}
               onClick={e => handleTileClick(e, f)}
               onDoubleClick={() => handleOpen(f)}
-              onTouchEnd={() => handleTileTouchEnd(f)}
+              onTouchEnd={e => handleTileTouchEnd(e, f)}
               draggable
               onDragStart={e => handleTileDragStart(e, f)}
               onDragOver={f.isDirectory ? (e => handleFolderDragOver(e, f)) : undefined}
@@ -729,10 +771,10 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
                 if (el) tileRefs.current.set(f.id, el);
                 else tileRefs.current.delete(f.id);
               }}
-              className={`${styles.listRow} ${selected.has(f.id) ? styles.listRowSelected : ''} ${dropTargetId === f.id ? styles.listRowDropTarget : ''}`.trim()}
+              className={`${styles.listRow} ${selected.has(f.id) ? styles.listRowSelected : ''} ${dropTargetId === f.id ? styles.listRowDropTarget : ''} ${clipboard?.mode === 'cut' && clipboard.ids.includes(f.id) ? styles.listRowCut : ''}`.trim()}
               onClick={e => handleTileClick(e, f)}
               onDoubleClick={() => handleOpen(f)}
-              onTouchEnd={() => handleTileTouchEnd(f)}
+              onTouchEnd={e => handleTileTouchEnd(e, f)}
               draggable
               onDragStart={e => handleTileDragStart(e, f)}
               onDragOver={f.isDirectory ? (e => handleFolderDragOver(e, f)) : undefined}

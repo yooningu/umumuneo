@@ -285,6 +285,11 @@
   border-style: dashed;
 }
 
+/* 잘라내기(Ctrl+X)한 파일 - 윈도우 탐색기처럼 붙여넣기 전까지 반투명하게 "잘린 것처럼" 표시 */
+.tileCut {
+  opacity: 0.45;
+}
+
 .tileIcon {
   position: relative;
   font-size: 36px;
@@ -365,6 +370,10 @@
   background-color: rgba(255, 165, 0, 0.18);
   border-color: var(--brand);
   border-style: dashed;
+}
+
+.listRowCut {
+  opacity: 0.45;
 }
 
 .listIcon {

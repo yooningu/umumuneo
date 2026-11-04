@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { getMails, getMailDetail } from '../api/mail';
+import { IoArrowBack } from 'react-icons/io5';
+import { BsTrash } from 'react-icons/bs';
+import { getMails, getMailDetail, deleteMail } from '../api/mail';
 import { downloadFile, getPreviewBlobUrl } from '../api/file';
 import Skeleton from '../components/common/Skeleton';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import type { MailItem, MailDetail, MailAttachment } from '../types';
 import styles from './MailPage.module.css';
+
+const PAGE_SIZE = 20;
 
 // 로딩 중에 실제 메일 항목(보낸사람/날짜 + 제목 + 미리보기) 모양으로 보여줄 스켈레톤
 function MailListSkeleton() {
   return (
     <div className={styles.listItem}>
-      <div className={styles.listItemTop}>
-        <Skeleton width="40%" height={12} />
-        <Skeleton width={50} height={12} />
+      <div className={styles.checkboxCol} />
+      <div className={styles.listItemContent}>
+        <div className={styles.listItemTop}>
+          <Skeleton width="40%" height={12} />
+          <Skeleton width={50} height={12} />
+        </div>
+        <Skeleton width="60%" height={15} className={styles.skeletonGap} />
+        <Skeleton width="85%" height={13} className={styles.skeletonGap} />
       </div>
-      <Skeleton width="60%" height={15} className={styles.skeletonGap} />
-      <Skeleton width="85%" height={13} className={styles.skeletonGap} />
     </div>
   );
 }
@@ -115,61 +123,193 @@ function HtmlMailBody({ html }: { html: string }) {
   );
 }
 
+// 메일 페이지: 예전엔 목록(왼쪽)+상세(오른쪽) 분할 화면이었는데, 모바일 메일 앱처럼
+// 평소엔 목록 하나만 꽉 채워 보여주고, 메일을 열면 화면 전체가 상세 화면으로 전환되는 방식으로 바꿈.
 export default function MailPage() {
   const [mails, setMails] = useState<MailItem[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<MailDetail | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [openMailId, setOpenMailId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<MailDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const visibleMails = mails.filter(m => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return m.fromAddress.toLowerCase().includes(q)
-      || (m.subject ?? '').toLowerCase().includes(q)
-      || m.bodyPreview.toLowerCase().includes(q);
-  });
+  const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    getMails()
-      .then(setMails)
+    setLoading(true);
+    getMails({ page, size: PAGE_SIZE, search: search.trim() || undefined })
+      .then(data => {
+        setMails(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => setError('메일 목록을 불러오지 못했어요.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, search, refreshKey]);
+
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(0);
+  };
 
   const openMail = (id: string) => {
+    setOpenMailId(id);
+    setDetail(null);
     setDetailLoading(true);
     setError(null);
     getMailDetail(id)
-      .then(setSelected)
+      .then(d => {
+        setDetail(d);
+        // 백엔드가 조회 시점에 읽음 처리해주므로, 목록 쪽도 다시 안 불러오고 바로 반영
+        setMails(prev => prev.map(m => (m.id === id ? { ...m, isRead: true } : m)));
+      })
       .catch(() => setError('메일을 불러오지 못했어요.'))
       .finally(() => setDetailLoading(false));
   };
 
+  const closeMail = () => {
+    setOpenMailId(null);
+    setDetail(null);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => (prev.size === mails.length ? new Set() : new Set(mails.map(m => m.id))));
+  };
+
+  const confirmDeleteNow = async () => {
+    const ids = confirmDeleteIds;
+    setConfirmDeleteIds(null);
+    if (!ids || ids.length === 0) return;
+    try {
+      await Promise.all(ids.map(id => deleteMail(id)));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
+      if (openMailId && ids.includes(openMailId)) closeMail();
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (openMailId) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.detailTopBar}>
+          <button className={styles.backBtn} onClick={closeMail} title="목록으로">
+            <IoArrowBack />
+          </button>
+          <div className={styles.detailTopInfo}>
+            <div className={styles.detailTopSubject}>{detail?.subject || (detailLoading ? '' : '(제목 없음)')}</div>
+            {detail && <div className={styles.detailTopFrom}>{detail.fromAddress}</div>}
+          </div>
+          <button
+            className={styles.deleteBtn}
+            onClick={() => setConfirmDeleteIds([openMailId])}
+            title="삭제"
+          >
+            <BsTrash />
+          </button>
+        </div>
+
+        <div className={styles.detailScroll}>
+          {error && <div className={styles.errorBox}>{error}</div>}
+          {!error && detailLoading && <div className={styles.empty}>불러오는 중...</div>}
+          {!error && !detailLoading && detail && (
+            <div>
+              <div className={styles.detailMeta}>
+                <span>{formatDate(detail.receivedAt)}</span>
+              </div>
+              {detail.bodyHtml ? (
+                <HtmlMailBody html={detail.bodyHtml} />
+              ) : (
+                <div className={styles.detailBody}>{detail.body}</div>
+              )}
+              {detail.attachments.length > 0 && (
+                <div className={styles.attachmentSection}>
+                  <div className={styles.attachmentSectionTitle}>
+                    첨부파일 {detail.attachments.length}개
+                  </div>
+                  {detail.attachments.map(att => (
+                    <AttachmentRow key={att.id} attachment={att} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {confirmDeleteIds && (
+          <ConfirmDialog
+            message="이 메일을 삭제할까요?"
+            danger
+            onConfirm={confirmDeleteNow}
+            onCancel={() => setConfirmDeleteIds(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
-      <div className={styles.listPane}>
-        <div className={styles.listHeader}>
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="메일 검색"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <div className={styles.listScroll}>
-          {loading && [0, 1, 2, 3, 4].map(i => <MailListSkeleton key={i} />)}
-          {!loading && visibleMails.length === 0 && (
-            <div className={styles.empty}>{search ? '검색 결과가 없어요.' : '받은 메일이 없어요.'}</div>
-          )}
-          {visibleMails.map(mail => (
-            <button
-              key={mail.id}
-              className={`${styles.listItem} ${selected?.id === mail.id ? styles.listItemActive : ''}`.trim()}
-              onClick={() => openMail(mail.id)}
-            >
+      <div className={styles.listHeader}>
+        <input
+          className={styles.checkbox}
+          type="checkbox"
+          checked={mails.length > 0 && selectedIds.size === mails.length}
+          onChange={toggleSelectAll}
+          title="전체 선택"
+        />
+        <input
+          className={styles.searchInput}
+          type="text"
+          placeholder="메일 검색"
+          value={search}
+          onChange={e => handleSearchChange(e.target.value)}
+        />
+        {selectedIds.size > 0 && (
+          <button
+            className={styles.deleteSelectedBtn}
+            onClick={() => setConfirmDeleteIds([...selectedIds])}
+          >
+            삭제 ({selectedIds.size})
+          </button>
+        )}
+      </div>
+
+      <div className={styles.listScroll}>
+        {loading && Array.from({ length: 6 }, (_, i) => <MailListSkeleton key={i} />)}
+        {!loading && mails.length === 0 && (
+          <div className={styles.empty}>{search ? '검색 결과가 없어요.' : '받은 메일이 없어요.'}</div>
+        )}
+        {!loading && mails.map(mail => (
+          <div
+            key={mail.id}
+            className={`${styles.listItem} ${mail.isRead ? styles.listItemRead : ''}`.trim()}
+            onClick={() => openMail(mail.id)}
+          >
+            <input
+              className={styles.checkbox}
+              type="checkbox"
+              checked={selectedIds.has(mail.id)}
+              onChange={() => toggleSelect(mail.id)}
+              onClick={e => e.stopPropagation()}
+            />
+            <div className={styles.listItemContent}>
               <div className={styles.listItemTop}>
                 <span className={styles.listItemFrom}>{highlightMatch(mail.fromAddress, search)}</span>
                 <span className={styles.listItemDate}>{formatDate(mail.receivedAt)}</span>
@@ -181,40 +321,27 @@ export default function MailPage() {
                   <span className={styles.attachmentBadge}> 📎{mail.attachmentCount}</span>
                 )}
               </div>
-            </button>
-          ))}
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className={styles.detailPane}>
-        {error && <div className={styles.errorBox}>{error}</div>}
-        {!error && detailLoading && <div className={styles.empty}>불러오는 중...</div>}
-        {!error && !detailLoading && !selected && <div className={styles.empty}>메일을 선택해주세요.</div>}
-        {!error && !detailLoading && selected && (
-          <div>
-            <h2 className={styles.detailSubject}>{selected.subject || '(제목 없음)'}</h2>
-            <div className={styles.detailMeta}>
-              <span>보낸사람: {selected.fromAddress}</span>
-              <span>{formatDate(selected.receivedAt)}</span>
-            </div>
-            {selected.bodyHtml ? (
-              <HtmlMailBody html={selected.bodyHtml} />
-            ) : (
-              <div className={styles.detailBody}>{selected.body}</div>
-            )}
-            {selected.attachments.length > 0 && (
-              <div className={styles.attachmentSection}>
-                <div className={styles.attachmentSectionTitle}>
-                  첨부파일 {selected.attachments.length}개
-                </div>
-                {selected.attachments.map(att => (
-                  <AttachmentRow key={att.id} attachment={att} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>이전</button>
+          <span className={styles.pageInfo}>{page + 1} / {totalPages}</span>
+          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>다음</button>
+        </div>
+      )}
+
+      {confirmDeleteIds && (
+        <ConfirmDialog
+          message={`메일 ${confirmDeleteIds.length}개를 삭제할까요?`}
+          danger
+          onConfirm={confirmDeleteNow}
+          onCancel={() => setConfirmDeleteIds(null)}
+        />
+      )}
     </div>
   );
 }

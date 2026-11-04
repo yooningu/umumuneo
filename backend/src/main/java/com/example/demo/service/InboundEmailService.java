@@ -11,6 +11,8 @@ import com.example.demo.repository.InboundEmailRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,19 +130,29 @@ public class InboundEmailService {
         return name.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
-    // 로그인한 유저 본인의 메일 목록 (최신순) - 본문 전체/첨부파일 전체를 안 불러오는 전용 쿼리 사용
+    // 로그인한 유저 본인의 메일 목록 (최신순, 페이지 단위) - 본문 전체/첨부파일 전체를 안 불러오는 전용 쿼리 사용
     @Transactional(readOnly = true)
-    public List<InboundEmailResponse> getEmailsForUser(String userId) {
-        return inboundEmailRepository.findListViewByUserId(userId).stream()
-                .map(InboundEmailResponse::new)
-                .toList();
+    public Page<InboundEmailResponse> getEmailsForUser(String userId, String search, Pageable pageable) {
+        return inboundEmailRepository.findListViewByUserId(userId, search, pageable)
+                .map(InboundEmailResponse::new);
     }
 
-    // 메일 상세 (첨부파일 목록 포함) - 본인 것만 조회 가능
-    @Transactional(readOnly = true)
+    // 메일 상세 (첨부파일 목록 포함) - 본인 것만 조회 가능. 열어본 시점에 안 읽음 상태였으면 읽음으로 표시함
+    @Transactional
     public InboundEmailDetailResponse getEmailDetail(String userId, String emailId) {
         InboundEmail email = findOwnedEmail(userId, emailId);
+        if (!Boolean.TRUE.equals(email.getIsRead())) {
+            email.setIsRead(true);
+            inboundEmailRepository.save(email);
+        }
         return new InboundEmailDetailResponse(email);
+    }
+
+    // 메일 삭제(첨부파일도 cascade로 같이 삭제됨) - 본인 것만 가능
+    @Transactional
+    public void deleteEmail(String userId, String emailId) {
+        InboundEmail email = findOwnedEmail(userId, emailId);
+        inboundEmailRepository.delete(email);
     }
 
     private InboundEmail findOwnedEmail(String userId, String emailId) {

@@ -108,6 +108,14 @@ export interface MailItem {
   bodyPreview: string;
   attachmentCount: number;
   receivedAt: string;
+  isRead: boolean;
+}
+// 스프링 Page<T> 응답 그대로 - 필요한 필드만 타입으로 잡음
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number; // 현재 페이지(0부터 시작)
 }
 export interface MailDetail {
   id: string;

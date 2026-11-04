@@ -5,11 +5,12 @@ import com.example.demo.dto.response.InboundEmailResponse;
 import com.example.demo.service.InboundEmailService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 // 로그인한 유저 본인이 받은 메일(umumuneo.com으로 온 것) 조회용.
 // 메일이 실제로 들어오는 경로(Cloudflare Worker -> 공유 시크릿)는 InboundEmailController(/api/v1/email/inbound)가 따로 담당함 -
@@ -23,19 +24,35 @@ public class MailController {
 
     private final InboundEmailService inboundEmailService;
 
-    // GET /api/v1/emails - 내가 받은 메일 목록 (최신순)
+    // GET /api/v1/emails?search=&page=0&size=20 - 내가 받은 메일 목록 (최신순, 20개씩 페이지네이션)
     @GetMapping
-    public ResponseEntity<List<InboundEmailResponse>> getEmails(@AuthenticationPrincipal String userId) {
-        return ResponseEntity.ok(inboundEmailService.getEmailsForUser(userId));
+    public ResponseEntity<Page<InboundEmailResponse>> getEmails(
+            @AuthenticationPrincipal String userId,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(inboundEmailService.getEmailsForUser(userId, search, pageable));
     }
 
-    // GET /api/v1/emails/{id} - 메일 상세 (첨부파일 목록 포함)
+    // GET /api/v1/emails/{id} - 메일 상세 (첨부파일 목록 포함). 조회하면 읽음 처리됨
     @GetMapping("/{id}")
     public ResponseEntity<InboundEmailDetailResponse> getEmail(
             @AuthenticationPrincipal String userId,
             @PathVariable String id
     ) {
         return ResponseEntity.ok(inboundEmailService.getEmailDetail(userId, id));
+    }
+
+    // DELETE /api/v1/emails/{id} - 메일 삭제 (첨부파일도 같이 삭제됨)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEmail(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String id
+    ) {
+        inboundEmailService.deleteEmail(userId, id);
+        return ResponseEntity.noContent().build();
     }
 
     // 첨부파일 다운로드/미리보기는 이제 실제로 NAS 파일(FileEntity)이라서 여기 따로 안 만들고
