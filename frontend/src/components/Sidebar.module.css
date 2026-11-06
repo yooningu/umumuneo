@@ -108,6 +108,11 @@
     display: none;
   }
 
+  /* 설정은 각 페이지 상단바로 옮겨가서(ex. 홈 화면) 하단 탭바에서는 숨김 */
+  .mobileHidden {
+    display: none;
+  }
+
   .buttonContainer > button:last-child {
     margin-top: 0;
   }

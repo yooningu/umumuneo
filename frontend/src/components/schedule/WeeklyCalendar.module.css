@@ -109,6 +109,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   min-width: 120px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* 공휴일 이름 뱃지 - 실제 일정이 아니라 공휴일 API에서만 받아오는 표시용 (DB에 저장 안 됨) */
@@ -172,17 +173,21 @@
 }
 
 .hourCell {
+  position: relative;
   height: var(--hour-height);
-  border-bottom: 1px solid var(--gray5);
-  padding-right: 6px;
-  text-align: right;
 }
 
+/* 숫자 가운데(세로)가 정확히 그 시각의 가로 눈금선(칸의 맨 위 경계) 위에 오도록, 칸 위쪽
+   끝(top:0)에 절대배치하고 자기 높이의 절반만큼 끌어올림. 시간 칸 자체의 구분선(바처럼 보이던
+   border-bottom)은 없애고, 실제 눈금선은 일정 영역의 .hourLine 하나로만 그어지게 함 */
 .hourLabel {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  transform: translateY(-50%);
   font-size: var(--font-s);
   color: var(--gray2);
-  position: relative;
-  top: -7px;
+  white-space: nowrap;
 }
 
 .dayCol {
@@ -210,7 +215,8 @@
   right: 0;
   z-index: 1;
   box-sizing: border-box;
-  border: 1px solid var(--white);
+  border-width: 1.5px;
+  border-style: solid;
   padding: 4px 6px;
   overflow: hidden;
   cursor: pointer;
@@ -219,7 +225,7 @@
 .timetableTitle {
   font-size: var(--font-s);
   font-weight: var(--font-weight-medium);
-  color: var(--white);
+  color: var(--gray1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -265,6 +271,7 @@
   text-overflow: ellipsis;
   z-index: 4;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .scheduleBlock {
@@ -280,6 +287,7 @@
   cursor: pointer;
   margin-left: 12px;
   margin-right: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .scheduleTitle {

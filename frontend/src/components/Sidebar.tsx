@@ -23,7 +23,8 @@ const NAV_ITEMS = [
   // 방식이라, attr을 덮어쓸 때 그 셋도 같이 지정해줘야 함 (안 그러면 외곽선이 사라지거나 채워져 버림)
   { path: '/nas', label: 'NAS', icon: <HiOutlineCloud />, activeIcon: <HiCloud />, iconViewBox: '1.5 3.72 21 16.53', iconStroke: '1.5' },
   { path: '/mail', label: '메일', icon: <IoMailOutline />, activeIcon: <IoMail />, iconViewBox: '32 80 448 352' },
-  { path: '/settings', label: '설정', icon: <IoSettingsOutline />, activeIcon: <IoSettings />, iconViewBox: '26 26 460 460' },
+  // 모바일에서는 설정이 각 페이지 상단바로 옮겨가서(ex. 홈 화면 상단바) 하단 탭바에서는 숨김 (Sidebar.module.css)
+  { path: '/settings', label: '설정', icon: <IoSettingsOutline />, activeIcon: <IoSettings />, iconViewBox: '26 26 460 460', mobileHidden: true },
 ];
 
 export default function Sidebar() {
@@ -54,7 +55,7 @@ export default function Sidebar() {
           return (
             <button
               key={item.path + index}
-              className={`${styles.navButton} ${isActive ? styles.navButtonActive : ''}`.trim()}
+              className={`${styles.navButton} ${isActive ? styles.navButtonActive : ''} ${item.mobileHidden ? styles.mobileHidden : ''}`.trim()}
               onClick={() => navigate(item.path)}
             >
               {iconNode}

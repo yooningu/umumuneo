@@ -6,6 +6,94 @@
   background-color: var(--white);
 }
 
+/* 브라우저 탭처럼 생긴 메모 탭 줄 - 메모가 많아지면 가로 스크롤됨 */
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 6px 6px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--gray4);
+  background-color: var(--gray5);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  max-width: 140px;
+  padding: 7px 8px 7px 12px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background-color: transparent;
+  color: var(--gray3);
+  font-size: var(--font-s);
+  cursor: pointer;
+}
+
+.tab:hover {
+  background-color: var(--gray4);
+}
+
+.tabActive {
+  background-color: var(--white);
+  color: var(--gray1);
+  font-weight: var(--font-weight-medium);
+}
+
+.tabActive:hover {
+  background-color: var(--white);
+}
+
+.tabTitle {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--gray3);
+}
+
+.tabClose:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.addTabBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  align-self: center;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gray3);
+  font-size: var(--font-m);
+  cursor: pointer;
+}
+
+.addTabBtn:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
 .textarea {
   flex: 1;
   width: 100%;

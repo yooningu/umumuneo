@@ -4,6 +4,8 @@ import MiniCalendar from '../components/home/MiniCalendar';
 import EtcPanel from '../components/home/EtcPanel';
 import ChatWidget from '../components/home/ChatWidget';
 import AddScheduleModal from '../components/schedule/AddScheduleModal';
+import HomePageMobile from './HomePageMobile';
+import useMediaQuery from '../hooks/useMediaQuery';
 import { toDateStr } from '../utils/date';
 import styles from './HomePage.module.css';
 
@@ -12,6 +14,7 @@ export default function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDate, setAddModalDate] = useState<string | null>(null); // 우클릭으로 특정 셀에서 추가하면 그 날짜, 아니면 selectedDate를 씀
+  const isMobile = useMediaQuery('(max-width: 824px)'); // HomePage.module.css의 모바일 기준과 동일
 
   const bump = () => setRefreshKey(k => k + 1);
 
@@ -19,6 +22,26 @@ export default function HomePage() {
     setAddModalDate(dateStr ?? null);
     setAddModalOpen(true);
   };
+
+  if (isMobile) {
+    return (
+      <>
+        <HomePageMobile
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+          refreshKey={refreshKey}
+          onScheduleChange={bump}
+        />
+        {addModalOpen && (
+          <AddScheduleModal
+            defaultDate={addModalDate ?? toDateStr(selectedDate)}
+            onCancel={() => setAddModalOpen(false)}
+            onSaved={() => { bump(); setAddModalOpen(false); }}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className={styles.container}>

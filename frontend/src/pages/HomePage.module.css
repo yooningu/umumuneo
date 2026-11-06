@@ -81,9 +81,6 @@
   }
 }
 
-/* 홈 화면 전용 모바일 기준 - 레이아웃은 아직 미정이라 자리만 잡아둠 */
-@media (max-width: 824px) {}
-
 @media (min-width: 1204px) {
   .sidePane {
     width: 660px;

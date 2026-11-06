@@ -132,6 +132,7 @@ export interface MailDetail {
   attachments: MailAttachment[];
 }
 export interface Memo {
+  id: string;
   content: string;
   updatedAt: string | null;
 }

@@ -7,16 +7,13 @@ import java.time.LocalDateTime;
 
 @Getter
 public class MemoResponse {
+    private final String id;
     private final String content;
     private final LocalDateTime updatedAt;
 
     public MemoResponse(Memo memo) {
+        this.id = memo.getId();
         this.content = memo.getContent();
         this.updatedAt = memo.getUpdatedAt();
-    }
-
-    public MemoResponse(String content, LocalDateTime updatedAt) {
-        this.content = content;
-        this.updatedAt = updatedAt;
     }
 }

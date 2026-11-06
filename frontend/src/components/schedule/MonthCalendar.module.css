@@ -20,9 +20,13 @@
 
 .daysGrid {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: 1fr;
+  /* 1fr로 모든 줄 높이를 똑같이 강제하던 걸 그만두고, 바가 많은 주만 그만큼 자연스럽게
+     늘어나도록(auto) 함. 바가 없을 때의 기본 높이는 110px로 맞춰둠 */
+  grid-auto-rows: minmax(110px, auto);
 }
 
 .dayCell,
@@ -116,15 +120,41 @@
   color: var(--yellow);
 }
 
-.dotsRow {
+.eventList {
   display: flex;
-  gap: 3px;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
   margin-top: 4px;
 }
 
-.dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+.eventRow {
+  position: relative;
+  width: 100%;
+  height: 16px;
   flex-shrink: 0;
+}
+
+/* 미니달력과 달리 기간 일정이어도 이어붙이지 않고 날짜마다 독립된 둥근 바로 보여줌 - 모든 날에
+   같은 모양(둥근 모서리)과 제목이 들어간다 */
+.eventBar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  right: 1px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.eventTitle {
+  padding: 0 4px;
+  font-size: var(--font-s);
+  line-height: 1;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -16,3 +16,12 @@ UserResponse). Hibernate ddl-auto=update는 컬럼을 자동으로 "추가"만 �
 DB에는 아직 email 컬럼이 그대로 남아있음 - 직접 지워야 함.
 
 1. DB에서 실행: ALTER TABLE users DROP COLUMN email;
+
+[백엔드] 미니 PC에서 아래 정리 필요 (메모장 여러 개 지원 - memos.user_id 유니크 제약 제거)
+메모장을 유저당 1개에서 브라우저 탭처럼 여러 개로 바꾸면서 entity/Memo.java를 @OneToOne(unique=true)에서
+@ManyToOne으로 고쳤음. Hibernate ddl-auto=update는 컬럼/제약을 "추가"만 하고 기존 유니크 인덱스는
+안 지워줘서, DB에는 아직 user_id 유니크 제약이 그대로 남아있음 - 이 상태로 두면 메모를 2개째
+만들 때 DB 에러가 남. 직접 지워야 함.
+
+1. DB에서 실행: SHOW INDEX FROM memos; 로 user_id 쪽 유니크 인덱스 이름 확인
+2. DB에서 실행: ALTER TABLE memos DROP INDEX <확인한 인덱스 이름>;

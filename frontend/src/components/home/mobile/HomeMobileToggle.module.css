@@ -1,0 +1,129 @@
+/* PC ScheduleHeader의 스케줄러/캘린더 토글(.viewToggle/.toggleThumb/.toggleBtn)과
+   색/그림자/라운딩/트랜지션을 전부 동일하게 맞춤 - 다른 점은 버튼 너비(고정 80px 대신 flex)뿐 */
+.track {
+  display: flex;
+  position: relative;
+  align-items: stretch;
+  height: 44px;
+  margin: 0 16px 8px;
+  padding: 4px;
+  border-radius: 10px;
+  background-color: var(--gray5);
+  border: 1px solid var(--gray3);
+  box-shadow: var(--shadow-toggle-track);
+}
+
+.thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 10px;
+  background-color: var(--brand);
+  box-shadow: var(--shadow-toggle-thumb-brand);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.thumbRight {
+  transform: translateX(100%);
+}
+
+.scheduleBtn {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-regular);
+  color: var(--gray2);
+  transition: color 0.2s ease;
+}
+
+.scheduleBtnActive {
+  color: var(--white);
+  font-weight: var(--font-weight-semibold);
+}
+
+.eventBtnCollapsed {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gray2);
+  cursor: pointer;
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-regular);
+  transition: color 0.2s ease;
+  animation: toggleSwap 0.18s ease;
+}
+
+/* "일정"을 고르면 이 자리가 일정/메모 2분할 토글로 바뀜 - 뒤에 깔린 .thumb(브랜드 컬러)이
+   오른쪽으로 슬라이드돼 배경이 되고, 그 위에 다시 흰색 알약이 떠서 일정/메모를 고르는 구조.
+   버튼이 다른 요소로 통째로 바뀌는 거라(React가 떼고 새로 붙임) CSS transition으론 안 되고,
+   나타날 때 애니메이션을 줌 */
+.eventSplit {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  animation: toggleSwap 0.18s ease;
+}
+
+@keyframes toggleSwap {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 일정/메모 안쪽 토글도 바깥쪽 메인 토글과 같은 방식 - 흰색 thumb이 슬라이드되고 글자색만 바뀜 */
+.eventSplitThumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 4px);
+  border-radius: 7px;
+  background-color: var(--white);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.eventSplitThumbRight {
+  transform: translateX(calc(100% + 2px));
+}
+
+.eventSplitBtn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: var(--font-s);
+  transition: color 0.2s ease;
+}
+
+.eventSplitBtnActive {
+  color: var(--brand);
+  font-weight: var(--font-weight-semibold);
+}

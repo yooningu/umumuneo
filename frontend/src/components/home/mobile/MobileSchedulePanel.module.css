@@ -1,0 +1,17 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.topArea {
+  flex-shrink: 0;
+}
+
+.dayTimeline {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--gray4);
+}

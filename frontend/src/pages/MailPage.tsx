@@ -29,7 +29,7 @@ function getPageNumbers(current: number, total: number): number[] {
 function MailListSkeleton() {
   return (
     <div className={styles.listItem}>
-      <div className={styles.checkboxCol} />
+      <Skeleton width={17} height={17} borderRadius={4} className={styles.checkboxCol} />
       <div className={styles.listItemContent}>
         <div className={styles.listItemTop}>
           <Skeleton width="40%" height={12} />

@@ -43,10 +43,25 @@ function mondayBasedDow(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
 
+// 시간표 배경 블록은 테두리는 진하게(그 색 그대로), 배경은 옅게(투명도) 깔아서
+// 뒤에 있는 배경 레이어라는 느낌을 주고 위에 올라오는 실제 일정 블록과 구분되게 한다
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 const MAX_ALLDAY_VISIBLE = 2;
 const TIME_COL_WIDTH = 50;
 const MIN_DAY_COL_WIDTH = 120; // 요일 칸 하나의 최소 너비 (CSS의 min-width와 맞춰야 함)
+// 일정 블록 좌우 여백(px) - 왼쪽을 더 크게 줘서 일정이 오른쪽으로 치우치고,
+// 뒤에 깔린 시간표 배경이 왼쪽으로 더 잘 보이게 한다 (모바일과 동일한 방향)
+const SCHEDULE_INSET_LEFT = 24;
+const SCHEDULE_INSET_RIGHT = 2;
 
 // 시간 한 칸(1시간)의 높이(px) - 이 값 하나만 바꾸면 그리드 칸 높이(CSS 변수로 전달)와
 // 일정 블록/현재시각 선의 위치 계산(분 단위를 px로 환산)이 전부 같이 따라감
@@ -110,6 +125,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const [selectedTimetableGroup, setSelectedTimetableGroup] = useState<Timetable[] | null>(null);
   const [timetableModalMode, setTimetableModalMode] = useState<'view' | 'edit'>('view');
   const [expandedAlldayDays, setExpandedAlldayDays] = useState<Set<string>>(new Set());
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null); // 마우스 올린 일정/시간표를 맨 위로 올려서 온전히 보이게 함
   const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number; dateStr: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -379,58 +395,79 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             return (
               <div key={i} className={dayColClassName} data-daycol-date={dateStr} onContextMenu={e => handleBgContextMenu(e, dateStr)}>
                 {/* 시간표 배경 블록 */}
-                {dayTimetables.map(({ timetable: t, startMin, endMin }) => (
-                  <div
-                    key={t.id}
-                    className={styles.timetableBlock}
-                    style={{
-                      top: startMin * PX_PER_MINUTE,
-                      height: (endMin - startMin) * PX_PER_MINUTE,
-                      backgroundColor: t.color,
-                    }}
-                    onClick={() => {
-                      const key = t.groupId ?? t.id;
-                      setSelectedTimetableGroup(timetables.filter(x => (x.groupId ?? x.id) === key));
-                      setTimetableModalMode('view');
-                    }}
-                  >
-                    <span className={styles.timetableTitle}>{t.title}</span>
-                  </div>
-                ))}
+                {dayTimetables.map(({ timetable: t, startMin, endMin }) => {
+                  const key = `t-${t.id}`;
+                  const hovered = hoveredKey === key;
+                  return (
+                    <div
+                      key={t.id}
+                      className={styles.timetableBlock}
+                      style={{
+                        top: startMin * PX_PER_MINUTE,
+                        height: (endMin - startMin) * PX_PER_MINUTE,
+                        backgroundColor: hexToRgba(t.color, 0.5),
+                        borderColor: t.color,
+                        zIndex: hovered ? 20 : undefined,
+                      }}
+                      onMouseEnter={() => setHoveredKey(key)}
+                      onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
+                      onClick={() => {
+                        const groupKey = t.groupId ?? t.id;
+                        setSelectedTimetableGroup(timetables.filter(x => (x.groupId ?? x.id) === groupKey));
+                        setTimetableModalMode('view');
+                      }}
+                    >
+                      <span className={styles.timetableTitle}>{t.title}</span>
+                    </div>
+                  );
+                })}
 
                 {HOURS.map(h => (
                   <div key={h} className={styles.hourLine} />
                 ))}
 
-                {/* 일정 블록 (TIMED) */}
-                {positionedItems.map(({ schedule: s, startMin, endMin, left, right }) => (
-                  <div
-                    key={s.id}
-                    className={styles.scheduleBlock}
-                    style={{
-                      top: startMin * PX_PER_MINUTE,
-                      height: Math.max((endMin - startMin) * PX_PER_MINUTE, 20),
-                      left: 2 + left,
-                      right: 2 + right,
-                      backgroundColor: s.color || '#7c8cf8',
-                    }}
-                    onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
-                  >
-                    <div className={styles.scheduleTitle}>{s.title}</div>
-                  </div>
-                ))}
+                {/* 일정 블록 (TIMED) - 마우스를 올리면 크기는 그대로 두고 맨 위로만 올림 */}
+                {positionedItems.map(({ schedule: s, startMin, endMin, left, right }) => {
+                  const key = `s-${s.id}`;
+                  const hovered = hoveredKey === key;
+                  return (
+                    <div
+                      key={s.id}
+                      className={styles.scheduleBlock}
+                      style={{
+                        top: startMin * PX_PER_MINUTE,
+                        height: Math.max((endMin - startMin) * PX_PER_MINUTE, 20),
+                        left: SCHEDULE_INSET_LEFT + left,
+                        right: SCHEDULE_INSET_RIGHT + right,
+                        backgroundColor: s.color || '#7c8cf8',
+                        zIndex: hovered ? 20 : undefined,
+                      }}
+                      onMouseEnter={() => setHoveredKey(key)}
+                      onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
+                      onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
+                    >
+                      <div className={styles.scheduleTitle}>{s.title}</div>
+                    </div>
+                  );
+                })}
 
                 {/* 시각 바 (MOMENT): 텍스트 크기만큼 꽉 채운 알약 모양 */}
-                {momentItems.map(({ schedule: s, startMin }) => (
-                  <div
-                    key={s.id}
-                    className={styles.momentBadge}
-                    style={{ top: startMin * PX_PER_MINUTE, backgroundColor: s.color || '#7c8cf8' }}
-                    onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
-                  >
-                    {s.title}
-                  </div>
-                ))}
+                {momentItems.map(({ schedule: s, startMin }) => {
+                  const key = `s-${s.id}`;
+                  const hovered = hoveredKey === key;
+                  return (
+                    <div
+                      key={s.id}
+                      className={styles.momentBadge}
+                      style={{ top: startMin * PX_PER_MINUTE, backgroundColor: s.color || '#7c8cf8', zIndex: hovered ? 20 : undefined }}
+                      onMouseEnter={() => setHoveredKey(key)}
+                      onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
+                      onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
+                    >
+                      {s.title}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}

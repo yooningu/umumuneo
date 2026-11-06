@@ -61,6 +61,7 @@
   font-size: var(--font-m);
   outline: none;
   box-sizing: border-box;
+  color: var(--gray1);
 }
 
 .headerActions {

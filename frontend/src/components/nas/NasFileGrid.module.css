@@ -94,6 +94,7 @@
   width: 200px;
   outline: none;
   margin-left: auto;
+  color: var(--gray1);
 }
 
 @media (max-width: 767px) {

@@ -29,15 +29,38 @@ interface PeriodBar {
 
 interface PeriodInterval {
   color: string;
-  clipStartDay: number;
-  clipEndDay: number;
-  isTrueStart: boolean;
-  isTrueEnd: boolean;
+  title: string;
+  notification: boolean;
+  start: string;
+  end: string;
 }
 
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 const MAX_DOTS = 3;
 const MAX_PERIOD_BARS = 3;
+
+function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+// 월요일 시작(월~일)으로 그 날이 속한 주의 월요일을 돌려줌
+function mondayOf(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const offset = (x.getDay() + 6) % 7; // 월=0, 화=1, ..., 일=6
+  x.setDate(x.getDate() - offset);
+  return x;
+}
+
+// 그 달을 월~일 기준 그리드로 그릴 때 몇 주(줄)가 필요한지 - 달마다 4~6주로 다름
+function monthRows(d: Date): number {
+  const firstDow = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+  const offset = (firstDow + 6) % 7; // 월=0, ..., 일=6
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return Math.ceil((offset + daysInMonth) / 7);
+}
 
 export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -46,98 +69,86 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
-
-  const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
-  const cells: (number | null)[] = [
-    ...Array(startOffset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
+  // 이전/다음 달 일부가 옅게 보이는 그리드 - 모바일 달력과 동일하게, 그 달에 실제로 필요한 주(4~6주)만큼만
+  const gridStart = mondayOf(new Date(year, month, 1));
+  const gridDays = Array.from({ length: monthRows(selectedDate) * 7 }, (_, i) => addDays(gridStart, i));
+  const paddedFromStr = toDateStr(gridStart);
+  const paddedToStr = toDateStr(gridDays[gridDays.length - 1]);
 
   useEffect(() => {
-    const from = toDateStr(new Date(year, month, 1));
-    const to = toDateStr(new Date(year, month, daysInMonth));
-    getSchedules(from, to)
+    getSchedules(paddedFromStr, paddedToStr)
       // 내용이 실제로 바뀌지 않았으면 이전 배열을 그대로 돌려줘서(참조 동일) 불필요한 재렌더링을 막음
       .then(data => setSchedules(prev => (JSON.stringify(prev) === JSON.stringify(data) ? prev : data)))
       .catch(console.error);
-  }, [year, month, daysInMonth, refreshKey]);
+  }, [paddedFromStr, paddedToStr, refreshKey]);
 
-  // 공휴일(빨간날) - 월이 바뀔 때만 새로 조회
+  // 공휴일(빨간날) - 그리드가 걸칠 수 있는 이전/이번/다음 달을 모두 조회
   useEffect(() => {
-    getHolidaysCached(year, month + 1)
-      .then(list => setHolidays(new Map(list.map(h => [h.date, h.name]))))
+    const months = [-1, 0, 1].map(o => new Date(year, month + o, 1));
+    Promise.all(months.map(d => getHolidaysCached(d.getFullYear(), d.getMonth() + 1)))
+      .then(lists => setHolidays(new Map(lists.flat().map(h => [h.date, h.name]))))
       .catch(console.error);
   }, [year, month]);
 
-  // 날짜별 점(dot)/알림 정보 + 기간 일정 바 계산
-  const monthStartStr = toDateStr(new Date(year, month, 1));
-  const monthEndStr = toDateStr(new Date(year, month, daysInMonth));
-  const dayInfos = new Map<number, DayInfo>();
+  // 날짜별 점(dot)/알림 정보 + 기간 일정 바 계산 - 날짜 문자열 기준(모바일 달력과 동일한 방식)
+  const dayInfos = new Map<string, DayInfo>();
   const periodIntervals: PeriodInterval[] = [];
 
   for (const s of schedules) {
     const color = s.color || '#7c8cf8';
     if (s.type === 'PERIOD') {
-      const rangeStart = s.startDate;
-      const rangeEnd = s.endDate ?? s.startDate;
-      if (rangeEnd < monthStartStr || rangeStart > monthEndStr) continue;
-      const isTrueStart = rangeStart >= monthStartStr;
-      const isTrueEnd = rangeEnd <= monthEndStr;
-      const clipStartDay = isTrueStart ? Number(rangeStart.slice(8, 10)) : 1;
-      const clipEndDay = isTrueEnd ? Number(rangeEnd.slice(8, 10)) : daysInMonth;
-      periodIntervals.push({ color, clipStartDay, clipEndDay, isTrueStart, isTrueEnd });
-      for (let d = clipStartDay; d <= clipEndDay; d++) {
-        // 기간 일정은 아래 바(bar)로 표시되므로 점은 따로 찍지 않음 (중복 방지)
-        const info = dayInfos.get(d) ?? { dots: [], hasNotification: false, titles: [] };
-        // 알림은 시작일 하루에만 가므로(기간 내내 매일 가는 게 아님), 벨 표시도 진짜 시작일에만
-        if (s.notification && d === clipStartDay && isTrueStart) info.hasNotification = true;
-        info.titles.push(s.title);
-        dayInfos.set(d, info);
-      }
+      periodIntervals.push({ color, title: s.title, notification: !!s.notification, start: s.startDate, end: s.endDate ?? s.startDate });
     } else {
-      if (s.startDate < monthStartStr || s.startDate > monthEndStr) continue;
-      const d = Number(s.startDate.slice(8, 10));
-      const info = dayInfos.get(d) ?? { dots: [], hasNotification: false, titles: [] };
+      const info = dayInfos.get(s.startDate) ?? { dots: [], hasNotification: false, titles: [] };
       if (info.dots.length < MAX_DOTS) info.dots.push(color);
       if (s.notification) info.hasNotification = true;
       info.titles.push(s.title);
-      dayInfos.set(d, info);
+      dayInfos.set(s.startDate, info);
     }
   }
 
   // 기간 일정마다 겹치지 않는 "줄(slot)"을 하나 배정해서, 같은 일정은 시작부터 끝까지
   // 항상 같은 줄에 표시되도록 한다 (날짜마다 따로 계산하면 중간에 줄이 바뀌어 끊겨 보임).
-  periodIntervals.sort((a, b) => a.clipStartDay - b.clipStartDay);
-  const slotLastDay: number[] = [];
-  const periodBarByDay = new Map<number, (PeriodBar | null)[]>();
+  periodIntervals.sort((a, b) => a.start.localeCompare(b.start));
+  const slotLastEnd: string[] = [];
+  const periodBarByDate = new Map<string, (PeriodBar | null)[]>();
   for (const iv of periodIntervals) {
     let slot = -1;
     for (let s = 0; s < MAX_PERIOD_BARS; s++) {
-      if (slotLastDay[s] === undefined || slotLastDay[s] < iv.clipStartDay) {
+      if (slotLastEnd[s] === undefined || slotLastEnd[s] < iv.start) {
         slot = s;
         break;
       }
     }
     if (slot === -1) continue; // 동시에 겹치는 기간 일정이 MAX_PERIOD_BARS개를 넘으면 생략
-    slotLastDay[slot] = iv.clipEndDay;
+    slotLastEnd[slot] = iv.end;
 
-    for (let d = iv.clipStartDay; d <= iv.clipEndDay; d++) {
-      const arr = periodBarByDay.get(d) ?? [];
+    let cursor = iv.start;
+    while (cursor <= iv.end) {
+      const arr = periodBarByDate.get(cursor) ?? [];
       while (arr.length <= slot) arr.push(null);
-      arr[slot] = {
-        color: iv.color,
-        roundLeft: d === iv.clipStartDay && iv.isTrueStart,
-        roundRight: d === iv.clipEndDay && iv.isTrueEnd,
-      };
-      periodBarByDay.set(d, arr);
+      arr[slot] = { color: iv.color, roundLeft: cursor === iv.start, roundRight: cursor === iv.end };
+      periodBarByDate.set(cursor, arr);
+
+      // 기간 일정은 아래 바(bar)로 표시되므로 점은 따로 찍지 않지만, 알림/툴팁용 제목은 그대로 모음
+      const info = dayInfos.get(cursor) ?? { dots: [], hasNotification: false, titles: [] };
+      // 알림은 시작일 하루에만 가므로(기간 내내 매일 가는 게 아님), 벨 표시도 진짜 시작일에만
+      if (iv.notification && cursor === iv.start) info.hasNotification = true;
+      info.titles.push(iv.title);
+      dayInfos.set(cursor, info);
+
+      cursor = toDateStr(addDays(new Date(cursor), 1));
     }
   }
 
-  // 달력 아래에 보여줄 이번 달 일정 목록 (시작일 순)
-  const sortedSchedules = [...schedules].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  // 달력 아래에 보여줄 이번 달 일정 목록 (이번 달과 겹치는 일정만, 시작일 순)
+  const monthStartStr = toDateStr(new Date(year, month, 1));
+  const monthEndStr = toDateStr(new Date(year, month, daysInMonth));
+  const sortedSchedules = schedules
+    .filter(s => (s.endDate ?? s.startDate) >= monthStartStr && s.startDate <= monthEndStr)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   const prevMonth = () => {
     const d = new Date(selectedDate);
@@ -187,24 +198,26 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
         ))}
       </div>
 
-      {/* 날짜 */}
+      {/* 날짜 - 이전/다음 달 일부는 옅게(모바일 달력과 동일) */}
       <div className={styles.daysGrid}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const date = new Date(year, month, day, 0, 0, 0, 0); // 시간 0으로 초기화
+        {gridDays.map((date, i) => {
+          const ds = toDateStr(date);
+          const inMonth = date.getMonth() === month;
           const isToday = date.toDateString() === today.toDateString();
           const isSelected = date.toDateString() === selectedDate.toDateString();
-          const info = dayInfos.get(day);
-          const periodSlots = periodBarByDay.get(day) ?? [];
-          const col = i % 7;
-          const isGridLeftEdge = col === 0;
-          const isGridRightEdge = col === 6;
+          const info = dayInfos.get(ds);
+          const periodSlotsRaw = periodBarByDate.get(ds) ?? [];
+          // 일정이 1개든 2개든 칸 높이가 고정되도록, 일정이 하나라도 있으면 항상 MAX_PERIOD_BARS줄만큼 채워둠
+          // (개수만큼만 렌더링하면 옆 칸과 줄 수가 달라져서 높이가 들쭉날쭉해 보였음)
+          const periodSlots = periodSlotsRaw.length > 0
+            ? Array.from({ length: MAX_PERIOD_BARS }, (_, idx) => periodSlotsRaw[idx] ?? null)
+            : periodSlotsRaw;
           const wrapperClassName = [
             styles.dayCell,
             isToday ? styles.today : '',
             isSelected ? styles.selected : '',
           ].join(' ').trim();
-          const holidayName = holidays.get(toDateStr(date));
+          const holidayName = holidays.get(ds);
           const tooltipText = [holidayName, ...(info?.titles ?? [])].filter(Boolean).join('\n');
           const dow = date.getDay();
           const numberClassName = [
@@ -216,9 +229,13 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
           ].join(' ').trim();
           return (
             <Tooltip key={i} content={tooltipText}>
-              <div onClick={() => onDateSelect(date)} className={wrapperClassName}>
+              <div
+                onClick={() => onDateSelect(date)}
+                className={wrapperClassName}
+                style={{ opacity: inMonth ? 1 : 0.35 }}
+              >
                 <span className={numberClassName}>
-                  {day}
+                  {date.getDate()}
                   {info?.hasNotification && <span className={styles.bell}><PiAlarmFill /></span>}
                 </span>
                 <div className={styles.dotsRow}>
@@ -228,36 +245,26 @@ export default function MiniCalendar({ selectedDate, onDateSelect, refreshKey }:
                 </div>
                 {periodSlots.length > 0 && (
                   <div className={styles.periodBarStack}>
-                    {periodSlots.map((pb, idx) => {
-                      if (!pb) return <div key={idx} className={styles.periodBarRow} />;
-                      // 실제로 옆 칸까지 이어지는 방향으로만 틈(gap)을 메워 붙이고,
-                      // 진짜 시작/종료 칸은 끝까지 가지 않고 칸 중간에서 끊어서 시작/종료되게 한다.
-                      const bleedLeft = !pb.roundLeft && !isGridLeftEdge;
-                      const bleedRight = !pb.roundRight && !isGridRightEdge;
-                      // 줄이 바뀌는 경계(왼쪽 끝/오른쪽 끝 칸)는 옆 칸과 실제로 붙어있지 않으므로
-                      // 이어지는 중이어도 칸 끝까지 채우지 않고 중간에서 끊어 보이게 한다.
-                      const rowWrapLeft = !pb.roundLeft && isGridLeftEdge;
-                      const rowWrapRight = !pb.roundRight && isGridRightEdge;
-                      const isSingleDay = pb.roundLeft && pb.roundRight;
-                      const left = bleedLeft ? '-1px' : pb.roundLeft ? (isSingleDay ? '25%' : '50%') : rowWrapLeft ? '50%' : '0';
-                      const right = bleedRight ? '-1px' : pb.roundRight ? (isSingleDay ? '25%' : '50%') : rowWrapRight ? '50%' : '0';
-                      return (
-                        <div key={idx} className={styles.periodBarRow}>
+                    {periodSlots.map((pb, idx) => (
+                      <div key={idx} className={styles.periodBarRow}>
+                        {pb && (
                           <div
                             className={styles.periodBar}
                             style={{
                               backgroundColor: pb.color,
-                              left,
-                              right,
+                              // 월요일(맨 왼쪽 칸)/일요일(맨 오른쪽 칸)은 옆으로 이어 붙일 칸이 없어서
+                              // 끝까지 안 채우고 조금 짧게 끊어 보이게 한다
+                              left: pb.roundLeft ? '50%' : dow === 1 ? '10%' : '-1px',
+                              right: pb.roundRight ? '50%' : dow === 0 ? '10%' : '-1px',
                               borderTopLeftRadius: pb.roundLeft ? 4 : 0,
                               borderBottomLeftRadius: pb.roundLeft ? 4 : 0,
                               borderTopRightRadius: pb.roundRight ? 4 : 0,
                               borderBottomRightRadius: pb.roundRight ? 4 : 0,
                             }}
                           />
-                        </div>
-                      );
-                    })}
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
