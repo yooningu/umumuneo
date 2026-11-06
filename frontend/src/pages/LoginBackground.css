@@ -1,6 +1,14 @@
 /* 로그인 배경 애니메이션 스타일 (frontend/ex/style.css 그대로, 단 body/html/전역 선택자만
    .loginBg 아래로 스코프해서 다른 페이지로 새어나가지 않게 함 - 디자인/수치는 변경 없음) */
 
+/* 로그인 화면 상단 제목(.title)에 쓰는 커스텀 글꼴 */
+@font-face {
+  font-family: 'EllisDigitalCoding';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_220508@1.0/EliceDigitalBaeum_Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 .loginBg,
 .loginBg *,
 .loginBg *::before,
@@ -147,7 +155,7 @@
   z-index: 10;
   text-align: center;
   color: var(--title-color, #fff);
-  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "EllisDigitalCoding", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: var(--title-size, 36px);
   font-weight: var(--title-weight, 300);
   letter-spacing: var(--title-spacing, 6px);

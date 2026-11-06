@@ -74,12 +74,24 @@ function isLightColor(hex: string): boolean {
 }
 
 // 실제로 일정/시간표가 있는 시각(시작/종료)끼리만 모아 고정 간격으로 배치하고(빈 시간대는 건너뜀),
-// 시간표/일정을 합쳐서 하나의 세로 축 인덱스를 만든다 (PC처럼 0~24시 전체 축에 분 단위로 비례시키지 않음)
+// 시간표/일정을 합쳐서 하나의 세로 축 인덱스를 만든다 (PC처럼 0~24시 전체 축에 분 단위로 비례시키지 않음).
+// 0시/24시는 일정이 하나도 없어도 항상 포함시켜서 하루의 시작/끝을 알 수 있게 한다.
 function buildTimeIndex(items: TimelineItem[]): { times: number[]; indexOf: Map<number, number>; height: number } {
-  const times = [...new Set(items.flatMap(e => [e.startMin, e.endMin]))].sort((a, b) => a - b);
+  const times = [...new Set([0, 24 * 60, ...items.flatMap(e => [e.startMin, e.endMin])])].sort((a, b) => a - b);
   const indexOf = new Map(times.map((t, i) => [t, i]));
-  const height = times.length > 0 ? PAD * 2 + (times.length - 1) * GAP : 0;
+  const height = PAD * 2 + (times.length - 1) * GAP;
   return { times, indexOf, height };
+}
+
+// 지금 시각처럼 times[]에 정확히 없는 분(min)의 세로 위치를, 양옆에서 가장 가까운 두 시각
+// 사이를 선형보간해서 구한다 (0~24시가 항상 양 끝에 있으므로 어떤 시각이든 그 사이 어딘가에 들어감)
+function yOfMinute(min: number, times: number[]): number {
+  let i = 0;
+  while (i < times.length - 2 && times[i + 1] <= min) i++;
+  const lo = times[i];
+  const hi = times[i + 1] ?? lo;
+  const ratio = hi > lo ? (min - lo) / (hi - lo) : 0;
+  return PAD + (i + ratio) * GAP;
 }
 
 function toIndexed(items: TimelineItem[], indexOf: Map<number, number>): IndexedItem[] {
@@ -204,6 +216,12 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
   const positionedSchedules = layoutLanes(toIndexed(scheduleItems, indexOf));
   const positionedTimetables = toIndexed(timetableItems, indexOf);
 
+  // 선택한 날짜가 오늘이면, PC 주간시간표처럼 지금 시각 표시선을 띄움
+  const now = new Date();
+  const isToday = selectedDate.toDateString() === now.toDateString();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowY = yOfMinute(nowMin, times);
+
   return (
     <div className={styles.container}>
       {alldayItems.length > 0 && (
@@ -221,18 +239,19 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
         </div>
       )}
 
-      {items.length === 0 ? (
-        <div className={styles.empty}>일정이 없습니다</div>
-      ) : (
-        <div className={styles.timeline}>
-          <div className={styles.labels} style={{ height }}>
+      <div className={styles.timeline} style={{ height }}>
+          {/* 각 시각의 가로 눈금선 - 배경에 옅게 깔리고, 일정/시간표 카드보다 뒤에 있음(z-index 없음) */}
+          {times.map((t, i) => (
+            <div key={`line-${t}`} className={styles.hourLine} style={{ top: PAD + i * GAP }} />
+          ))}
+          <div className={styles.labels}>
             {times.map((t, i) => (
               <span key={t} className={styles.timeLabel} style={{ top: PAD + i * GAP }}>
                 {formatMin(t)}
               </span>
             ))}
           </div>
-          <div className={styles.track} style={{ height }}>
+          <div className={styles.track}>
             {/* 시간표(반복 일정) - PC 주간시간표처럼 전체 너비 배경으로 깔고, 일정보다 뒤에(z-index 낮게) */}
             {positionedTimetables.map(item => {
               const top = PAD + item.startIdx * GAP;
@@ -288,8 +307,15 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
               );
             })}
           </div>
-        </div>
-      )}
+
+          {/* 지금 시각 표시선 - PC처럼 브랜드 컬러 선, 시각은 선 중앙이 아니라 왼쪽에 표시 */}
+          {isToday && (
+            <>
+              <div className={styles.nowLine} style={{ top: nowY }} />
+              <div className={styles.nowLabel} style={{ top: nowY }}>{formatMin(nowMin)}</div>
+            </>
+          )}
+      </div>
 
       {selectedSchedule && modalMode === 'view' && (
         <ScheduleDetailModal

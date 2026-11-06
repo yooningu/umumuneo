@@ -41,6 +41,25 @@
   box-shadow: var(--shadow-raised);
 }
 
+.listToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--gray3);
+  background: var(--white);
+  cursor: pointer;
+  font-size: var(--font-m);
+  color: var(--gray2);
+  box-shadow: var(--shadow-raised);
+}
+
+.listToggleBtn:hover {
+  background-color: var(--gray4);
+}
+
 .navCircle:hover {
   background-color: var(--gray4);
 }

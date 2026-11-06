@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
+import { FaChevronLeft, FaChevronRight, FaListUl } from "react-icons/fa6";
 import DatePickerPopover from '../common/DatePickerPopover';
 import styles from './ScheduleHeader.module.css';
 
@@ -15,11 +15,13 @@ interface Props {
   onNext: () => void;
   onToday: () => void;
   onAdd: () => void;
+  // 좁은 화면이라 일정 목록이 서랍으로 숨겨져 있을 때만 상위에서 넘겨줌 - 있을 때만 아이콘이 보임
+  onToggleList?: () => void;
 }
 
 // 일정 페이지 상단 바: 제목 + 기간 이동(prev/next/오늘) + 스케줄러/캘린더 보기 전환 + 스케줄(일정/시간표) 추가 버튼
 export default function ScheduleHeader({
-  viewMode, onViewModeChange, rangeLabel, selectedDate, onDateSelect, onPrev, onNext, onToday, onAdd,
+  viewMode, onViewModeChange, rangeLabel, selectedDate, onDateSelect, onPrev, onNext, onToday, onAdd, onToggleList,
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -59,7 +61,14 @@ export default function ScheduleHeader({
         <button className={styles.todayBtn} onClick={onToday}>오늘</button>
       </div>
 
-      <button className={styles.addBtn} onClick={onAdd}>스케줄 추가</button>
+      <div className={styles.right}>
+        {onToggleList && (
+          <button className={styles.listToggleBtn} onClick={onToggleList} aria-label="일정 목록 열기">
+            <FaListUl />
+          </button>
+        )}
+        <button className={styles.addBtn} onClick={onAdd}>스케줄 추가</button>
+      </div>
     </div>
   );
 }

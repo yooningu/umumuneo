@@ -1,3 +1,9 @@
+/* PC 미니달력(MiniCalendar.module.css)과 공유하는 .container엔 border-bottom(1px)이 있는데,
+   모바일에선 그게 달력과 아래 일정 영역 사이에 눈에 띄는 가름선으로 보여서 여기서만 없앤다 */
+.container {
+  border-bottom: none;
+}
+
 .body {
   position: relative;
   overflow: hidden;

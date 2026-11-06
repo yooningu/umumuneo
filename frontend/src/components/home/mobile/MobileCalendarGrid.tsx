@@ -323,7 +323,7 @@ export default function MobileCalendarGrid({ selectedDate, onDateSelect, refresh
   const bodyHeight = expanded ? rowH * currentMonthRows + ROW_GAP * (currentMonthRows - 1) : rowH;
 
   return (
-    <div className={miniStyles.container}>
+    <div className={`${miniStyles.container} ${styles.container}`.trim()}>
       <div className={miniStyles.weekdayRow}>
         {DAY_LABELS.map((d, i) => (
           <div key={d} className={[miniStyles.weekdayCell, i === 5 ? miniStyles.saturday : '', i === 6 ? miniStyles.sunday : ''].join(' ').trim()}>
