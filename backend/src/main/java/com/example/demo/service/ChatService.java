@@ -60,10 +60,10 @@ public class ChatService {
     // 이미지가 첨부되면 vision을 지원하는 모델로 전환해서 호출한다
     private static final String VISION_MODEL = "gemma4:12b";
 
-    // ⚠️ 임시 점검 모드 (사용자 요청, 2026-09-28) - true면 Ollama를 아예 호출하지 않고
-    // 고정 문구만 돌려준다. 서버 램 절약을 위해 Ollama 컨테이너를 잠깐 꺼둘 때 씀.
-    // 원래대로 되돌리려면 이 값만 false로 바꾸면 됨 (다른 로직은 안 건드림).
-    private static final boolean AI_MAINTENANCE_MODE = true;
+    // ⚠️ 임시 점검 모드 (사용자 요청, 2026-09-28 설정 -> 2026-11-07 해제) - true면 Ollama를 아예
+    // 호출하지 않고 고정 문구만 돌려준다. 서버 램 절약을 위해 Ollama를 잠깐 꺼뒀을 때 쓰던 것.
+    // 지금은 Ollama를 네이티브(윈도우, GPU)로 옮겨서 다시 켤 필요가 없어져 꺼둠.
+    private static final boolean AI_MAINTENANCE_MODE = false;
     private static final String MAINTENANCE_MESSAGE = "🔧 지금은 AI 기능 점검 중이에요. 잠시 후 다시 시도해주세요.";
 
     // 시크릿(임시) 대화 - DB에 아예 저장하지 않고 메모리에 딱 1개 대화 슬롯만 유지한다.
