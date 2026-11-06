@@ -1,18 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSchedules } from '../../../api/schedule';
 import { getTimetables } from '../../../api/timetable';
 import type { Schedule, Timetable } from '../../../types';
 import { toDateStr } from '../../../utils/date';
+import { attachLongPress } from '../../../utils/longPress';
 import ScheduleDetailModal from '../../schedule/ScheduleDetailModal';
 import ScheduleEditModal from '../../schedule/ScheduleEditModal';
 import TimetableDetailModal from '../../schedule/TimetableDetailModal';
 import TimetableEditModal from '../../schedule/TimetableEditModal';
+import NasContextMenu, { type ContextMenuItem } from '../../nas/NasContextMenu';
 import styles from './MobileDayAgenda.module.css';
 
 interface Props {
   selectedDate: Date;
   refreshKey: number;
   onScheduleChange: () => void;
+  onRequestAddSchedule?: (dateStr: string) => void; // 없으면 꾹 눌러도 메뉴가 안 뜸(시간표 전용 읽기 화면 등)
 }
 
 interface TimelineItem {
@@ -136,13 +139,15 @@ function layoutLanes(items: IndexedItem[]): PositionedItem[] {
 // 모바일 홈의 "오늘 일정" 영역 - PC 주간시간표처럼 시작~종료 시간에 맞춰 세로 타임라인에 카드로
 // 배치하지만, 실제로 분 단위로 비례시키지 않고 실제 일정이 있는 시각끼리만 고정 간격으로 둬서
 // 빈 시간대가 공간을 차지하지 않게 한다. 겹치는 일정은 카드가 뒤로 살짝 밀려 겹쳐 보인다.
-export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleChange }: Props) {
+export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleChange, onRequestAddSchedule }: Props) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [selectedTimetableGroup, setSelectedTimetableGroup] = useState<Timetable[] | null>(null);
   const [timetableModalMode, setTimetableModalMode] = useState<'view' | 'edit'>('view');
+  const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const dateStr = toDateStr(selectedDate);
 
@@ -153,6 +158,17 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
   useEffect(() => {
     getTimetables().then(setTimetables).catch(console.error);
   }, [refreshKey]);
+
+  // PC 주간시간표와 동일하게, 빈 곳을 길게 누르면(모바일엔 우클릭이 없음) 일정 추가 메뉴가 뜸
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !onRequestAddSchedule) return;
+    return attachLongPress(el, (x, y) => setBgContextMenu({ x, y }));
+  }, [onRequestAddSchedule]);
+
+  const bgContextMenuItems: ContextMenuItem[] = bgContextMenu && onRequestAddSchedule
+    ? [{ label: '일정 추가', onClick: () => onRequestAddSchedule(dateStr) }]
+    : [];
 
   const alldayItems = schedules.filter(s =>
     (s.type === 'ALLDAY' || s.type === 'PERIOD') &&
@@ -223,7 +239,15 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
   const nowY = yOfMinute(nowMin, times);
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      ref={containerRef}
+      onContextMenu={e => {
+        if (!onRequestAddSchedule) return;
+        e.preventDefault();
+        setBgContextMenu({ x: e.clientX, y: e.clientY });
+      }}
+    >
       {alldayItems.length > 0 && (
         <div className={styles.alldayRow}>
           {alldayItems.map(s => (
@@ -347,6 +371,15 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
           onCancel={() => setTimetableModalMode('view')}
           onSaved={() => { onScheduleChange(); setSelectedTimetableGroup(null); }}
           onDeleted={() => { onScheduleChange(); setSelectedTimetableGroup(null); }}
+        />
+      )}
+
+      {bgContextMenu && (
+        <NasContextMenu
+          x={bgContextMenu.x}
+          y={bgContextMenu.y}
+          items={bgContextMenuItems}
+          onClose={() => setBgContextMenu(null)}
         />
       )}
     </div>

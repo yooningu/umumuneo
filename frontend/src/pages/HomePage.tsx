@@ -31,6 +31,7 @@ export default function HomePage() {
           onDateSelect={setSelectedDate}
           refreshKey={refreshKey}
           onScheduleChange={bump}
+          onRequestAddSchedule={handleAdd}
         />
         {addModalOpen && (
           <AddScheduleModal

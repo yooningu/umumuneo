@@ -11,9 +11,11 @@ import { FaXmark } from 'react-icons/fa6';
 import { toDateStr } from '../utils/date';
 import styles from './SchedulePage.module.css';
 
-// 이 너비 밑으로는 주간 스케줄러 대신 홈 화면에서 쓰는 하루짜리 스케줄러를 쓰고,
-// 일정 목록도 항상 보이는 사이드 패널 대신 아이콘으로 여닫는 서랍으로 바뀜
+// 이 너비 밑으로는 주간 스케줄러 대신 홈 화면에서 쓰는 하루짜리 스케줄러를 씀
 const NARROW_BREAKPOINT = '(max-width: 450px)';
+// 이 너비 밑으로는(450 기준과 별개로) 일정 목록이 항상 보이는 사이드 패널 대신
+// 아이콘으로 여닫는 서랍으로 바뀜 - SchedulePage.module.css의 모바일 분기와 같은 기준
+const MOBILE_LIST_BREAKPOINT = '(max-width: 903px)';
 
 // WeeklyCalendar는 폭에 따라 7/5/3일만 보여주는 반응형이라(달력 주 단위 고정이 아님),
 // 헤더의 기간 라벨/이전·다음 이동 폭도 지금 실제로 보여주는 일수(visibleCount)에 맞춰야 함
@@ -40,6 +42,7 @@ export default function SchedulePage() {
   const [addModalDate, setAddModalDate] = useState<string | null>(null); // 우클릭으로 특정 셀에서 추가하면 그 날짜, 아니면 selectedDate를 씀
   const [listDrawerOpen, setListDrawerOpen] = useState(false);
   const isNarrow = useMediaQuery(NARROW_BREAKPOINT);
+  const isMobileList = useMediaQuery(MOBILE_LIST_BREAKPOINT);
 
   const bump = () => setRefreshKey(k => k + 1);
 
@@ -98,7 +101,7 @@ export default function SchedulePage() {
         onNext={handleNext}
         onToday={handleToday}
         onAdd={() => handleAdd()}
-        onToggleList={isNarrow ? () => setListDrawerOpen(true) : undefined}
+        onToggleList={isMobileList ? () => setListDrawerOpen(true) : undefined}
       />
 
       <div className={styles.body}>
@@ -110,6 +113,7 @@ export default function SchedulePage() {
                 onDateSelect={handleDateSelect}
                 refreshKey={refreshKey}
                 onScheduleChange={bump}
+                onRequestAddSchedule={handleAdd}
               />
             ) : (
               <WeeklyCalendar
@@ -130,15 +134,15 @@ export default function SchedulePage() {
           )}
         </div>
 
-        {!isNarrow && (
+        {!isMobileList && (
           <div className={styles.sidePane}>
             {sideContent}
           </div>
         )}
       </div>
 
-      {/* 좁은 화면 - 일정 목록은 평소엔 숨겨두고, 헤더의 아이콘을 누르면 오른쪽에서 서랍으로 띄움 */}
-      {isNarrow && listDrawerOpen && (
+      {/* 모바일 - 일정 목록은 평소엔 숨겨두고, 헤더의 아이콘을 누르면 오른쪽에서 서랍으로 띄움 */}
+      {isMobileList && listDrawerOpen && (
         <div className={styles.drawerOverlay} onClick={() => setListDrawerOpen(false)}>
           <div className={styles.drawerPanel} onClick={e => e.stopPropagation()}>
             <button type="button" className={styles.drawerClose} onClick={() => setListDrawerOpen(false)} aria-label="닫기">

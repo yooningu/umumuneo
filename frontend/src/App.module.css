@@ -10,7 +10,9 @@
   background-color: var(--white);
 }
 
-@media (max-width: 767px) {
+/* Sidebar가 하단 고정 탭바로 바뀌는 기준(824px)과 맞춰야 함 - 안 그러면 그 탭바 높이(56px)만큼
+   본문 아래가 가려짐 */
+@media (max-width: 824px) {
   .main {
     padding-bottom: 56px;
     box-sizing: border-box;

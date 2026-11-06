@@ -11,12 +11,13 @@ interface Props {
   onDateSelect: (date: Date) => void;
   refreshKey: number;
   onScheduleChange: () => void;
+  onRequestAddSchedule?: (dateStr: string) => void;
 }
 
 // 홈 화면 모바일 레이아웃: 상단바(년/월 + 설정) → 스케줄/일정 토글 → 그 아래 본문.
 // "스케줄"에선 주간 스트립(또는 펼치면 미니 달력) + 그날 하루 타임라인을, "일정"에선 일정
 // 리스트 또는 메모장을 보여줌(일정/메모는 토글 안쪽 작은 토글로 전환)
-export default function HomePageMobile({ selectedDate, onDateSelect, refreshKey, onScheduleChange }: Props) {
+export default function HomePageMobile({ selectedDate, onDateSelect, refreshKey, onScheduleChange, onRequestAddSchedule }: Props) {
   const [view, setView] = useState<HomeMobileView>('schedule');
   const [eventMode, setEventMode] = useState<HomeEventMode>('list');
 
@@ -36,6 +37,7 @@ export default function HomePageMobile({ selectedDate, onDateSelect, refreshKey,
             onDateSelect={onDateSelect}
             refreshKey={refreshKey}
             onScheduleChange={onScheduleChange}
+            onRequestAddSchedule={onRequestAddSchedule}
           />
         ) : eventMode === 'list' ? (
           <ScheduleList selectedDate={selectedDate} refreshKey={refreshKey} onScheduleChange={onScheduleChange} />

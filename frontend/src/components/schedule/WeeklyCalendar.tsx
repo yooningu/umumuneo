@@ -356,9 +356,10 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
           {visibleDates.map((date, i) => {
             const dateStr = toDateStr(date);
 
-            // TIMED: 시작~종료 구간이 있는 블록으로 표시 (겹치면 좌우 여백)
+            // TIMED/MOMENT: 둘 다 똑같이 시작~종료 구간이 있는 블록으로 표시 (겹치면 좌우 여백).
+            // MOMENT는 종료 시각이 없어서(특정 시각 하나) TIMED의 종료시각 없을 때와 같은 기본값(30분)을 씀
             const timedItems: TimedItem[] = schedules
-              .filter(s => s.type === 'TIMED' && s.startDate === dateStr && s.startTime)
+              .filter(s => (s.type === 'TIMED' || s.type === 'MOMENT') && s.startDate === dateStr && s.startTime)
               .map(s => {
                 const [sh, sm] = s.startTime!.split(':').map(Number);
                 const startMin = sh * 60 + sm;
@@ -370,14 +371,6 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             const positionedItems = groupOverlapping(timedItems).flatMap(group =>
               group.map((item, idx) => ({ ...item, ...getOverlapMargins(idx, group.length) }))
             );
-
-            // MOMENT: 특정 시각 하나를 나타내므로 구간 블록 대신 얇은 바로 표시
-            const momentItems = schedules
-              .filter(s => s.type === 'MOMENT' && s.startDate === dateStr && s.startTime)
-              .map(s => {
-                const [sh, sm] = s.startTime!.split(':').map(Number);
-                return { schedule: s, startMin: sh * 60 + sm };
-              });
 
             // 시간표: 날짜가 아니라 요일(dayOfWeek)로 매칭되는, 매주 반복되는 배경 블록
             const dayTimetables = timetables
@@ -447,24 +440,6 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
                       onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
                     >
                       <div className={styles.scheduleTitle}>{s.title}</div>
-                    </div>
-                  );
-                })}
-
-                {/* 시각 바 (MOMENT): 텍스트 크기만큼 꽉 채운 알약 모양 */}
-                {momentItems.map(({ schedule: s, startMin }) => {
-                  const key = `s-${s.id}`;
-                  const hovered = hoveredKey === key;
-                  return (
-                    <div
-                      key={s.id}
-                      className={styles.momentBadge}
-                      style={{ top: startMin * PX_PER_MINUTE, backgroundColor: s.color || '#7c8cf8', zIndex: hovered ? 20 : undefined }}
-                      onMouseEnter={() => setHoveredKey(key)}
-                      onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
-                      onClick={() => { setSelectedSchedule(s); setModalMode('view'); }}
-                    >
-                      {s.title}
                     </div>
                   );
                 })}

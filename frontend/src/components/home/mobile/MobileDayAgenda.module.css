@@ -4,7 +4,7 @@
   padding: 12px 16px;
   box-sizing: border-box;
   background-color: var(--gray5);
-  border-radius: 20px;
+  border-radius: 20px 20px 0 0;
 }
 
 .alldayRow {

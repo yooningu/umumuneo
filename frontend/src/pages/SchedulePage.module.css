@@ -40,25 +40,16 @@
   }
 }
 
-/* 일정 페이지 전용 모바일 기준 - 904px 미만부터 세로로 쌓음 */
+/* 일정 페이지 전용 모바일 기준 - 904px 미만부터는 일정 목록이 사이드 패널이 아니라
+   서랍으로 바뀌므로(SchedulePage.tsx의 isMobileList) 본문엔 mainPane 하나만 남음 */
 @media (max-width: 903px) {
   .container {
     padding: 12px;
   }
 
-  .body {
-    flex-direction: column;
-  }
-
   .mainPane {
     flex: 1;
     min-height: 320px;
-  }
-
-  .sidePane {
-    width: 100%;
-    min-width: 0;
-    max-height: 40vh;
   }
 }
 
