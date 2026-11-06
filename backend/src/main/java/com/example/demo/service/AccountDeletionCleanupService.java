@@ -66,7 +66,7 @@ public class AccountDeletionCleanupService {
         timetableRepository.deleteAll(timetableRepository.findByUserId(userId));
         notificationRepository.deleteAll(notificationRepository.findByUserId(userId));
         notificationLogRepository.deleteAll(notificationLogRepository.findByUserId(userId));
-        memoRepository.findByUserId(userId).ifPresent(memoRepository::delete);
+        memoRepository.deleteAll(memoRepository.findByUserIdOrderByCreatedAtAsc(userId));
         inboundEmailRepository.deleteAll(inboundEmailRepository.findByUserId(userId));
         fileService.deleteAllFilesForUser(userId); // DB 전부 + 디스크 디렉토리 재귀 삭제
         uploadSessionRepository.deleteAll(uploadSessionRepository.findByUserId(userId));
