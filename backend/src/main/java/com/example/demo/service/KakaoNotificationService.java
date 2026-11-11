@@ -16,8 +16,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// 카카오톡 "나에게 보내기" - 챗봇이 요청받은 내용을 즉시 카카오톡 메시지로 전송
-// (일정 알림은 더 이상 여기서 보내지 않음 -> KakaoCalendarService/톡캘린더가 대체)
+// 카카오톡 "나에게 보내기" - 챗봇이 요청받은 내용을 즉시 카카오톡 메시지로 전송.
+// 일정 알림(NotificationService)도 이 sendText를 그대로 재사용함 - 톡캘린더 자체 리마인더는
+// 사업자 인증 없이는 본인 계정에서만 동작해서, 알림이 실제로 오게 하려면 이쪽이 필요함.
 @Slf4j
 @Service
 @RequiredArgsConstructor

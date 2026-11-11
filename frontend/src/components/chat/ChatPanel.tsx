@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import { sendMessage, getMessages } from '../../api/chat';
+import { sendMessage, getMessages, cancelMessage } from '../../api/chat';
 import { uploadFiles, getFileBlob, getPreviewBlobUrl } from '../../api/file';
 import { transcribeAudio } from '../../api/stt';
 import Loader from '../common/Loader';
@@ -12,7 +12,7 @@ import NasThumbnail from '../nas/NasThumbnail';
 import type { FileItem } from '../../types';
 import styles from './ChatPanel.module.css';
 import { RiMic2Fill } from "react-icons/ri";
-import { FaChevronRight } from "react-icons/fa6";
+import { FaChevronRight, FaStop } from "react-icons/fa6";
 import { IoClose } from "react-icons/io5";
 import { LiaUserSecretSolid } from "react-icons/lia";
 import { FaPlus } from "react-icons/fa";
@@ -99,6 +99,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
   const silenceRafRef = useRef<number | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sentImageUrlsRef = useRef<string[]>([]); // 채팅 기록에 표시 중인 이미지 미리보기 URL들 (언마운트 시 정리용)
+  const currentRequestIdRef = useRef<string | null>(null); // 지금 생성 중인 턴의 ID ("중단" 버튼용)
 
   // initialSessionId가 있으면(기존 대화를 골라서 들어온 경우) 그 세션의 메시지 기록을 불러온다.
   // ChatPage에서 key={sessionId}로 세션이 바뀔 때마다 이 컴포넌트를 통째로 새로 마운트시키므로
@@ -379,6 +380,8 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
     setLoading(true);
 
     let aiContent = '';
+    const requestId = crypto.randomUUID();
+    currentRequestIdRef.current = requestId;
 
     sendMessage(
       content,
@@ -394,6 +397,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       },
       (newSessionId) => {
         const isNewSession = !sessionId;
+        currentRequestIdRef.current = null;
         setSessionId(newSessionId);
         setLoading(false);
         onScheduleChange?.();
@@ -401,6 +405,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       },
       (err) => {
         console.error(err);
+        currentRequestIdRef.current = null;
         setLoading(false);
         setMessages(prev => {
           const next = [...prev];
@@ -413,7 +418,17 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
       audio.length > 0 ? audio : undefined,
       sendableFiles.length > 0 ? sendableFiles : undefined,
       secretMode,
+      requestId,
     );
+  };
+
+  // "중단" 버튼 - 답장이 끝까지 오기 전까지만 유효(로딩 중에만 보임). 연결을 그냥 끊는 게 아니라
+  // 서버에 명시적으로 알려서, 탭을 닫거나 다른 화면으로 이동한 경우와 구분되게 한다
+  // (그 경우는 중단 신호를 안 보내므로 서버가 끝까지 생성해서 저장함).
+  const stopGenerating = () => {
+    if (currentRequestIdRef.current) {
+      cancelMessage(currentRequestIdRef.current).catch(console.error);
+    }
   };
 
   return (
@@ -556,8 +571,12 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
             placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
             className={styles.input}
           />
-          {!isWhisperRecording && (input.trim() || pendingFiles.length > 0 || nasFiles.length > 0) ? (
-            <button onClick={send} disabled={loading || uploading} className={styles.sendButton}>
+          {loading ? (
+            <button onClick={stopGenerating} className={styles.sendButton} title="중단">
+              <FaStop />
+            </button>
+          ) : !isWhisperRecording && (input.trim() || pendingFiles.length > 0 || nasFiles.length > 0) ? (
+            <button onClick={send} disabled={uploading} className={styles.sendButton}>
               <FaChevronRight />
             </button>
           ) : (

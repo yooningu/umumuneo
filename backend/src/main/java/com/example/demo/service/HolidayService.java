@@ -15,6 +15,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +83,45 @@ public class HolidayService {
         }
         cache.put(cacheKey, result);
         return result;
+    }
+
+    // 챗봇이 "올해 남은 휴일 수" 같은 질문에 답할 수 있도록, 오늘부터 올해 12월 31일까지의
+    // 공식 공휴일 목록 + 주말(토/일) 일수를 한눈에 보도록 정리한 텍스트. 공휴일이 주말과 겹치는
+    // 날은 "쉬는 날" 합계에서 한 번만 센다(이중 집계 방지).
+    public String getRemainingHolidaySummaryText() throws Exception {
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+        LocalDate yearEnd = LocalDate.of(year, 12, 31);
+
+        List<Holiday> remainingHolidays = new ArrayList<>();
+        for (int month = today.getMonthValue(); month <= 12; month++) {
+            for (Holiday h : getHolidays(year, month)) {
+                if (!LocalDate.parse(h.date()).isBefore(today)) remainingHolidays.add(h);
+            }
+        }
+
+        long weekendDays = 0;
+        long holidayWeekendOverlap = 0;
+        for (LocalDate d = today; !d.isAfter(yearEnd); d = d.plusDays(1)) {
+            boolean isWeekend = d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY;
+            if (isWeekend) {
+                weekendDays++;
+                boolean isAlsoHoliday = remainingHolidays.stream().anyMatch(h -> h.date().equals(d.toString()));
+                if (isAlsoHoliday) holidayWeekendOverlap++;
+            }
+        }
+
+        long totalDaysOff = remainingHolidays.size() + weekendDays - holidayWeekendOverlap;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("오늘: ").append(today).append("\n");
+        sb.append("올해(").append(year).append(") 12월 31일까지 남은 공식 공휴일: ").append(remainingHolidays.size()).append("개\n");
+        for (Holiday h : remainingHolidays) {
+            sb.append("- ").append(h.date()).append(" ").append(h.name()).append("\n");
+        }
+        sb.append("같은 기간 남은 주말(토/일) 일수: ").append(weekendDays).append("일 (공휴일과 겹치는 날 ").append(holidayWeekendOverlap).append("일 포함)\n");
+        sb.append("공휴일+주말을 합쳐 겹치는 날 한 번만 센 '올해 남은 쉬는 날' 총합: ").append(totalDaysOff).append("일");
+        return sb.toString();
     }
 
     private String firstText(Document doc, String tag) {

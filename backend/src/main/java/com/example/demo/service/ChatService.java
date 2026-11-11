@@ -35,6 +35,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -52,10 +54,42 @@ public class ChatService {
     private final OcrService ocrService;
     private final WeatherService weatherService;
     private final BusService busService;
+    private final HolidayService holidayService;
     private final ObjectMapper objectMapper;
 
     @Value("${ollama.base-url}")
     private String ollamaBaseUrl;
+
+    // "중단" 버튼으로 취소된 requestId들 - 사용자가 명시적으로 멈춘 턴만 여기 들어간다.
+    // (단순히 탭을 닫거나 화면을 이동해서 SSE 연결이 끊긴 것과는 다름 - 그 경우는 생성이
+    // 끝까지 이어져서 DB에 저장되어야 하므로 이 목록에 들어가면 안 됨)
+    private final Set<String> cancelledRequests = ConcurrentHashMap.newKeySet();
+
+    public void cancelRequest(String requestId) {
+        if (requestId != null && !requestId.isBlank()) cancelledRequests.add(requestId);
+    }
+
+    private boolean isCancelled(String requestId) {
+        return requestId != null && cancelledRequests.contains(requestId);
+    }
+
+    // SSE 전송 실패(탭을 닫거나 다른 화면으로 이동해서 연결이 끊긴 경우 등)는 생성 자체를 막으면
+    // 안 됨 - 끝까지 생성해서 DB에는 저장되게 하고, 나중에 그 채팅을 다시 열면 보이게 한다.
+    // 그래서 emitter로 보내는 시도 자체가 실패해도 예외를 밖으로 던지지 않고 조용히 넘어간다.
+    private void safeSend(SseEmitter emitter, SseEmitter.SseEventBuilder event) {
+        if (emitter == null) return;
+        try {
+            emitter.send(event);
+        } catch (Exception e) {
+            log.debug("SSE 전송 실패(클라이언트 연결 끊김으로 추정) - 생성은 계속 진행합니다: {}", e.getMessage());
+        }
+    }
+
+    private void safeComplete(SseEmitter emitter) {
+        try {
+            emitter.complete();
+        } catch (Exception ignored) {}
+    }
 
     // 이미지가 첨부되면 vision을 지원하는 모델로 전환해서 호출한다
     private static final String VISION_MODEL = "gemma4:12b";
@@ -118,6 +152,7 @@ public class ChatService {
 
         boolean isSecret = request.isSecret();
         boolean isUmu = request.isUmu();
+        String requestId = request.getRequestId();
 
         // 세션 조회 또는 새로 생성
         ChatSession session;
@@ -176,6 +211,7 @@ public class ChatService {
         final boolean hasAttachment = request.isHasAttachment() || !images.isEmpty();
         final boolean finalIsSecret = isSecret;
         final boolean finalIsUmu = isUmu;
+        final String finalRequestId = requestId;
 
         // 비동기로 Ollama 호출
         new Thread(() -> {
@@ -183,7 +219,7 @@ public class ChatService {
             try {
                 if (AI_MAINTENANCE_MODE) {
                     // Ollama는 아예 안 건드리고 고정 문구만 스트리밍인 것처럼 바로 보냄
-                    emitter.send(SseEmitter.event()
+                    safeSend(emitter, SseEmitter.event()
                             .name("chunk")
                             .data("{\"content\":\"" + escapeJson(MAINTENANCE_MESSAGE) + "\"}"));
 
@@ -201,10 +237,10 @@ public class ChatService {
                         chatSaveService.saveAiMessage(finalSession.getId(), MAINTENANCE_MESSAGE, finalTurnIndex + 1);
                     }
 
-                    emitter.send(SseEmitter.event()
+                    safeSend(emitter, SseEmitter.event()
                             .name("done")
                             .data("{\"sessionId\":\"" + finalSession.getId() + "\"}"));
-                    emitter.complete();
+                    safeComplete(emitter);
                     return;
                 }
 
@@ -254,7 +290,7 @@ public class ChatService {
                         busText = "지금은 버스 도착정보를 가져올 수 없어요. 잠시 후 다시 시도해주세요.";
                     }
                     visibleContent = busText;
-                    emitter.send(SseEmitter.event()
+                    safeSend(emitter, SseEmitter.event()
                             .name("chunk")
                             .data("{\"content\":\"" + escapeJson(visibleContent) + "\"}"));
                 } else if ("WEATHER".equals(intent)) {
@@ -269,12 +305,32 @@ public class ChatService {
                     }
                     if (weatherData == null) {
                         visibleContent = "지금은 날씨 정보를 가져올 수 없어요. 잠시 후 다시 시도해주세요.";
-                        emitter.send(SseEmitter.event()
+                        safeSend(emitter, SseEmitter.event()
                                 .name("chunk")
                                 .data("{\"content\":\"" + escapeJson(visibleContent) + "\"}"));
                     } else {
                         String weatherPrompt = buildWeatherPrompt(messageForPrompt, weatherData);
-                        callOllamaStreaming(modelToUse, weatherPrompt, images, emitter, fullResponse);
+                        callOllamaStreaming(modelToUse, weatherPrompt, images, finalRequestId, emitter, fullResponse);
+                        visibleContent = fullResponse.toString();
+                    }
+                } else if ("HOLIDAY".equals(intent)) {
+                    // 공휴일 API + 주말 계산 결과(실제 날짜/개수)는 그대로 두고, 그 데이터를 근거로
+                    // 질문에 맞춰 자연스럽게 답하도록 LLM에게 맡긴다(날씨와 동일한 패턴).
+                    String holidayData;
+                    try {
+                        holidayData = holidayService.getRemainingHolidaySummaryText();
+                    } catch (Exception e) {
+                        log.error("공휴일 조회 실패: {}", e.getMessage());
+                        holidayData = null;
+                    }
+                    if (holidayData == null) {
+                        visibleContent = "지금은 공휴일 정보를 가져올 수 없어요. 잠시 후 다시 시도해주세요.";
+                        safeSend(emitter, SseEmitter.event()
+                                .name("chunk")
+                                .data("{\"content\":\"" + escapeJson(visibleContent) + "\"}"));
+                    } else {
+                        String holidayPrompt = buildHolidayPrompt(messageForPrompt, holidayData);
+                        callOllamaStreaming(modelToUse, holidayPrompt, images, finalRequestId, emitter, fullResponse);
                         visibleContent = fullResponse.toString();
                     }
                 } else {
@@ -289,7 +345,7 @@ public class ChatService {
                     // 그대로 스트리밍해서 보여주면 못 알아먹으므로, 이 경우는 실시간 스트리밍하지 않고
                     // 다 받은 뒤 액션을 실행해서 나온 자연어 결과 메시지만 보여준다. (일반 대화만 실시간 스트리밍)
                     boolean isChat = "CHAT".equals(intent);
-                    callOllamaStreaming(modelToUse, prompt, images, isChat ? emitter : null, fullResponse);
+                    callOllamaStreaming(modelToUse, prompt, images, finalRequestId, isChat ? emitter : null, fullResponse);
 
                     // AI 응답 처리 (일정/전송 관련 액션 실행)
                     String actionResult = processAiResponse(userId, intent, fullResponse.toString(), sendableFiles);
@@ -298,7 +354,7 @@ public class ChatService {
                         visibleContent = fullResponse.toString();
                         if (actionResult != null) {
                             visibleContent += "\n\n" + actionResult;
-                            emitter.send(SseEmitter.event()
+                            safeSend(emitter, SseEmitter.event()
                                     .name("chunk")
                                     .data("{\"content\":\"" + escapeJson("\n\n" + actionResult) + "\"}"));
                         }
@@ -306,7 +362,7 @@ public class ChatService {
                         visibleContent = actionResult != null
                                 ? actionResult
                                 : "요청을 정확히 처리하지 못했어요. 다시 한 번 말씀해주시겠어요?";
-                        emitter.send(SseEmitter.event()
+                        safeSend(emitter, SseEmitter.event()
                                 .name("chunk")
                                 .data("{\"content\":\"" + escapeJson(visibleContent) + "\"}"));
                     }
@@ -348,34 +404,42 @@ public class ChatService {
                     }
                 }
 
-                emitter.send(SseEmitter.event()
+                safeSend(emitter, SseEmitter.event()
                         .name("done")
                         .data("{\"sessionId\":\"" + finalSession.getId() + "\"}"));
-                emitter.complete();
+                safeComplete(emitter);
 
             } catch (Exception e) {
                 log.error("챗봇 오류: {}", e.getMessage());
-                try {
-                    String message = e.getMessage() != null ? e.getMessage() : "알 수 없는 오류가 발생했어요.";
-                    emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("{\"error\":\"" + escapeJson(message) + "\"}"));
-                    emitter.complete();
-                } catch (Exception ignored) {}
+                String message = e.getMessage() != null ? e.getMessage() : "알 수 없는 오류가 발생했어요.";
+                safeSend(emitter, SseEmitter.event()
+                        .name("error")
+                        .data("{\"error\":\"" + escapeJson(message) + "\"}"));
+                safeComplete(emitter);
+            } finally {
+                // 메모리 누수 방지 - 이 턴 처리가 끝났으니(성공/실패/취소 무엇이든) 취소 목록에서 지움
+                if (finalRequestId != null) cancelledRequests.remove(finalRequestId);
             }
         }).start();
 
         return emitter;
     }
 
-    // Ollama SSE 스트리밍 호출 (텍스트 전용)
+    // Ollama SSE 스트리밍 호출 (텍스트 전용, 취소 불가 - 분류/제목생성/요약 등 보조용 호출)
     private String callOllamaStreaming(String model, String prompt,
                                        SseEmitter emitter, StringBuilder fullResponse) throws Exception {
-        return callOllamaStreaming(model, prompt, List.of(), emitter, fullResponse);
+        return callOllamaStreaming(model, prompt, List.of(), null, emitter, fullResponse);
     }
 
-    // Ollama SSE 스트리밍 호출 (이미지 첨부 가능 - vision 모델일 때만 의미 있음)
+    // Ollama SSE 스트리밍 호출 (이미지 첨부 가능 - vision 모델일 때만 의미 있음, 취소 불가)
     private String callOllamaStreaming(String model, String prompt, List<String> images,
+                                       SseEmitter emitter, StringBuilder fullResponse) throws Exception {
+        return callOllamaStreaming(model, prompt, images, null, emitter, fullResponse);
+    }
+
+    // requestId가 있으면(실제로 화면에 타이핑되는 메인 응답) "중단" 버튼으로 취소됐는지 매 청크마다
+    // 확인해서 조기 종료한다. SSE 전송은 safeSend를 써서 클라이언트 연결이 끊겨도 생성이 안 끊기게 함.
+    private String callOllamaStreaming(String model, String prompt, List<String> images, String requestId,
                                        SseEmitter emitter, StringBuilder fullResponse) throws Exception {
         URL url = new URL(ollamaBaseUrl + "/api/generate");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -428,14 +492,12 @@ public class ChatService {
 
                 if (!chunk.isEmpty()) {
                     fullResponse.append(chunk);
-                    if (emitter != null) {
-                        emitter.send(SseEmitter.event()
-                                .name("chunk")
-                                .data("{\"content\":\"" + escapeJson(chunk) + "\"}"));
-                    }
+                    safeSend(emitter, SseEmitter.event()
+                            .name("chunk")
+                            .data("{\"content\":\"" + escapeJson(chunk) + "\"}"));
                 }
 
-                if (done) break;
+                if (done || isCancelled(requestId)) break;
             }
         }
 
@@ -481,14 +543,21 @@ public class ChatService {
                 : "";
         String intentPrompt = String.format("""
                 다음 메시지의 의도를 분류해서 아래 중 하나로만 답하세요.
-                SCHEDULE: 일정 추가/수정/삭제/조회 요청
+                SCHEDULE: 실제로 사용자 본인의 일정(캘린더에 저장된 항목)을 추가/수정/삭제/조회해달라는 요청
+                  (예: 내일 3시에 회의 추가해줘, 이번 주 일정 뭐 있어, 그 일정 지워줘)
+                  ※ 주의: "달력"/"일정"이라는 단어가 들어가거나 달력 화면 자체에 대한 질문이어도, 실제로 일정을
+                  추가/조회/삭제해달라는 요청이 아니면 SCHEDULE이 아니라 CHAT입니다.
+                  (예: 달력에서 제일 왼쪽이 월요일 맞아?, 일정 페이지는 어떻게 써?, 캘린더 디자인 어때? → 전부 CHAT)
                 SEND: 첨부파일이나 대화 내용을 그대로/가공 없이 카카오톡 "나에게 보내기"로 전송해달라는 요청
                   (예: 일정 목록 나에게 보내줘, 이 파일 나한테 보내줘, 이거 카톡으로 전송해줘)
                   ※ 주의: 사진/파일의 내용을 분석·번역·설명·요약해달라는 요청은 SEND가 아니라 CHAT입니다.
                   (예: 이 사진 번역해줘, 이거 뭐라고 써있어, 이 파일 요약해줘 → 전부 CHAT)
                 WEATHER: 날씨/기온/강수확률/비 여부 등에 대한 질문 (예: 오늘 날씨 어때, 이번 주 비 와?, 내일 기온 몇도야)
                 BUS: 출근버스/버스 도착시간 관련 질문 (예: 출근버스 언제 와, 버스 몇 분 남았어)
-                CHAT: 그 외 일반 대화 (사진/파일 내용에 대한 질문, 분석, 번역 포함)
+                HOLIDAY: 공휴일/휴일/쉬는 날의 개수나 날짜에 대한 질문 (예: 올해 남은 휴일 며칠이야, 다음 공휴일 언제야,
+                  이번 달 쉬는 날 며칠이야) - 주말도 쉬는 날에 포함해서 물어보는 경우가 많으니 HOLIDAY로 분류할 것
+                CHAT: 그 외 일반 대화 (사진/파일 내용에 대한 질문, 분석, 번역, 앱 사용법/화면 구성에 대한 질문,
+                  바로 전 어시스턴트 답변이 이상하다고 되묻거나 항의하는 경우 포함)
                 메시지: %s%s
                 """, userMessage, attachmentNote);
         StringBuilder result = new StringBuilder();
@@ -498,6 +567,7 @@ public class ChatService {
         if (r.contains("SEND")) return "SEND";
         if (r.contains("WEATHER")) return "WEATHER";
         if (r.contains("BUS")) return "BUS";
+        if (r.contains("HOLIDAY")) return "HOLIDAY";
         return "CHAT";
     }
 
@@ -539,8 +609,7 @@ public class ChatService {
                 [ACTION:SCHEDULE_ADD] {"type":"TIMED","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","endTime":"HH:mm:ss","notifOffsetMin":null,"repeatRule":null}
                 [ACTION:SCHEDULE_ADD] {"type":"ALLDAY","title":"제목","startDate":"YYYY-MM-DD","notifOffsetMin":null,"repeatRule":null}
                 [ACTION:SCHEDULE_ADD] {"type":"PERIOD","title":"제목","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","notifOffsetMin":null,"repeatRule":null}
-                [ACTION:SCHEDULE_DELETE] {"id":"일정ID"}
-                [ACTION:SCHEDULE_DELETE_BY_DATE] {"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}
+                [ACTION:SCHEDULE_DELETE_BY_DATE] {"from":"YYYY-MM-DD","to":"YYYY-MM-DD","keyword":null}
 
                 규칙:
                 - 알림 또는 알람 언급 있으면 notifOffsetMin=5(몇 분 전인지 특정 언급 있으면 그 값), 없으면 null (알림 = 톡캘린더에 일정이 등록되고 그쪽 리마인더로 알려주는 것. "나에게 보내기"와는 다른 기능이니 헷갈리지 말 것)
@@ -550,9 +619,10 @@ public class ChatService {
                 - "N분 뒤", "N시간 뒤"처럼 상대 시간 표현이면 반드시 위에 명시된 지금 시각을 기준으로 계산해서 정확한 날짜/시:분으로 변환할 것 (예: 지금이 22:15인데 "10분 뒤"면 22:25)
                 - 오전/오후 언급 없이 "O시" 또는 "O시 O분"만 말했다면, 지금 시각 기준으로 그 시각이 이미 지났으면(오전으로 해석 시 과거가 되면) 오후(12시간 뒤)로 해석할 것. 예: 지금이 오후 10시인데 "10시 30분"이라고 하면 이미 지난 오전 10시 30분이 아니라 오늘 오후 10시 30분으로 해석
                 - 여러 날에 걸친 일정은 반드시 PERIOD 타입으로 startDate~endDate로 한 번에 등록할 것
-                - 특정 일정 하나를 콕 집어 삭제하는 거고 ID를 모르면 먼저 [ACTION:SCHEDULE_GET]으로 조회 후 삭제할 것
-                - 특정 날짜/기간에 있는 일정을 통째로 삭제해달라는 요청이면 ID 조회 없이 바로 [ACTION:SCHEDULE_DELETE_BY_DATE]를 쓸 것
-                - [ACTION:SCHEDULE_DELETE]는 반드시 실제 UUID 형식의 ID로만 할 것 (날짜나 이름으로는 삭제 불가, 그럴 땐 SCHEDULE_DELETE_BY_DATE 사용)
+                - 일정 삭제 요청은 전부 [ACTION:SCHEDULE_DELETE_BY_DATE]로 처리할 것 (일정 목록엔 ID를 안 보여주므로
+                  ID로 콕 집어 지우는 기능은 없음). "날짜"는 반드시 있어야 하고(없으면 "오늘"로), "keyword"는 사용자가
+                  제목의 일부를 언급했을 때만 그 단어를 그대로 채우고(예: "내일 운동 일정 지워줘" → keyword:"운동"),
+                  그냥 그 날짜 일정을 통째로 지워달라는 거면 keyword는 null로 둘 것
                 """, nowText, todayStr, tomorrowStr, dayAfterTomorrowStr, userMessage));
 
         return sb.toString();
@@ -618,6 +688,26 @@ public class ChatService {
                 """, weatherData, userMessage);
     }
 
+    // 공휴일 질문 프롬프트 생성 - 공휴일 API + 주말 계산 데이터를 근거로 질문에 맞게 답하게 함
+    private String buildHolidayPrompt(String userMessage, String holidayData) {
+        return String.format("""
+                아래는 방금 계산한 실제 공휴일/주말 데이터야.
+
+                [공휴일 데이터]
+                %s
+
+                사용자가 "%s"라고 물어봤어.
+
+                규칙:
+                - 반드시 위 데이터에 있는 날짜/개수만 사용해. 데이터에 없는 내용은 답하지 말고 모른다고 해.
+                - "휴일"/"쉬는 날"이라고만 물어봤으면 공휴일과 주말을 합친 총합을 답해. "공휴일"이라고 콕 집어
+                  물어봤으면 주말은 빼고 공식 공휴일 개수/목록만 답해.
+                - 다음 공휴일이 언제인지 물어봤으면 목록에서 가장 빠른 날짜 하나만 답해.
+                - 특정 달(이번 달 등)만 물어봤으면 그 달에 해당하는 것만 추려서 답해.
+                - 존댓말로 짧고 자연스럽게 답해. 이모지나 표 형식 없이 문장으로.
+                """, holidayData, userMessage);
+    }
+
     // 일반 대화 프롬프트 생성
     private String buildChatPrompt(String userMessage, List<ChatMessage> history, String summary) {
         StringBuilder sb = new StringBuilder();
@@ -674,12 +764,14 @@ public class ChatService {
                 JsonNode node = objectMapper.readTree(json);
                 String from = node.path("from").asText();
                 String to = node.path("to").asText();
-                scheduleService.deleteSchedulesByDate(userId, LocalDate.parse(from), LocalDate.parse(to));
-                log.info("챗봇이 날짜 기반 일정 삭제: {} ~ {}", from, to);
+                String keyword = node.hasNonNull("keyword") ? node.path("keyword").asText().trim() : "";
+                scheduleService.deleteSchedulesByDate(userId, LocalDate.parse(from), LocalDate.parse(to), keyword);
+                log.info("챗봇이 날짜 기반 일정 삭제: {} ~ {} (키워드: {})", from, to, keyword.isEmpty() ? "없음" : keyword);
                 String rangeLabel = from.equals(to)
                         ? koreanDateLabel(LocalDate.parse(from))
                         : koreanDateLabel(LocalDate.parse(from)) + "부터 " + koreanDateLabel(LocalDate.parse(to)) + "까지";
-                return rangeLabel + " 일정을 모두 삭제했어요.";
+                String what = keyword.isEmpty() ? "일정을 모두" : "'" + keyword + "'가 포함된 일정을";
+                return rangeLabel + " " + what + " 삭제했어요.";
 
             } else if (response.contains("[ACTION:SCHEDULE_GET]")) {
                 int start = response.indexOf("[ACTION:SCHEDULE_GET]") + "[ACTION:SCHEDULE_GET]".length();
@@ -699,14 +791,15 @@ public class ChatService {
                     return "해당 기간에 일정이 없습니다.";
                 }
 
+                // 사용자에게는 언제/무엇만 자연스럽게 보여주면 되고, ID는 필요 없음(삭제는 전부
+                // 날짜 기준 SCHEDULE_DELETE_BY_DATE로만 처리하므로 특정 하나를 ID로 집어 지울 일이 없음)
                 StringBuilder sb = new StringBuilder("일정 목록:\n");
                 for (var s : schedules) {
-                    sb.append("- [ID:").append(s.getId()).append("] ");
-                    sb.append(s.getTitle());
-                    if (s.getStartTime() != null) {
-                        sb.append(" (").append(s.getStartTime()).append(")");
-                    }
-                    sb.append("\n");
+                    String dateLabel = (s.getEndDate() != null && !s.getEndDate().equals(s.getStartDate()))
+                            ? koreanDateLabel(s.getStartDate()) + "~" + koreanDateLabel(s.getEndDate())
+                            : koreanDateLabel(s.getStartDate());
+                    String timeLabel = s.getStartTime() != null ? " " + koreanTimeLabel(s.getStartTime()) : "";
+                    sb.append("- ").append(dateLabel).append(timeLabel).append(" ").append(s.getTitle()).append("\n");
                 }
                 return sb.toString();
 

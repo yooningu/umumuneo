@@ -10,6 +10,10 @@ public class ChatRequest {
 
     private String sessionId;   // null이면 새 세션 생성
 
+    // 프론트에서 매 전송마다 새로 만들어 보내는 임의의 ID. "중단" 버튼을 누르면 이 ID로
+    // 취소 요청을 보내서 서버가 지금 이 턴의 생성만 멈추게 함 (sessionId와 달리 한 턴 전용).
+    private String requestId;
+
     private String model = "gemma4:e4b";  // 기본 모델
 
     @NotBlank(message = "메시지 내용은 필수입니다.")

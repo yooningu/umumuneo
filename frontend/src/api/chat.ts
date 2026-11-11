@@ -15,7 +15,18 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
   await client.delete(`/chat/sessions/${sessionId}`);
 };
 
-// SSE 스트리밍은 fetch로 직접 처리 (ChatWidget에서 사용)
+// "중단" 버튼 - 이 턴의 생성만 멈춘다 (탭을 닫거나 다른 화면으로 이동한 것과는 구분되어야 해서
+// sendMessage를 그냥 끊는(fetch abort) 게 아니라 서버에 명시적으로 알려줌. 서버는 지금까지
+// 생성된 내용까지만 저장하고 정상적으로 스트림을 끝냄)
+export const cancelMessage = async (requestId: string): Promise<void> => {
+  const accessToken = localStorage.getItem('accessToken');
+  await fetch(`${import.meta.env.VITE_API_BASE_URL}/chat/messages/${requestId}/cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+};
+
+// SSE 스트리밍은 fetch로 직접 처리 (ChatWidget/ChatPanel에서 사용)
 export const sendMessage = (
   content: string,
   sessionId: string | null,
@@ -28,6 +39,7 @@ export const sendMessage = (
   audio?: string[], // base64 인코딩된 음성 파일. 백엔드가 STT로 변환해서 프롬프트에 반영
   sendableFiles?: { name: string; fileId: string; isImage: boolean }[], // 첨부 파일. 공개 링크로 "나에게 보내기"할 때 사용
   secret?: boolean, // true면 DB에 저장 안 하고 서버 메모리에만 대화를 유지 (시크릿 모드)
+  requestId?: string, // "중단" 버튼으로 이 턴만 콕 집어 취소할 수 있게 하는 ID (cancelMessage에 그대로 넘김)
 ) => {
   const accessToken = localStorage.getItem('accessToken');
   fetch(`${import.meta.env.VITE_API_BASE_URL}/chat/messages`, {
@@ -36,7 +48,7 @@ export const sendMessage = (
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ sessionId, model, content, images, hasAttachment, audio, sendableFiles, secret }),
+    body: JSON.stringify({ sessionId, model, content, images, hasAttachment, audio, sendableFiles, secret, requestId }),
   }).then(async res => {
     const reader = res.body?.getReader();
     const decoder = new TextDecoder();

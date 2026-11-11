@@ -48,6 +48,18 @@ public class ChatController {
         return chatService.sendMessage(userId, request);
     }
 
+    // POST /api/v1/chat/messages/{requestId}/cancel - "중단" 버튼. 그 턴의 생성만 멈춤
+    // (연결이 끊겨서가 아니라 사용자가 직접 멈춘 거라는 걸 구분하는 용도 - 탭을 닫거나 다른
+    // 화면으로 이동한 경우는 이걸 호출하지 않으므로 생성이 그대로 끝까지 이어져 저장됨)
+    @PostMapping("/messages/{requestId}/cancel")
+    public ResponseEntity<Void> cancelMessage(
+            @AuthenticationPrincipal String userId,
+            @PathVariable String requestId
+    ) {
+        chatService.cancelRequest(requestId);
+        return ResponseEntity.ok().build();
+    }
+
     // DELETE /api/v1/chat/sessions/{id}
     @DeleteMapping("/sessions/{id}")
     public ResponseEntity<Void> deleteSession(

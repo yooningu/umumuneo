@@ -39,11 +39,15 @@ public class ScheduleService {
 
     // 날짜 범위로 일정 삭제 (챗봇 SCHEDULE_DELETE_BY_DATE용)
     // 반복 일정은 findSchedulesInRange가 "가상 복제"로도 돌려주는데, 그걸 그대로 지우면 발생일 하나 때문에
-    // 반복 규칙 전체(원본 row)가 삭제돼버리므로 여기서는 제외함 - 반복 일정 자체를 지우려면 단건 삭제를 써야 함
+    // 반복 규칙 전체(원본 row)가 삭제돼버리므로 여기서는 제외함 - 반복 일정 자체를 지우려면 단건 삭제를 써야 함.
+    // titleKeyword가 있으면(예: "운동") 그 날짜 범위 안에서도 제목에 그 단어가 들어간 일정만 지운다
+    // (예: "내일 운동 일정 삭제해줘" → 내일 전체가 아니라 제목에 "운동"이 포함된 것만).
     @Transactional
-    public void deleteSchedulesByDate(String userId, LocalDate from, LocalDate to) {
+    public void deleteSchedulesByDate(String userId, LocalDate from, LocalDate to, String titleKeyword) {
+        String keyword = titleKeyword == null ? "" : titleKeyword.trim().toLowerCase();
         List<Schedule> schedules = findSchedulesInRange(userId, from, to, null).stream()
                 .filter(s -> s.getRepeatRule() == null)
+                .filter(s -> keyword.isEmpty() || (s.getTitle() != null && s.getTitle().toLowerCase().contains(keyword)))
                 .toList();
         schedules.forEach(this::deleteKakaoEventIfAny);
         scheduleRepository.deleteAll(schedules);
