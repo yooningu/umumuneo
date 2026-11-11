@@ -548,6 +548,10 @@ public class ChatService {
                   ※ 주의: "달력"/"일정"이라는 단어가 들어가거나 달력 화면 자체에 대한 질문이어도, 실제로 일정을
                   추가/조회/삭제해달라는 요청이 아니면 SCHEDULE이 아니라 CHAT입니다.
                   (예: 달력에서 제일 왼쪽이 월요일 맞아?, 일정 페이지는 어떻게 써?, 캘린더 디자인 어때? → 전부 CHAT)
+                  ※ "일정"은 "스케줄"/"스케쥴"/"약속"이라고 불러도 같은 뜻으로 인식할 것. 띄어쓰기 여부나
+                  다른 말과 붙여 쓴 복합어(예: "운동일정", "회의스케줄")여도 그 안에 일정을 가리키는 말이
+                  포함되어 있으면 SCHEDULE로 인식할 것.
+                  (예: 내일 운동일정 삭제해줘, 회의스케줄 추가해줘, 약속 하나 잡아줘 → 전부 SCHEDULE)
                 SEND: 첨부파일이나 대화 내용을 그대로/가공 없이 카카오톡 "나에게 보내기"로 전송해달라는 요청
                   (예: 일정 목록 나에게 보내줘, 이 파일 나한테 보내줘, 이거 카톡으로 전송해줘)
                   ※ 주의: 사진/파일의 내용을 분석·번역·설명·요약해달라는 요청은 SEND가 아니라 CHAT입니다.
@@ -603,6 +607,8 @@ public class ChatService {
                 사용자가 "%s"라고 했어.
 
                 반드시 아래 형식 중 하나로만 응답해. JSON 외에 다른 텍스트는 절대 쓰지 마.
+                (시스템 지시의 "간단히 대답하라"는 일반 대화에 대한 것이고, 이 JSON 출력에는 적용 안 됨 -
+                 아래 예시에 있는 필드는 값이 null이더라도 전부 빠짐없이 그대로 포함할 것. 필드를 생략하지 말 것.)
 
                 [ACTION:SCHEDULE_GET] {"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}
                 [ACTION:SCHEDULE_ADD] {"type":"MOMENT","title":"제목","startDate":"YYYY-MM-DD","startTime":"HH:mm:ss","notifOffsetMin":null,"repeatRule":null}
@@ -621,7 +627,9 @@ public class ChatService {
                 - 여러 날에 걸친 일정은 반드시 PERIOD 타입으로 startDate~endDate로 한 번에 등록할 것
                 - 일정 삭제 요청은 전부 [ACTION:SCHEDULE_DELETE_BY_DATE]로 처리할 것 (일정 목록엔 ID를 안 보여주므로
                   ID로 콕 집어 지우는 기능은 없음). "날짜"는 반드시 있어야 하고(없으면 "오늘"로), "keyword"는 사용자가
-                  제목의 일부를 언급했을 때만 그 단어를 그대로 채우고(예: "내일 운동 일정 지워줘" → keyword:"운동"),
+                  제목의 일부를 언급했을 때만 그 단어를 그대로 채우고(예: "내일 운동 일정 지워줘" → keyword:"운동",
+                  "내일 운동일정 지워줘"처럼 "일정"/"스케줄"과 붙여 쓴 복합어여도 그 단어는 떼어내고 앞부분만
+                  keyword로 채울 것 → keyword:"운동"),
                   그냥 그 날짜 일정을 통째로 지워달라는 거면 keyword는 null로 둘 것
                 """, nowText, todayStr, tomorrowStr, dayAfterTomorrowStr, userMessage));
 
