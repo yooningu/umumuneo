@@ -876,7 +876,9 @@ public class ChatService {
             }
 
         } catch (Exception e) {
-            log.warn("액션 처리 실패 (intent={}): {}", intent, e.getMessage());
+            // 어떤 액션이 어떤 원문(JSON 포함)으로 실패했는지 + 예외 스택트레이스까지 남겨야
+            // 다음에 비슷한 문제가 생겼을 때 원인을 바로 알 수 있음 (전엔 메시지만 남아서 못 찾았음)
+            log.warn("액션 처리 실패 (intent={}, response={})", intent, response, e);
             return "요청을 처리하는 중 오류가 발생했어요. 다시 한 번 말씀해주시겠어요?";
         }
 
