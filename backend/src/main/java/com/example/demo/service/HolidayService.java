@@ -106,7 +106,8 @@ public class HolidayService {
             boolean isWeekend = d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY;
             if (isWeekend) {
                 weekendDays++;
-                boolean isAlsoHoliday = remainingHolidays.stream().anyMatch(h -> h.date().equals(d.toString()));
+                final LocalDate day = d;
+                boolean isAlsoHoliday = remainingHolidays.stream().anyMatch(h -> h.date().equals(day.toString()));
                 if (isAlsoHoliday) holidayWeekendOverlap++;
             }
         }
