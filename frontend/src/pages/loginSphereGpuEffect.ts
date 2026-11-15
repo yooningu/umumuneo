@@ -11,7 +11,15 @@
 // WebGPU를 지원하지 않는 브라우저에서는 null을 반환함 - 호출하는 쪽(LoginBackground.tsx)이
 // 이 경우 기존 DOM 기반 구(.sphere/.galaxy)를 그대로 보여주는 폴백으로 씀.
 // (타입 패키지(@webgpu/types)를 새로 추가하지 않기 위해 WebGPU API는 any로 다룸)
+//
+// GPUBufferUsage 전역은 이 저장소 로컬 환경(TS/lib 버전)에서는 보였지만, CI 빌드 환경에서는
+// "Cannot find name 'GPUBufferUsage'"로 실패했음 - 전역 타입에 기대지 않도록 WebGPU 스펙에
+// 정의된 고정 비트플래그 값을 직접 상수로 선언해서 씀 (BUFFER_USAGE_VERTEX=0x20, UNIFORM=0x40, COPY_DST=0x08)
 import type { CONFIG as LoginGalaxyConfig } from './LoginBackground';
+
+const BUFFER_USAGE_COPY_DST = 0x0008;
+const BUFFER_USAGE_VERTEX = 0x0020;
+const BUFFER_USAGE_UNIFORM = 0x0040;
 
 function hexToRgbNorm(hex: string): [number, number, number] {
   const h = hex.replace('#', '').slice(0, 6).padEnd(6, '0');
@@ -162,7 +170,7 @@ export async function initLoginSphereGpu(
 
   const uniformBuffer = device.createBuffer({
     size: 96, // mat4x4(64) + params vec4(16) + resolution vec4(16)
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    usage: BUFFER_USAGE_UNIFORM | BUFFER_USAGE_COPY_DST
   });
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
@@ -193,7 +201,7 @@ export async function initLoginSphereGpu(
 
   const vertexBuffer = device.createBuffer({
     size: baseStars.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+    usage: BUFFER_USAGE_VERTEX | BUFFER_USAGE_COPY_DST
   });
 
   let dpr = 1;
