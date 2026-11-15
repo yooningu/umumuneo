@@ -1,0 +1,1755 @@
+<html>
+	<head>
+		<style>
+			html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: black; }		
+			canvas { position: fixed; top: 0; left; 0; }
+			#canvas { display: block; }
+			#canvasBg { filter: blur( 10px ); }
+			#fps { position: absolute; top: 0; left: 0; padding: 10px; color: white; z-index: 10000; }	
+			#cpu-warning { display: none; position: absolute; top: 0; left: 0; right: 0; background: black; padding: 50px; color: white; text-align: center; font-family: sans-serif; font-size: 1.5em;}
+			#cpu-warning h2 {color: red;}
+			#time{   
+				position: absolute; 
+				top: 50%; 
+				left: 50%;
+				color: black;
+			}
+			#timelabel {
+				position: absolute;
+				width: 200px;
+				height: 50px;
+				margin-left: -100px;
+				margin-top: -25px;
+				line-height: 50px;
+				text-align: center;
+				font-size: 40px;
+				font-weight: 800;
+				font-family: "courier new",monospace;
+				
+			}
+			
+			#time-hour,
+			#time-minute {
+				letter-spacing: -0.10em;
+			}
+			
+			#time-seperator,
+			#time-seperator2 {
+				width: 0.5em;
+				text-align: center;
+			}
+			#time-postfix { 
+				font-size: 0.6em;	
+			}
+		</style>
+		<style>
+			#background-wrapper { position: fixed; width: 100%; height: 100%; top: 0; left: 0; }
+			#background-image1 { position: absolute; width: 100%; height: 100%; top: 0; left: 0;  }	
+			#background-image2 { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }	
+			#background-image1-wrapper { position: absolute; width: 100%; height: 100%; top: 0; left: 0;  }	
+			#background-image2-wrapper { position: absolute; width: 100%; height: 100%; top: 0; left: 0;  }	
+		</style>
+		
+		<!-- 
+			log.js : overwrites console.log and console.error to display messages within the wallpaper. 
+		-->
+		<script src="log.js"></script>
+		
+		<!-- 
+			timer.js : simple timer class to measure performance 
+		-->
+		<script src="timer.js"></script>
+		
+		<!-- 
+			audioarray.js : has a class that holds data for one channel ( left or right ) of the fft data with some
+							useful functions to access it 
+		-->
+		<script src="audioarray.js"></script>
+		
+		<!-- 
+			audiodata.js : has a class that holds 2 audiodata instances ( left/right channels ) with some useful
+						   functions to access it 
+		-->
+		<script src="audiodata.js"></script>
+		
+		<!-- 
+			audiocollection.js : is currently unused, i have used this to bunch up and average multiple fft data 
+								 frames that might occur within one render frame when rendering at a low FPS 
+		-->
+		<script src="audiocollection.js"></script>
+		
+		<!--
+			 audiodata-polyfill.js : fakes wallpaperRegisterAudioListener function for testing in the browser 
+			 						 ( also see the guide as thre is another better alternative to this if needed ) 
+		-->
+		<script src="audiodata-polyfill.js"></script>
+		
+		<!-- 
+			utils.js : contains some functions for processing the properties as well as a function to render 
+					  the data in an audioframe object
+		 -->
+		<script src="utils.js"></script>
+		
+		<!-- 
+			audioframe.js : somewhat misnamed class written to contain all the audio processing demonstrated 
+							with configurable options 
+		-->
+		<script src="audioframe.js"></script>
+		
+		
+		<script src="delayed.js"></script>
+		
+		
+		
+		<script src="background.js"></script>		
+		<link href="background-anim.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+		<div id="background-wrapper">
+			<div id="background-image1-wrapper"><div id="background-image1"></div></div>
+			<div id="background-image2-wrapper"><div id="background-image2"></div></div>
+		</div>
+		<div id="time"><div id="timelabel">
+			<span id="time-hour">00</span><!--
+			--><span id="time-seperator">:</span><!--
+			--><span id="time-seperator2" style="color: transparent; display: none;"> </span><!--
+			--><span id="time-minute">00</span><!--
+			--><span id="time-postfix"></span>
+		</div></div>
+		<canvas id="canvasBg"></canvas>
+		<canvas id="canvas"></canvas>
+		<div id="cpu-warning">
+			<h2>CPU Usage Warning!</h2>
+			<p>
+				The CPU usage of this wallpaper is fairly high at the moment. Lower some settings. 
+				<br>
+				This might be caused by:<br>
+				<small>
+					High detail level<br>
+					Possibly glow effect.
+				</small>
+				<br>
+				<br>
+				<small style="color: #80ccff">You an also adjust when this shows in the settings.</small>
+				<br>
+				<br>
+				Estimated CPU usage: <span id="usage-label"></span>
+			</p>
+		</div>
+		<div id="fps"></div>
+		
+		<!-- all main scripting -->
+		<script>
+			// hide log & timer
+			log.hide();
+			timer.hide();
+			
+			
+			function digiTime() 
+			{
+				this.wrapper = document.getElementById("time");
+				this.wrapperInner = document.getElementById("timelabel");
+				this.hourLabel = document.getElementById("time-hour");
+				this.sepLabel = document.getElementById("time-seperator");
+				this.sep2Label = document.getElementById("time-seperator2");
+				this.minuteLabel = document.getElementById("time-minute");
+				this.postfixLabel = document.getElementById("time-postfix");
+				
+				this.visi = true;
+				this.show = function() { this.wrapper.style.display = 'block'; this.visi = true; this.interval();}
+				this.hide = function() { this.wrapper.style.display = 'none'; this.visi = false;}
+				
+				this.use12h = true;
+				this.h = -1;
+				this.m = -1;
+				this.p = 'adsa';
+				
+				this.scale = 1;
+				this.ox = 0;
+				this.oy = 0;
+				
+				this.setHue = function(h)
+				{
+					this.wrapperInner.style.textShadow = '0 0 5px hsl('+h+',100%,50%)';
+				}
+				
+				this.setScale = function(s)
+				{
+					this.scale = s;
+					this.wrapper.style.transformOrigin = '50% 50%';
+					this.wrapper.style.transform = 'translate( ' + this.ox + 'px, ' + this.oy + 'px ) scale(' + (this.scale) + ' )';
+				}
+				
+				this.setPosition = function( x, y )
+				{
+					this.ox = x;
+					this.oy = y;
+					this.wrapper.style.transformOrigin = '50% 50%';
+					this.wrapper.style.transform = 'translate( ' + this.ox + 'px, ' + this.oy + 'px ) scale(' + (this.scale) + ' )';
+				}
+				
+				this.sepVisible = true;
+				this.interval = function() {
+					if( !this.visi ) return;
+					if( this.sepVisible ) { 
+						this.sepLabel.style.display = 'none';
+						this.sep2Label.style.display = 'inline-block';
+						this.sepVisible = false;
+					}
+					else  { 
+						this.sepLabel.style.display = 'inline-block';
+						this.sep2Label.style.display = 'none';
+						this.sepVisible = true;
+					}
+					
+					var dt = new Date();
+					var h = dt.getHours();
+					var m = dt.getMinutes();
+					var p = '';
+					
+					if( this.use12h ) {
+						if( h >= 12 ) { 
+							p = ' PM';
+						}
+						else {
+							p = ' AM';
+						}
+						
+						h = h % 12;
+						if( h == 0 ) h = 12;
+					}
+					
+					if( m < 10 ) m = '0' + m;
+					if( h < 10 ) h = '0' + h;
+					
+					if( h != this.h ) {
+						this.h = h;
+						this.hourLabel.innerText = h;
+					}
+					if( m != this.m ) {
+						this.m = m;
+						this.minuteLabel.innerText = m;
+					}
+					if( p != this.p ) {
+						this.p = p;
+						this.postfixLabel.innerText = p;
+					}
+				}
+				
+				var self = this;
+				setInterval( function() { self.interval(); }, 1000 );
+			}
+			
+			var htmlTime = new digiTime();
+			
+			function p(x,y,dx,dy)
+			{
+				this.x = x;
+				this.y = y;
+				this.dx = dx;
+				this.dy = dy;
+				this.lifetime = 1;
+			}
+			
+			function ps()
+			{
+				this.nextIdx = 0;
+				this.maxParticles = 50;
+				this.ps = [];
+				
+				this.hasParticles = false;
+				
+				this.setMaxParticles = function( m )
+				{
+					this.maxParticles = m;
+				}
+				
+				this.spawnAndAdd = function()
+				{
+					var part = typeof this.ps[ this.nextIdx ] != 'undefined' ? this.ps[ this.nextIdx ] : null;
+					if( !part ) {
+						var x = Math.random() * window.innerWidth/2 -  window.innerWidth/4;
+						var y = Math.random() * window.innerHeight/2 -  window.innerHeight/4;	
+						var rad = Math.random() * Math.PI * 2;
+						var sp = Math.random() * 1.5  + 0.05;
+						var dx = Math.sin( rad ) * sp;
+						var dy = Math.cos( rad ) * sp;
+						part = this.ps[ this.nextIdx ] = new p( x, y, dx, dy );
+						part.lifetime = 0;
+					}
+					else {
+						part.lifetime = 1;
+						this.hasParticles = true;
+					}
+					this.nextIdx = ( this.nextIdx + 1 ) % this.maxParticles;
+					return part;
+				}
+				
+				this.render = function( ctx, timestamp, timediff )
+				{
+					if( isNaN( timediff ) ) timediff = 0;
+					var tau = Math.PI * 2;
+					var l = this.ps.length;
+					var rendered = 0;
+					for( var i = 0; i < l && i < this.maxParticles; i++ )
+					{
+						var p = this.ps[ i ];
+						if( !p || p.lifetime < 0 ) {
+							continue;
+						}
+						rendered++;
+						
+						p.x += p.dx * timediff/particlesSpeed;
+						p.y += p.dy * timediff/particlesSpeed;
+						p.lifetime -= timediff/particlesLifetime/1000;
+						
+						ctx.rect( Math.floor(p.x-particlesSpawnSize*p.lifetime), Math.floor(p.y-particlesSpawnSize*p.lifetime), 
+										1 + (particlesSpawnSize2*p.lifetime), 	1 + (particlesSpawnSize2*p.lifetime));
+						
+						//if( p.lifetime < 0 /*|| p.x < 0 || p.y < 0 || p.x >= window.innerWidth || p.y >= window.innerHeight*/ )
+						//{
+						//	p.lifetime = -1;
+						//}
+					}
+					this.renderedParticles = rendered;
+					this.hasParticles = rendered > 0;
+				}
+				
+				for( var i = 0; i < this.maxParticles; i++ )
+				{
+					this.ps[ i ] = this.spawnAndAdd();
+				}
+			}
+			
+			var particles = [
+				new ps(),
+				new ps(),
+				new ps()
+			];
+			
+			function colorHueRotation()
+			{
+				this.h = 0;
+				
+				this.update = function( timestamp, timeDiff )
+				{		
+					this.h = (timestamp / 30 ) ;
+				}
+				
+				this.getColor = function( p )
+				{
+					var h = ( this.h + p * 360 );
+					return 'hsl( ' + h + ', 100%, 50% )';
+				}
+				
+				this.getParticleColor = function(p)
+				{
+					var h = ( this.h + p * 360 );
+					return 'hsl( ' + (h) + ', 100%, 40% )';
+				}
+				
+				this.getHue = function(p) 
+				{
+					return (this.h + (p||0) * 360 );	
+				}
+			}
+			
+			
+			function colorCustom()
+			{
+				this.col1 = [];
+				this.col2 = [];
+				
+				this.rotationPerc = 0;
+				
+				this.setColor1 = function( hsl ) 
+				{
+					this.col1 = hsl;
+					if( this.col1[ 1 ] == 0 || this.col1[2] == 0 || this.col1[2] == 1 )
+					{
+						this.col1[0] = this.col2[0]; // match hue if there is no saturation at all
+					}
+					if( this.col2[ 1 ] == 0 || this.col2[2] == 0 || this.col2[2] == 1 )
+					{
+						this.col2[0] = this.col1[0]; // match hue if there is no saturation at all
+					}
+				}
+				
+				this.setColor2 = function( hsl ) 
+				{
+					this.col2 = hsl;
+					if( this.col1[ 1 ] == 0 || this.col1[2] == 0 || this.col1[2] == 1 )
+					{
+						this.col1[0] = this.col2[0]; // match hue if there is no saturation at all
+					}
+					if( this.col2[ 1 ] == 0 || this.col2[2] == 0 || this.col2[2] == 1 )
+					{
+						this.col2[0] = this.col1[0]; // match hue if there is no saturation at all
+					}
+				}
+				
+				this.update = function( timestamp, timeDiff )
+				{		
+					this.rotationPerc = (timestamp / ( 30 * 360 ) )%1000;
+				}
+				
+				this.correctP = function( p ) {					
+				    //var range = 1;
+				    p = (p||0)*2 + this.rotationPerc;
+				    //return 0 + Math.abs(((p + range) % (range * 2)) - p);
+				    
+			        var range = 1 - 0;
+
+			        var multiple = p / range;
+
+			        var asc = Math.floor( p ) % 2 == 0;
+			        var modulus = p % range;
+
+			        return asc ? modulus + 0 : 1 - modulus;
+			        
+				}
+				
+				this.getColor = function( p )
+				{
+					p = this.correctP( p );
+					var h1 = this.col1[ 0 ];
+					var h2 = this.col2[ 0 ];
+					var s1 = this.col1[ 1 ];
+					var s2 = this.col2[ 1 ];
+					var l1 = this.col1[ 2 ];
+					var l2 = this.col2[ 2 ];
+					if( h1 < h2 - 0.5 ) h1 += 1;
+					if( h2 < h1 - 0.5 ) h2 += 1;
+					var h = h1 + ( h2 - h1 ) * p;
+					var s = s1 + ( s2 - s1 ) * p;
+					var l = l1 + ( l2 - l1 ) * p;
+					return 'hsl( ' + (h*360) + ', ' + (s*100) + '%, ' + (l*100) + '% )';
+					
+				}
+				
+				this.getParticleColor = function(p)
+				{
+					p = this.correctP( p );
+					var h1 = this.col1[ 0 ];
+					var h2 = this.col2[ 0 ];
+					var s1 = this.col1[ 1 ];
+					var s2 = this.col2[ 1 ];
+					var l1 = this.col1[ 2 ];
+					var l2 = this.col2[ 2 ];
+					if( h1 < h2 - 0.5 ) h1 += 1;
+					if( h2 < h1 - 0.5 ) h2 += 1;
+					var h = h1 + ( h2 - h1 ) * p;
+					var s = s1 + ( s2 - s1 ) * p;
+					var l = l1 + ( l2 - l1 ) * p;
+					return'hsl( ' + (h*360) + ', ' + (s*100) + '%, ' + (l*80) + '% )';
+				}
+				
+				this.getHue = function(p) 
+				{
+					p = this.correctP( p );
+					var h1 = this.col1[ 0 ];
+					var h2 = this.col2[ 0 ];
+					if( h1 < h2 - 0.5 ) h1 += 1;
+					if( h2 < h1 - 0.5 ) h2 += 1;
+					return ( h1 + ( h2 - h1 ) * p ) * 360;
+				}
+			}
+			
+			var colorHR = new colorHueRotation();
+			var colorC = new colorCustom();
+			var colorClass = colorHR;
+			var useColorRotation = true;
+			
+			// define global variables
+			var canvas = null;
+			var context = null;
+			var canvasBg = null;
+			var contextBg = null;
+			
+			// variables regarding use fps settings & frameskipping
+			var targetFramerate = 30; // wallpaper engine will supply us with the target framerate and we will use a sloppy frameskipping mechanism to adjust to that.
+			var nextRenderTimestamp = 0; // used from frameskipping to determine if current time is before or after we should render the next frame (see render function)
+			
+			// variable regarding fps
+			var fpsElement = null;
+			var fpsPrevUpdate = 0;
+			var fpsFrameCount = 0;
+			var fpsRenderTime = 0;
+			
+			var cpuWarningVisible = false;
+			var cpuWarningElement = null;//cpu-warning
+			var cpuWarningLabel = null;//usage-label
+			
+			var cpuShowFps = false;
+			var cpuCores = 4;
+			var cpuWarningAt = 10;
+			
+			// screen width & height ( maintained via onResize event )
+			var width, height;
+			
+			// render function to use
+			var renderFunction = 'default';
+			
+			//var bgColor = 'black';
+			//v//ar bgImage = '';
+			//var bgTintElement = null;
+			//var backgroundTint = 0;
+			//var backgroundBlur = 0;
+			
+			var cfgHeightCutoff = 0;
+			var heightCutoff = 0;
+			var heightDir = 3;
+			
+			var offsetX = 0;
+			var offsetY = 0;
+			var offsetRing2X = 0;
+			var offsetRing2Y = 0;
+			var offsetTimeX = 0;
+			var offsetTimeY = 0;
+			var offsetLinked = true;
+			var baseRotation = 0;
+			
+			var clockType = 0;
+			
+			
+			
+			/*
+				! audioFrame found in utils.js
+				
+				in audioFrame is where I store the audio data and do all processing of the incoming audio listener event
+				Most code regarding the wallpaper settings are found in there.
+			*/
+			var frame2; // is an AudioFrame object .. stores the "processes" data and is created in setup()
+			var frameHistory = [];
+			
+			var cfgRadiusFactor = 1;
+			var radiusFactor = 1;
+			var freqScaleAdjustment = 1;
+			var freqScaleAdjustmentAnim = true;
+			
+			var initialized = false;
+			var lastEqChange = -1000000000000;
+			
+			var useOutline = true;
+			var interpolationSteps = 1;
+			var interpolationBalanced = true;
+			var renderMethod = 1;
+			var animateWhenSilent = 1;
+			var animateWhenSilentHeight = 0.01;
+			
+			var hadAudioFrame = false;
+			var isPaused = false;
+			var allowDrawing = false;
+			var lockedDrawing = false;
+			
+			var bg;
+			var bgSettingsProxy;
+			var fnInitSlideshow;
+							
+			var colorGradient = 1;
+			var colorRotation = true;
+			var colorGlow = 0;
+			var colorGlowStrength = 2;
+			
+			var height1 = 1;
+			var radius1 = 1;
+			var height2 = 1;
+			var radius2 = 1;
+			var radius3 = 1;
+			var shift1 = 0;
+			var shift2 = 0;
+			var shiftWhenSilent = 0;
+			var scale1 = false;
+			var scale2 = false;
+			var scaleWhenSilent = false;
+			var particles1 = false;
+			var particles2 = false;
+			var particlesSpawnType1 = 1;
+			var particlesSpawnType2 = 0;
+			var particlesSpawnCnt = 3;
+			var particlesSpawnSize = 1;
+			var particlesSpawnSize2 = 1;
+			var particlesLifetime = 1;
+			var particlesSpeed = 2;
+			var particlesSpawnSpread = 1;
+			var detailLevel = 1;
+			 
+
+			function cosInterpolate( v1, v2, perc )
+			{
+			  	var mu2 = (1-Math.cos(perc*Math.PI))/2;
+			    return(v1*(1-mu2)+v2*mu2);
+			}
+
+			function rotate2D( x, y, rad )
+			{
+				
+				var x2 = x * Math.cos(rad) - y * Math.sin( rad );
+				var y2 = y * Math.cos(rad) + x * Math.sin( rad );
+				return [x2,y2];
+			}                               
+			/**
+			 * setup wallpaper stuff
+			 **/
+			function setup()
+			{
+				bg = new Background( 	document.body, 
+										document.getElementById('background-image1' ), 
+										document.getElementById('background-image2' ), 
+										document.getElementById('background-image1-wrapper' ), 
+										document.getElementById('background-image2-wrapper' ) );
+										
+				// delay initialisation until we got the first properties
+				fnInitSlideshow = function() { 
+					bg.play(true); 	 // start the slideshow loop
+					fnInitSlideshow = null;	
+				}
+				
+								
+				// arguments are the background instance and assigning the property names
+				// leave a property out if you dont use it or set it to null
+				bgSettingsProxy = new BackgroundSettingsProxy( bg, {
+					'background-source': 'backgroundSource', // !
+					
+					'video-file': 'backgroundVideo', // ! setting of type file
+					'video-volume': 'backgroundVideoVolume', // ! setting of type file
+					
+					'image-file': 'backgroundImage', //  setting of type file					
+					'image-folder': 'slideshowFolder', //  setting of type directory
+					'image-opacity': 'backgroundOpacity', //  setting of type slider/combo with values 0 - 100 
+					'image-size': 'backgroundSize', // !
+					
+					'slideshow-use-transitions': 'slideshowUseTransitions', // setting of type bool/combo with true/false ( numeric values 0 and 1 should work too )
+					'slideshow-transition-duration': 'slideshowTransitionDuration', // setting of type slider/combo with values 0 to 3600 ( 1 hour )
+					'slideshow-interval': 'slideshowInterval', // setting of type slider/combo with int values
+					'slideshow-interval-multiply': 'slideshowIntervalMultiplier', // setting of type slider/combo with int values
+					
+					'color-1': 'backgroundColor', //  setting of type color ( or combo if you set values to color notation, aka '1 0 0' for red )
+					
+					'slideshow-transition-fade': 'slideshowTransFade',
+					'slideshow-transition-fade-in': 'slideshowTransFadeIn',
+					'slideshow-transition-fade-out': 'slideshowTransFadeOut',
+					'slideshow-transition-zoom-in': 'slideshowTransZoomIn',
+					'slideshow-transition-zoom-out': 'slideshowTransZoomOut',
+					'slideshow-transition-zoom-horz-in': 'slideshowTransZoomHorzIn',
+					'slideshow-transition-zoom-horz-out': 'slideshowTransZoomHorzOut',
+					'slideshow-transition-zoom-vert-in': 'slideshowTransZoomVertIn',
+					'slideshow-transition-zoom-vert-out': 'slideshowTransZoomVertOut',
+					'slideshow-transition-move-left': 'slideshowTransMoveLeft',
+					'slideshow-transition-move-right': 'slideshowTransMoveRight',
+					'slideshow-transition-move-top': 'slideshowTransMoveTop',
+					'slideshow-transition-move-bottom': 'slideshowTransMoveBottom',
+					'slideshow-transition-shuffle-left': 'slideshowTransShuffleLeft',
+					'slideshow-transition-shuffle-right': 'slideshowTransShuffleRight',
+					'slideshow-transition-shuffle-top': 'slideshowTransShuffleTop',
+					'slideshow-transition-shuffle-bottom': 'slideshowTransShuffleBottom'
+				});
+						
+				fpsElement = document.getElementById('fps');
+				fpsElement.style.display = 'none';
+				
+				//bgTintElement = document.getElementById('tint'); 
+				
+				canvas = document.getElementById('canvas'); // reference to our canvas element
+				context = canvas.getContext('2d');  // reference to our context
+				
+				canvasBg = document.getElementById('canvasBg'); // reference to our canvas element
+				contextBg = canvasBg.getContext('2d');  // reference to our context
+				
+				cpuWarningElement = document.getElementById('cpu-warning');
+				cpuWarningLabel = document.getElementById('usage-label'); 
+				
+								
+				// create container to store processed data
+				frame2 = new AudioFrame({
+					normalize: true,
+					normalizeFactor: 0.5,
+					motionBlur: true,
+					motionBlurFactor: 1,
+					smooth: true,
+					smoothFactor: 0.5,
+					powerOf: 4,
+					mono: true
+				});
+			}
+			
+			/**
+			 * processing anything regarding frameskipping
+			 *
+			 * @returns true when should skip
+			 **/
+			function shouldSkipFrame( timestamp )
+			{
+				// should we skip this frame?
+				
+				if( timestamp < nextRenderTimestamp ) {
+					return true;
+				}
+				
+				// update time for next frame to render
+				var frameInterval = 1000 / targetFramerate;		
+				nextRenderTimestamp = Math.floor( timestamp / frameInterval ) * frameInterval + frameInterval;
+				return false;
+				
+			}
+			
+			/**
+			 * measures framerate & updates framerate label
+			 **/
+			function updateFps( timestamp )
+			{ 
+				if( timestamp > fpsPrevUpdate + 1000 )
+				{
+					var diff = ( timestamp - fpsPrevUpdate ) / 1000; // time diff in seconds
+					var fps = fpsFrameCount / diff; // adjust framerate to exactly 1 second 
+					
+					
+					var cpuUsage = fpsRenderTime/10/cpuCores + 2; // 10 = 1000ms/10 == 100%;
+					cpuUsage *= 1.2;
+					if( cpuUsage > 99 ) cpuUsage = 99;
+					//console.log( cpuUsage );
+					
+					var renderedParticles = particles[ 0 ].renderedParticles 
+										  + particles[ 0 ].renderedParticles 
+										  + particles[ 0 ].renderedParticles;
+										  
+					fpsElement.innerHTML = cpuShowFps // simple way of hiding fps
+											? fps.toFixed(1) + ' FPS <br>'  
+												+ 'est. cpu usage: ' + ( cpuUsage ).toFixed(1) + '%<br>' 
+												+ 'est. code exec time: ' + fpsRenderTime.toFixed(0) + 'ms/sec<br>'
+												+ renderedParticles +' particles ' 
+											: '';
+					
+					
+					if( cpuWarningAt < cpuUsage && !cpuWarningVisible )
+					{
+						cpuWarningVisible = true;
+						cpuWarningElement.style.display = 'block';
+						cpuWarningLabel.innerText = ( cpuUsage ).toFixed(0) + '%';
+					}
+					else if( cpuWarningAt > cpuUsage && cpuWarningVisible )
+					{
+						cpuWarningVisible = false;
+						cpuWarningElement.style.display = 'none';
+					}
+					else if( cpuWarningVisible ) {
+						cpuWarningLabel.innerText = ( cpuUsage ).toFixed(0) + '%';
+					}
+					fpsFrameCount = 0;
+					fpsPrevUpdate = timestamp;
+					fpsRenderTime = 0;
+					
+					
+				}
+				fpsFrameCount++;
+			}
+			
+			
+			//var h = 0;
+			var prevTimestamp;
+			var timeDiff;
+			var frameCount = 0;
+			var low = 0;
+			var lowAverage = 1;
+			var lowTiggerDiff = 1;
+			var lowHistory = [];
+			var bassGraph = false;
+			/**
+			 * render wallpaper
+			 **/
+			function render( timestamp ) // requestAnimationFrame supplies its own timestamp. no need for performance.now();
+			{					
+				frameCount++;
+				var t0 = performance.now();
+				timestamp = timestamp || performance.now();
+				if( timestamp > 2000 ) initialized = true;
+				
+				// queue next frame            
+				//window.requestAnimationFrame( render );
+				
+				var hasParticles = particles[0].hasParticles || particles[1].hasParticles || particles[2].hasParticles;
+				var hasAudioFrame = frame2.hasAudio;
+				var skipForAudio = !hadAudioFrame;
+				skipForAudio = skipForAudio && !( particles1 > 0 || particles2 > 0 ) && !bg.useTransitions;
+				skipForAudio = skipForAudio && !( scale1 || scale2 || shift1 || shift2 );
+				
+				// frame skipping to maintain user selected framerate
+				if( isPaused || skipForAudio || shouldSkipFrame( timestamp ) ){
+					setTimeout( render, isPaused ? 1000 : 4.166666666 );
+					return;
+				} 			
+				
+				hadAudioFrame = false;		
+				
+				
+				timeDiff = timestamp - prevTimestamp;
+				if( isNaN(timeDiff) || timeDiff < 0  ) timeDiff = 1;
+				prevTimestamp = timestamp;
+				
+				updateFps( timestamp );
+				
+				if( useColorRotation ) colorClass.update( timestamp, timeDiff );
+				
+				//h = (timestamp / 3);
+				htmlTime.setHue(colorClass.getHue());
+				 
+				var heightUse1 = frame2.hasAudio ? height1  : height1 * animateWhenSilentHeight;
+				var heightUse2 = frame2.hasAudio ? height2  : height2 * animateWhenSilentHeight;
+				var baseRadius = Math.min( width, height )/3;
+				// menu.update();
+				//
+				// now on to actual render some stuff				
+				//
+				try {
+					timer.start('render');
+					
+					// render a black background
+					//context.fillStyle = 'rgb( 0, 0, 0 )';
+					//context.fillRect( 0, 0, width, height );
+					//context.globalCompositeOperation = 'source-over';
+					context.globalCompositeOperation = 'destination-out';
+					context.fillStyle = 'rgba(0,0,0,1)';
+					context.fillRect(0, 0, canvas.width, canvas.height);	
+					context.globalCompositeOperation = 'screen';
+					
+					// renderAudioFrame() can found in utils.js
+					
+					context.lineCap = "round";
+					context.lineJoin = "round";
+					
+					
+					var dt = frame2.audioDataResult.left.data;
+					var dt2 = frame2.audioDataNormalizedBasic.left.data;
+					
+					var avgLow = frame2.audioDataNormalizedBasic.left.average(1, 9);
+					if( avgLow < 0 ) avgLow = 0;
+					lowAverage = lowAverage * 0.95 + Math.pow( avgLow, 0.9 ) * 0.05;
+					if( lowAverage < 0.2 ) lowAverage = 0.2;
+					
+					var avgDiff = ( avgLow - lowAverage );
+					if( avgDiff > 0 ) {
+						lowTiggerDiff = lowTiggerDiff * 0.95 + ( avgDiff ) * 0.05;
+						if( lowTiggerDiff < 0.05 ) { 
+							lowTiggerDiff = 0.05;
+						}
+						//lowTiggerDiff = 0.5;
+					}
+					
+					var low2 = Math.min( 2, Math.max( 0, ( avgLow - lowAverage  )/(lowTiggerDiff*2) * 10 ) )/20;
+					
+					low -= 0.3 * timeDiff/1000;
+					if( low < 0 ) low = 0;
+					if( low2 > low ) {
+						low = low2;
+					}	
+					
+					
+					lowHistory.push( [avgLow, lowAverage, lowTiggerDiff, avgDiff, low] );
+					if( lowHistory.length > 300 ) lowHistory.shift();
+					
+					if( bassGraph ) {
+						context.strokeStyle = 'white';
+						context.beginPath();
+						context.moveTo( 0, 0 );
+						context.lineTo( 300, 0 );
+						context.moveTo( 0, 100 );
+						context.lineTo( 300, 100 );
+						context.moveTo( 0, 150 );
+						context.lineTo( 300, 150 );
+						context.stroke();
+						for( var i = 0; i < lowHistory.length; i++ )
+						{
+							var d = lowHistory[ i ];
+							var v1 = d[1];
+							var v2 = d[3];
+							context.beginPath();
+							context.strokeStyle = v2 > 0 ? 'green' : 'red';
+							context.moveTo( i, 100 * ( 1 - v1 ) );
+							context.lineTo( i, 100 * ( 1 - (v1 + v2) ) );
+							context.stroke();
+						}
+						context.beginPath();
+						context.strokeStyle = 'blue';
+						context.moveTo( -1, 50 );
+						for( var i = 0; i < lowHistory.length; i++ )
+						{
+							var d = lowHistory[ i ];
+							var v1 = d[4];
+							context.lineTo( i, 150 - 500 * v1 );
+						}
+						context.stroke();
+					}
+				
+			
+					
+					var otx = offsetLinked ? offsetTimeX : offsetTimeX - offsetX;
+					var oty = offsetLinked ? offsetTimeY : offsetTimeY - offsetY;
+					
+					var orx = offsetLinked ? offsetRing2X : offsetRing2X - offsetX;
+					var ory = offsetLinked ? offsetRing2Y : offsetRing2Y - offsetY;
+
+					var col1 = colorClass.getColor( 0 );//'hsl( ' + ([0]*360+v) + ', 100%, 50% )';
+					var col2 = colorClass.getColor( 0.333 );//'hsl( ' + (color2[0]*360+v) + ', 100%, 50% )';
+					var col3 = colorClass.getColor( 0.666 );//'hsl( ' + (color3[0]*360+v) + ', 100%, 50% )';
+			
+					var gradient = context.createRadialGradient(otx, oty, 0, otx, oty, baseRadius*radius3/1);
+					gradient.addColorStop(0, col1);
+					gradient.addColorStop(0.5, col2);
+					gradient.addColorStop(1, col3);
+					/*
+					var gradient2 = context.createRadialGradient(0,0, 0, 0, 0, (width+height)/2);
+					gradient2.addColorStop(0, 'hsl( ' + (v2) + ', 100%, 50%)');
+					for( var i = 1; i <= 1 + (3*1); i++ ){
+						gradient2.addColorStop( i / (1 + (3*1)), 'hsl( ' + (v2+179*i) + ', 100%, 50%)');						
+					}
+					
+					var gradient3 = context.createRadialGradient(0,0, 0, 0, 0, (width+height)/2);
+					gradient3.addColorStop(0, 'hsl( ' + (v2+120) + ', 100%, 50%)');
+					for( var i = 1; i <= 1 + (3*1); i++ ){
+						gradient3.addColorStop( i / (1 + (3*1)), 'hsl( ' + (v2+120+179*i) + ', 100%, 50%)');						
+					}
+					
+					var gradient4 = context.createRadialGradient(0,0, 0, 0, 0, (width+height)/2);
+					gradient4.addColorStop(0, 'hsl( ' + (v2-120) + ', 100%, 50%)');
+					for( var i = 1; i <= 1 + (3*1); i++ ){
+						gradient4.addColorStop( i / (1 + (3*1)), 'hsl( ' + (v2-120+179*i) + ', 100%, 50%)');						
+					}*/
+					var gradient2 =  colorClass.getParticleColor( 0 );//'hsl( ' + colorClass.getHue(0) + ', 100%, 40%)';
+					var gradient3 =  colorClass.getParticleColor( 0.333 );//'hsl( ' + colorClass.getHue(0.333) + ', 100%, 40%)';
+					var gradient4 =  colorClass.getParticleColor( 0.666 );//'hsl( ' + colorClass.getHue(0.666) + ', 100%, 40%)';
+					
+					var layers = 1*detailLevel;
+					var points = [];
+					var points2 = [];
+					var steps = 4;
+					var steps2 = 8;
+					var baseRad = -Math.PI/2;
+					//context.fillStyle = gradient;
+					//context.strokeStyle = gradient;
+					context.lineWidth = 1;
+					//frame2.audioDataResult.left.add( frame2.audioDataResult.right );
+					//frame2.audioDataResult.left.divide(2);
+					var tau = Math.PI * 2;
+					//var frameOffset = frameCount/100;// timestamp / 3500;
+					var frameOffset = timestamp / 2500;
+					var w2 = 0;//width/2;
+					var h2 = 0;//height/2;
+					var particleSpawnLevel = 0.60;
+					var particleSpawnLevelOnBass = 0.095;
+					var nextSpawn = 0;
+					
+					var radius10 = radius1;
+					if( radius10 && scale1 && ( scaleWhenSilent || hasAudioFrame ) ) { 
+						radius10 *= 1 + low;
+					}
+					var radius20 = radius2;
+					if( radius20 && scale2 && ( scaleWhenSilent || hasAudioFrame ) ) { 
+						radius20 *= 1 + low;
+					}
+					
+					var particleDirFactor1 = 0.25 * particlesSpawnSpread;
+					var particleDirFactor2 = 1 - particleDirFactor1;
+					
+					context.save();
+					context.translate( offsetX+width/2, offsetY+height/2 );
+					
+					if( radius10 > 0 ) {
+						for( var i = 0; i < 128; i++ )
+						{
+							var i2 = i < 64 ? i : ( 127 - i );
+							var i3 = i < 64 ? i2 + 1 : i2 - 1;
+							if( i3 > 63  ) i3 = 63;
+							if( i3 < 0 ) i3 = 0;
+							var rad =  i * tau / 128 + baseRad + (tau/256);
+							var v = dt[ i2 ] * heightUse1 * 100;
+							var v2 = dt[i3] * heightUse1 * 100;
+							
+							var v4 = dt[ i2 ];
+							var v5 = dt[ i3 ];
+							var subPoints = [];
+							var spawnParticle = ( (particlesSpawnType1 & 2) != 0 && low > particleSpawnLevelOnBass ) 
+											 || ( (particlesSpawnType1 & 1) != 0 && v4 > particleSpawnLevel );
+							if( particles1 && spawnParticle ) {
+							//if( particles1 && v4 > particleSpawnLevel  ) {
+								var res;
+								for( var z = 0; z < particlesSpawnCnt; z++ ) {
+									switch( particles1 ) {
+										case 1:
+										 	res = rotate2D( -(Math.random()*heightUse1*80*particlesSpawnSpread)-baseRadius*radius10, 0, rad );
+										 	break;
+										case 2:
+										 	res = rotate2D( (Math.random()*heightUse1*80*particlesSpawnSpread)-baseRadius*radius10, 0, rad );
+										 	break;
+										case 3:
+										 	res = rotate2D( (Math.random()*heightUse1*160*particlesSpawnSpread-(heightUse1*160*particlesSpawnSpread/2))-baseRadius*radius10, 0, rad );
+										 	break;
+									}
+									var p123 = particles[(nextSpawn=(nextSpawn+1)%3)].spawnAndAdd();
+									p123.x = 0 + res[ 0 ] + (Math.random()-0.5)*heightUse1*50*particlesSpawnSpread/2;
+									p123.y = 0 + res[ 1 ] + (Math.random()-0.5)*heightUse1*50*particlesSpawnSpread/2;
+									var r2 = 0;
+									switch( particles1 ) {
+										case 1: r2 = Math.PI; break;
+										case 2: r2 = 0; break;
+										case 3: r2 = (Math.random()>0.5?Math.PI:0); break;
+									}
+									p123.dx = p123.dx   * particleDirFactor1 + particleDirFactor2 * Math.cos(rad+r2)* 1;
+									p123.dy = p123.dy   * particleDirFactor1 + particleDirFactor2 * Math.sin(rad+r2)* 1;
+								}
+							}
+							for( var j = 0; j < layers; j++ )
+							{
+								var rad2 = /*( j % 2 == 1 ? 1 : 1 ) **/(j+i) * tau / layers + frameOffset;
+								var shiftFactor = ( shiftWhenSilent || hasAudioFrame ) ? shift1 : 0;
+								var x = Math.sin( rad2 ) * v 
+									  - shiftFactor * heightUse1 * 1500/layers * low * (j-(layers-1)/2);
+								//var z = ( Math.cos( rad2 ) * v + 1 ) + 2;
+								var res = rotate2D( x -  baseRadius*radius10, 0, rad );
+								//x = res[ 0 ];
+								//y = res[ 1 ];
+								//var d = 1/z;
+								//var sx = (x) / (z*d);
+								//var sy = (y) / (z*d);
+								//res[0] = x;
+								//res[1] = y;
+								res[0] += w2;
+								res[1] += h2;
+								//res[0] = Math.round( res[0] );
+								//res[1] = Math.round( res[1] );
+								subPoints.push( res );
+							}
+							 
+							points.push( subPoints );
+							
+							for( var k = 1; k < steps; k++ ) {
+								var perc = k / (steps);
+								rad = (i+perc) * tau / 128 + baseRad + (tau/256);
+								subPoints = [];
+								var v3 = cosInterpolate( v, v2, perc );
+								if( particles1 ) {
+									var v6 = cosInterpolate( v4, v5, perc );
+									var spawnParticle = ( (particlesSpawnType1 & 2) != 0 && low > particleSpawnLevelOnBass ) 
+											 		 || ( (particlesSpawnType1 & 1) != 0 && v6 > particleSpawnLevel );
+									if( spawnParticle ) {
+									//if( v6 > particleSpawnLevel  ) {
+										var res;
+										for( var z = 0; z < particlesSpawnCnt; z++ ) {
+											switch( particles1 ) {
+												case 1:
+												 	res = rotate2D( -(Math.random()*heightUse1*80*particlesSpawnSpread)-baseRadius*radius10, 0, rad );
+												 	break;
+												case 2:
+												 	res = rotate2D( (Math.random()*heightUse1*80*particlesSpawnSpread)-baseRadius*radius10, 0, rad );
+												 	break;
+												case 3:
+												 	res = rotate2D( (Math.random()*heightUse1*160*particlesSpawnSpread-(heightUse1*160*particlesSpawnSpread/2))-baseRadius*radius10, 0, rad );
+												 	break;
+											}
+											var p123 = particles[(nextSpawn=(nextSpawn+1)%3)].spawnAndAdd();
+											p123.x = 0 + res[ 0 ] + (Math.random()-0.5)*heightUse1*50*particlesSpawnSpread/2;
+											p123.y = 0 + res[ 1 ] + (Math.random()-0.5)*heightUse1*50*particlesSpawnSpread/2;
+											var r2 = 0;
+											switch( particles1 ) {
+												case 1: r2 = Math.PI; break;
+												case 2: r2 = 0; break;
+												case 3: r2 = (Math.random()>0.5?Math.PI:0); break;
+											}
+											p123.dx = p123.dx   * particleDirFactor1 + particleDirFactor2 * Math.cos(rad+r2)*1;
+											p123.dy = p123.dy   * particleDirFactor1 + particleDirFactor2 * Math.sin(rad+r2)*1;
+										}
+									}
+								}
+								for( var j = 0; j < layers; j++ )
+								{
+									var rad2 = /*( j % 2 == 1 ? 1 : 1 ) **/ ((j+perc+i)) * tau / layers + frameOffset;
+									var shiftFactor = ( shiftWhenSilent || hasAudioFrame ) ? shift1 : 0;
+									var x = Math.sin( rad2 ) * v3 
+										  - shiftFactor * heightUse1 * 1500/layers * low * (j-(layers-1)/2);
+									//var z = ( Math.cos( rad2 ) * v3 + 1 ) + 2;
+									var res = rotate2D( x -  baseRadius*radius10, 0, rad );
+									//x = res[ 0 ];
+									//y = res[ 1 ];
+									//var d = 1/z;
+									//var sx = (x) / (z*d);
+									//var sy = (y) / (z*d);
+								/*
+									var x = Math.sin( rad2 ) * (v3);
+									var y = ( Math.cos( rad2 ) * (v3) + 1 ) + 2;
+									var d = 1;
+									var sx = (x - height) / (y*d);
+									var sy = (0) / (y*d);
+									var res = rotate2D( sx, sy, rad );*/
+									//res[0] = sx;
+									//res[1] = sy;
+									res[0] += w2;
+									res[1] += h2;
+									//res[0] = Math.round( res[0] );
+									//res[1] = Math.round( res[1] );
+									subPoints.push( res );
+									
+								}
+								points.push( subPoints );
+							}
+							
+							//context.fillRect( i*10, 0, 10, dt[i]*100 );
+						}
+					}
+					if( radius20 > 0 ) {
+						baseRad = Math.PI/2;
+						for( var i = 0; i < 16; i++ )
+						{
+							var i2 = i < 8 ? i : ( 15 - i );
+							var i3 = i < 8 ? i2 + 1 : i2 - 1;
+							if( i3 > 7  ) i3 = 7;
+							if( i3 < 0 ) i3 = 0;
+							var rad =  i * tau / 16 + baseRad + (tau/32);
+							var v = dt[ i2 ] * heightUse2 * 100;
+							var v2 = dt[i3] * heightUse2 * 100;
+							
+							var v4 = dt[ i2 ];
+							var v5 = dt[ i3 ];
+							//v = v * v;
+							//v2 = v2 * v2;
+							var spawnParticle = ( (particlesSpawnType2 & 2) != 0 && low > particleSpawnLevelOnBass ) 
+											 || ( (particlesSpawnType2 & 1) != 0 && v4 > particleSpawnLevel );
+							if( particles2 && spawnParticle ) {
+								//var res = rotate2D( (Math.random()*heightUse2*160-(heightUse2*160/2))-baseRadius*radius20, 0, rad );
+								var res;
+								for( var z = 0; z < particlesSpawnCnt; z++ ) {
+									switch( particles2 ) {
+										case 1:
+										 	res = rotate2D( -(Math.random()*heightUse2*80*particlesSpawnSpread)-baseRadius*radius20, 0, rad );
+										 	break;
+										case 2:
+										 	res = rotate2D( (Math.random()*heightUse2*80*particlesSpawnSpread)-baseRadius*radius20, 0, rad );
+										 	break;
+										case 3:
+										 	res = rotate2D( (Math.random()*heightUse2*160*particlesSpawnSpread-(heightUse2*160*particlesSpawnSpread/2))-baseRadius*radius20, 0, rad );
+										 	break;
+									}
+									var p123 = particles[(nextSpawn=(nextSpawn+1)%3)].spawnAndAdd();
+									p123.x = 0 + res[ 0 ] + (Math.random()-0.5)*heightUse2*50*particlesSpawnSpread*particlesSpawnSpread/2 + orx;
+									p123.y = 0 + res[ 1 ] + (Math.random()-0.5)*heightUse2*50*particlesSpawnSpread/2 + ory;
+									var r2 = 0;
+									switch( particles2 ) {
+										case 1: r2 = Math.PI; break;
+										case 2: r2 = 0; break;
+										case 3: r2 = (Math.random()>0.5?Math.PI:0); break;
+									}
+									p123.dx = p123.dx   * particleDirFactor1 + particleDirFactor2 * Math.cos(rad+r2) * 1;
+									p123.dy = p123.dy   * particleDirFactor1 + particleDirFactor2 * Math.sin(rad+r2) * 1;
+								}
+							}
+							
+							var subPoints = [];
+							for( var j = 0; j < layers; j++ )
+							{
+								var rad2 = ( j % 2 == 1 ? -1 : -1 ) *(j+i) * tau / layers + frameOffset ;
+								
+								var shiftFactor = ( shiftWhenSilent || hasAudioFrame ) ? shift2 : 0;
+								var x = Math.sin( rad2 ) * v 
+									  - shiftFactor * heightUse2 * 1500/layers * low * (j-(layers-1)/2);
+								//var z = ( Math.cos( rad2 ) * v + 1 ) + 2;
+								var res = rotate2D( x -  baseRadius*radius20, 0, rad );
+								//x = res[ 0 ];
+								//y = res[ 1 ];
+								//var d = 1/z;
+								//var sx = (x) / (z*d);
+								//var sy = (y) / (z*d);
+								//res[0] = x;
+								//res[1] = y;
+								res[0] += w2 + orx;
+								res[1] += h2 + ory;
+								subPoints.push( res );
+							}
+							
+							points2.push( subPoints );
+
+							for( var k = 1; k < steps2; k++ ) {
+								var perc = k / (steps2);
+								rad = (i+perc) * tau / 16 + baseRad + (tau/32);
+								subPoints = [];
+								var v3 = cosInterpolate( v, v2, perc );
+								if( particles2 ) {	
+									var v6 = cosInterpolate( v4, v5, perc );
+									var spawnParticle = ( (particlesSpawnType2 & 2) != 0 && low > particleSpawnLevelOnBass ) 
+											 		 || ( (particlesSpawnType2 & 1) != 0 && v6 > particleSpawnLevel );
+									if(  spawnParticle ) {
+										var res;
+										for( var z = 0; z < particlesSpawnCnt; z++ ) {
+											switch( particles2 ) {
+												case 1:
+												 	res = rotate2D( -(Math.random()*heightUse2*80*particlesSpawnSpread)-baseRadius*radius20, 0, rad );
+												 	break;
+												case 2:
+												 	res = rotate2D( (Math.random()*heightUse2*80*particlesSpawnSpread)-baseRadius*radius20, 0, rad );
+												 	break;
+												case 3:
+												 	res = rotate2D( (Math.random()*heightUse2*160*particlesSpawnSpread-(heightUse2*160*particlesSpawnSpread/2))-baseRadius*radius20, 0, rad );
+												 	break;
+											}
+											var p123 = particles[(nextSpawn=(nextSpawn+1)%3)].spawnAndAdd();
+											p123.x = 0 + res[ 0 ] + (Math.random()-0.5)*heightUse2*50*particlesSpawnSpread/2 + orx;
+											p123.y = 0 + res[ 1 ] + (Math.random()-0.5)*heightUse2*50*particlesSpawnSpread/2 + ory;
+											var r2 = 0;
+											switch( particles2 ) {
+												case 1: r2 = Math.PI; break;
+												case 2: r2 = 0; break;
+												case 3: r2 = (Math.random()>0.5?Math.PI:0); break;
+											}
+											p123.dx = p123.dx   * particleDirFactor1 + particleDirFactor2 * Math.cos(rad+r2)* 1;
+											p123.dy = p123.dy   * particleDirFactor1 + particleDirFactor2 * Math.sin(rad+r2)* 1;
+										}
+									}
+								}
+								for( var j = 0; j < layers; j++ )
+								{
+									
+									var rad2 = ( j % 2 == 1 ? -1 : -1 ) *((j+perc+i)) * tau / layers + frameOffset;
+									var shiftFactor = ( shiftWhenSilent || hasAudioFrame ) ? shift2 : 0;
+									var x = Math.sin( rad2 ) * v3 
+										  - shiftFactor * heightUse2 * 1500/layers * low * (j-(layers-1)/2);
+									//var z = ( Math.cos( rad2 ) * v3 + 1 ) + 2;
+									var res = rotate2D( x -  baseRadius*radius20, 0, rad );
+									//x = res[ 0 ];
+									//y = res[ 1 ];
+									//var d = 1/z;
+									//var sx = (x) / (z*d);
+									//var sy = (y) / (z*d);
+									//res[0] = x;
+									//res[1] = y;
+									res[0] += w2 + orx;
+									res[1] += h2 + ory;
+									subPoints.push( res );
+									
+								}
+								points2.push( subPoints );
+							}
+							
+							//context.fillRect( i*10, 0, 10, dt[i]*100 );
+						}
+					}
+     				//context.scale(0.9 + low, 0.9 + low );
+				  	//context.translate(width/2, height/2);	
+					//context.rotate( baseRotation * Math.PI / 180 );
+					//context.translate(-width/2, -height/2);
+					
+					
+					
+					//context.globalCompositeOperation = 'source-over';
+					if( frame2.hasAudio ) {
+						context.fillStyle = gradient2;
+						context.beginPath();
+						particles[0].render( context, timestamp, timeDiff );
+						context.fill();
+						
+						context.fillStyle = gradient3;
+						context.beginPath();
+						particles[1].render( context, timestamp, timeDiff );
+						context.fill();
+						
+						context.fillStyle = gradient4;
+						context.beginPath();
+						particles[2].render( context, timestamp, timeDiff );
+						context.fill();
+					}
+					//context.globalCompositeOperation = 'screen';
+					
+					if( frame2.hasAudio || animateWhenSilent != 2 ) {
+						if( radius10 > 0 ) {
+							for( var j = 0; j < layers; j++ )
+							{
+								//var c = ( ( ++h/5 + (j*360 / layers ) ) % 360 ) ;
+								var col1 = colorClass.getColor( j / layers );//'hsla(  ' + (c)+  ', 100%, 50%, 1 )';
+								context.strokeStyle = col1;
+							
+								context.beginPath();
+								context.moveTo( points[points.length-1][j][0], points[points.length-1][j][1]);
+								for( var i = 0; i < points.length; i+=steps )
+								{
+									for( k = 0; k < steps; k++ ) {
+										//context.quadraticCurveTo(points[i][jIdx][0], points[i][jIdx][1], points[i+1][jIdx][0], points[i+1][jIdx][1]);
+										context.lineTo( points[i + k][j][0], points[i + k][j][1]);
+									}
+							 	}
+								context.stroke();
+							}
+						}
+						
+						if( radius20 > 0 ) {
+							//if( radius10 > 0 ) h-= layers;
+							for( var j = 0; j < layers; j++ )
+							{
+								//var c = ( ( ++h/5 + (j*360 / layers ) ) % 360 ) ;
+								var col1 = colorClass.getColor( j / layers );//'hsla(  ' + (c)+  ', 100%, 50%, 1 )';
+								context.fillStyle = col1;
+								context.strokeStyle = col1;
+							
+								
+								context.beginPath();
+								context.moveTo( points2[points2.length-1][j][0], points2[points2.length-1][j][1]);
+								for( var i = 0; i < points2.length; i+=steps2 )
+								{
+									for( k = 0; k < steps2; k++ ) {
+										//context.quadraticCurveTo(points[i][jIdx][0], points[i][jIdx][1], points[i+1][jIdx][0], points[i+1][jIdx][1]);
+										context.lineTo( points2[i + k][j][0], points2[i + k][j][1]);
+									}
+							 	}
+								context.stroke();
+							}
+						}
+					}
+					
+					//context.stroke();
+					
+					var dt = new Date();
+					context.fillStyle = gradient;
+					context.strokeStyle = gradient;
+					var hour = -Math.PI * 2 * (dt.getHours()%12)/12;
+					var m = -Math.PI * 2 * dt.getMinutes()/60;
+					var s = -Math.PI * 2 * dt.getSeconds()/60;
+					m += s / 60;
+					hour += m / 12;
+					
+					
+					if( radius3 > 0 && ( clockType == 0 || clockType == 3 ) ) {
+						context.lineWidth = 8;
+						context.beginPath();
+						context.moveTo( otx + w2, oty + h2 );
+						context.lineTo( otx + w2 + Math.sin( hour + Math.PI ) * radius3 * baseRadius/2, oty + h2 + Math.cos( hour + Math.PI ) * radius3 * baseRadius/2 );
+						context.stroke();
+						context.lineWidth = 4;
+						context.beginPath();
+						context.moveTo( otx + w2, oty + h2 );
+						context.lineTo( otx + w2 + Math.sin( m + Math.PI ) * radius3 * baseRadius/1, oty + h2 + Math.cos( m + Math.PI ) * radius3 * baseRadius/1 );
+						context.stroke();
+						//context.moveTo( w2, h2 );
+						//context.lineTo( w2 + Math.sin( s ) * height/16, h2 + Math.cos( s ) * height/16 );
+						//context.lineCap="butt";
+						if( clockType == 3 ) {
+							context.lineWidth = 2;
+							for( var i = 0; i < 360; i += 30 )
+							{
+								var sz = i % 90 == 0 ? -0.5 : 0;
+								context.moveTo( otx + w2 + Math.sin( i*Math.PI/180 + Math.PI ) * radius3 * baseRadius*(21+sz)/20, oty + h2 + Math.cos( i*Math.PI/180 + Math.PI ) * radius3 * baseRadius*(21+sz)/20 );
+								context.lineTo( otx + w2 + Math.sin( i*Math.PI/180 + Math.PI ) * radius3 * baseRadius*22/20, oty + h2 + Math.cos( i*Math.PI/180 + Math.PI ) * radius3 * baseRadius*22/20 );
+							}
+							//context.moveTo( w2, h2 );
+							//context.lineTo( w2 + Math.sin( s ) * height/16, h2 + Math.cos( s ) * height/16 );
+							context.stroke();
+						}
+					}
+					
+					context.restore();
+					
+					/** /
+					var f = new AudioFrame();
+					f.audioDataResult.copyFrom( frame2.audioDataResult );
+					f.config.downSample = frame2.config.downSample;
+					frameHistory.unshift( f );
+					for( var i = frameHistory.length-1; i >= 0 ; i-- ) {
+						frameHistory[i].audioDataResult.multiply( 0.90 );
+						frameHistory[i].audioDataResult.smooth( 0.5, -1 );
+						//frameHistory[i].audioDataResult.smooth( 0.25 );
+					}
+					if( frameHistory.length > 0 ) {
+						frameHistory.pop();
+					}
+					/**/
+					
+					if( colorGlow > 0 ) {
+						contextBg.globalCompositeOperation = 'destination-out';
+						contextBg.fillStyle = 'rgba(0,0,0,1)';
+						contextBg.fillRect(0, 0, this.width, this.height);	
+						contextBg.globalCompositeOperation = 'source-over';
+						
+						contextBg.globalCompositeOperation = 'source-over';
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, -1, -1 );
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, 0, -2 );
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, 1, -1 );
+						if( colorGlowStrength == 2 ) contextBg.drawImage( canvas, -2, 0 );
+						if( colorGlowStrength == 1 ) contextBg.drawImage( canvas, 0, 0 );
+						if( colorGlowStrength == 2 ) contextBg.drawImage( canvas, 2, 0 );
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, -1, 1 );
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, 0, 2 );
+						if( colorGlowStrength == 3 ) contextBg.drawImage( canvas, 1, 1 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, -3, -2 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, -3, 0 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, -3, 1 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 3, -2 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 3, 0 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 3, 2 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, -2, -3 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 0, -3 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 2, -3 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, -2, 3 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 0, 3 );
+						if( colorGlowStrength == 4 ) contextBg.drawImage( canvas, 2, 3 );
+					}
+					
+					if( lastEqChange + 5000 > timestamp  ) {
+						frame2.renderEQ( context );
+					}
+					timer.stop('render');
+				}
+				catch( ex )
+				{
+					console.error( 'fail' );
+					var caller_line = ex.stack.split("\n");
+					caller_line = caller_line[1];
+					var index = caller_line.indexOf("at ");
+					var clean = caller_line.slice(index+2, caller_line.length);
+					
+								
+					console.error( clean.replace( /^\s+/g, '' ).replace( /(http|file).+\//g, '' )  + ' ' + ex.message );
+				}
+				var t1 = performance.now();
+				fpsRenderTime += t1 - t0;
+				setTimeout( render, isPaused ? 1000 : 4.1666 );
+			}
+			
+			var hasInit = false; // initialisation is simply triggered by first audioData event
+			function onInit()
+			{
+			}
+			
+			/**
+			 * called on window/screen resize
+			 **/
+			function onResize() {
+				// update width/height
+				width = canvas.width = window.innerWidth;
+				height = canvas.height = window.innerHeight;
+				width = canvasBg.width = window.innerWidth;
+				height = canvasBg.height = window.innerHeight;
+			}
+			
+			/**
+			 * called when new fft data is avabile
+			 *
+			 * @param data Array of 128 floats 
+			 **/
+			function onAudioData( data ) 
+			{
+				if( !hasInit ) {
+					hasInit = true;
+					onInit();
+				}
+				var t0 = performance.now();
+				timer.start('audio update');
+				
+				try {
+					
+					// update data in the 2 frames
+					frame2.update( data );
+					if( !frame2.hasAudio && animateWhenSilent == 1 )
+					{
+						for( var i = 0; i < 64; i++ ) {
+							var p = i / 63;
+							var p2 = t0/(60*1000);
+							var v = Math.sin( 23 * ( p + p2 ) * Math.PI*2 )+1;
+								v += Math.cos( -31 * ( p - p2 ) * Math.PI/3 )/2;
+							v/=2;
+							data[i] = v;
+							data[i+64] = v ;
+						}
+						frame2.update( data, true );
+					}
+				}
+				catch(ex) { 
+					console.error( ex.message );
+				}				
+				hadAudioFrame = true;
+				timer.stop('audio update');
+				var t1 = performance.now();
+				fpsRenderTime += t1 - t0;
+			}
+		
+			/**
+			 * when document has been loaded, do all this stuff...
+			 *   	- setup
+			 * 		- register window resize event
+			 * 		- register audio listener
+			 * 		- set property listeners
+			 * 		- queue first frame fro rendering
+			 **/			
+			var startWp = function() 
+			{
+				setup(); // setup anything not already setup
+								
+				window.addEventListener('resize', onResize ); // in case screen resizes
+				onResize(); // call it to have width and height set correctly
+
+				// hook into wallpaper engins callback functions
+				window.wallpaperPropertyListener = {
+					applyUserProperties: function( p ) 
+					{ 
+						bgSettingsProxy.applyUserProperties( p );
+						if( fnInitSlideshow ) fnInitSlideshow();
+						try {
+							
+							if( p.rotation ) { baseRotation = getSlider( p.rotation.value, -180, 180 ); }
+							if( p.positionX ) {  
+								offsetX = getSlider( p.positionX.value, -3000, 3000 );
+								htmlTime.setPosition( offsetLinked ? offsetX + offsetTimeX : offsetTimeX, offsetLinked ? offsetY + offsetTimeY : offsetTimeY );
+							}  
+							if( p.positionY ) {  
+								offsetY = getSlider( p.positionY.value, -3000, 3000 ); 
+								htmlTime.setPosition( offsetLinked ? offsetX + offsetTimeX : offsetTimeX, offsetLinked ? offsetY + offsetTimeY : offsetTimeY );
+							}  
+							if( p.positionRing2X ) {  
+								offsetRing2X = getSlider( p.positionRing2X.value, -3000, 3000 );
+							}  
+							if( p.positionRing2Y ) {  
+								offsetRing2Y = getSlider( p.positionRing2Y.value, -3000, 3000 ); 
+							}  
+							if( p.positionTimeX ) {  
+								offsetTimeX = getSlider( p.positionTimeX.value, -3000, 3000 );
+								htmlTime.setPosition( offsetLinked ? offsetX + offsetTimeX : offsetTimeX, offsetLinked ? offsetY + offsetTimeY : offsetTimeY );
+							}  
+							if( p.positionTimeY ) {  
+								offsetTimeY = getSlider( p.positionTimeY.value, -3000, 3000 ); 
+								htmlTime.setPosition( offsetLinked ? offsetX + offsetTimeX : offsetTimeX, offsetLinked ? offsetY + offsetTimeY : offsetTimeY );
+							}  
+							if( p.positionLinked ) {
+								offsetLinked = getBool( p.positionLinked.value );
+								htmlTime.setPosition( offsetLinked ? offsetX + offsetTimeX : offsetTimeX, offsetLinked ? offsetY + offsetTimeY : offsetTimeY );
+							}
+							if( p.freqScaleAdjustment ) {  
+								freqScaleAdjustment = getSlider( p.freqScaleAdjustment.value, -100, 100 );
+								
+								if( freqScaleAdjustment < 0 ) {								
+									freqScaleAdjustment = -( 1 + freqScaleAdjustment / -100 );
+								}
+								else if( freqScaleAdjustment == 0 ) {								
+									freqScaleAdjustment = 0;
+								}
+								else {
+									freqScaleAdjustment = ( 1 + freqScaleAdjustment / 100 );
+								}
+								
+							} 
+							if( p.freqScaleAdjustmentAnim ) {  
+								freqScaleAdjustmentAnim = getBool( p.freqScaleAdjustmentAnim.value ); 
+							}
+							
+							if( p.render ) {
+								renderMethod = getSlider( p.render.value, 1, 9 );
+							}
+							
+							if( p.interpolation ) { interpolationSteps = getSlider( p.interpolation.value, 1, 10 );  } 
+							if( p.interpolationBalanced ) { interpolationBalanced = getBool( p.interpolationBalanced.value );  } 
+							
+							if( p.eq1 ) {  frame2.config.eqFreq1 = getSlider( p.eq1.value, 0, 220 ) * 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eq2 ) {  frame2.config.eqFreq2 = getSlider( p.eq2.value, 0, 220 ) * 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eq3 ) {  frame2.config.eqFreq3 = getSlider( p.eq3.value, 0, 220 ) * 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eq1Strength ) {  frame2.config.eqFreq1Strength = getSlider( p.eq1Strength.value, 0, 100 ) / 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eq2Strength ) {  frame2.config.eqFreq2Strength = getSlider( p.eq2Strength.value, 0, 100 ) / 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eq3Strength ) {  frame2.config.eqFreq3Strength = getSlider( p.eq3Strength.value, 0, 100 ) / 100; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eqWidth ) {  frame2.config.eqWidth = getSlider( p.eqWidth.value, 0, 30 ) ; if(initialized) lastEqChange = performance.now(); }  
+							if( p.eqStrength ) {  frame2.config.eqStrength = getSlider( p.eqStrength.value, 0, 100 ) / 100 ; if(initialized) lastEqChange = performance.now(); }  
+							
+							if( p.reverseAudio ) {  frame2.config.reverseFreq = getBool( p.reverseAudio.value ); }  // actually a combo, but this works too
+							if( p.frame2Pow ) {  frame2.config.powerOf = getSlider( p.frame2Pow.value, 0, 100 ); }  // actually a combo, but this works too
+							if( p.frame2ReverseAudio ) {  frame2.config.reverseFreq = getBool( p.frame2ReverseAudio.value ); }  // actually a combo, but this works too
+							if( p.outline ) {  useOutline = getBool( p.outline.value ); }  
+							if( p.radius ) {  radiusFactor = getSlider( p.radius.value, 1, 1000 )/100; }  // actually a combo, but this works too
+							if( p.height1 ) {  
+								var h = getSlider( p.height1.value, 1, 200 )/200; 
+								h -= 0.01; h /= 0.99; h = Math.pow( h, 2 ); h *= 0.99; h += 0.01;
+								height1 = h*2;
+							} 
+							if( p.height2 ) {  
+								var h = getSlider( p.height2.value, 1, 200 )/200; 
+								h -= 0.01; h /= 0.99; h = Math.pow( h, 2 ); h *= 0.99; h += 0.01;
+								height2 = h*2;
+							} 
+							if( p.radius1 ) {  
+								radius1 = getSlider( p.radius1.value, 0, 200 )/100; 
+							} 
+							if( p.radius2 ) {  
+								radius2 = getSlider( p.radius2.value, 0, 200 )/100; 
+							} 
+							if( p.clockSize ) {  
+								radius3 = getSlider( p.clockSize.value, 0, 200 )/100; 
+								htmlTime.setScale( radius3*5);
+							} 
+							if( p.clockType ) {
+								clockType = getSlider( p.clockType.value, -1, 3 ); 
+								switch( clockType ) {
+									case -1:
+										htmlTime.hide();
+										break;
+									case 0:
+										htmlTime.hide();
+										break;
+									case 3:
+										htmlTime.hide();
+										break;
+									case 1:
+										htmlTime.use12h = false;
+										htmlTime.show();
+										break;
+									case 2:
+										htmlTime.use12h = true;
+										htmlTime.show();
+										break;
+								}
+							}
+							if( p.detailLevel ) {  
+								detailLevel = Math.pow(2,(getSlider( p.detailLevel.value, 1, 5 )-1)); 
+							} 
+							if( p.frame2MotionBlurAmount ) {  frame2.config.motionBlurFactor = 1 - getSlider( p.frame2MotionBlurAmount.value, 0, 100 ) / 100;  }
+							
+							if( p.animateWhenSilent ) {  
+								animateWhenSilent = p.animateWhenSilent.value; 
+								if( animateWhenSilent === false ) animateWhenSilent = 0;
+								if( animateWhenSilent === true ) animateWhenSilent = 1;
+							} 
+							if( p.animateWhenSilentHeight ) {  
+								var h = getSlider( p.animateWhenSilentHeight.value, 1, 200 )/200; 
+								h -= 0.01; h /= 0.99; h = Math.pow( h, 2 ); h *= 0.99; h += 0.01;
+								animateWhenSilentHeight = h*2;
+							} 
+							
+							if( p.allowDrawing ) {  allowDrawing = getBool( p.allowDrawing.value ); }  
+
+							//if( p.heightDir ) {  heightDir = getSlider( p.heightDir.value, 1, 3 );  } 
+							if( p.cpuCores ) {  cpuCores = getSlider( p.cpuCores.value, 1, 16 );  } 
+							if( p.cpuPercWarning ) {  cpuWarningAt = getSlider( p.cpuPercWarning.value, 1, 100 );  } 
+							if( p.cpuShowFps ) { 
+								cpuShowFps = getBool( p.cpuShowFps.value ); 
+								fpsElement.style.display = cpuShowFps ? 'block' : 'none';
+							}
+							
+							//if( p.colorGradient ) { colorGradient = getSlider( p.colorGradient.value, 0, 3 ); }
+							///if( p.color1 ) { color1 = getColorAsArray( p.color1.value ); color1 = rgbToHsl( color1[0], color1[1], color1[2], 255 ); }
+							//if( p.color2 ) { color2 = getColorAsArray( p.color2.value ); color2 = rgbToHsl( color2[0], color2[1], color2[2], 255 ); }
+							//if( p.color3 ) { color3 = getColorAsArray( p.color3.value ); color3 = rgbToHsl( color3[0], color3[1], color3[2], 255 ); }
+							if( p.colorsUseCustom ) {
+								if( getBool( p.colorsUseCustom.value ) ) {
+									colorClass = colorC;
+								}
+								else {
+									colorClass = colorHR;
+								}
+							}
+							if( p.colorsUseColorRotation ) { useColorRotation = getBool( p.colorsUseColorRotation.value ); }
+							if( p.colors_r11 ) { var col = getColorAsArray( p.colors_r11.value ); colorC.setColor1( rgbToHsl( col[0], col[1], col[2], 255 ) ); }
+							if( p.colors_r12 ) { var col = getColorAsArray( p.colors_r12.value ); colorC.setColor2( rgbToHsl( col[0], col[1], col[2], 255 ) ); }
+			
+							if( p.bassGraph ) { bassGraph = getBool( p.bassGraph.value ); }
+							
+							if( p.colorGlow ) { 
+								colorGlow = getSlider( p.colorGlow.value, 0, 20 ); 
+								if( colorGlow == 0 ) canvasBg.style.display = 'none';
+								else canvasBg.style.display = 'block';
+								if( colorGlow >=1 ) colorGlow += 1;
+								canvasBg.style.filter = 'blur(' + colorGlow + (colorGlow ? 'px' : '' ) + ')';
+							}
+							if( p.colorGlowStrength ) { 
+								colorGlowStrength = getSlider( p.colorGlowStrength.value, 1, 4 ); 
+							}
+							
+							
+							if( p.scale1 ) {  
+								scale1 = getBool( p.scale1.value ) ? 1 : 0; 
+							}
+							if( p.scale2 ) {  
+								scale2 = getBool( p.scale2.value ) ? 1 : 0; 
+							}
+							if( p.scale_when_silent ) {  
+								scaleWhenSilent = getBool( p.scale_when_silent.value ) ? 1 : 0; 
+							}
+							
+							if( p.shifting1 ) {  
+								shift1 = getBool( p.shifting1.value ) ? 1 : 0; 
+							}
+							if( p.shifting2 ) {  
+								shift2 = getBool( p.shifting2.value ) ? 1 : 0; 
+							}
+							if( p.shifting_when_silent ) {  
+								shiftWhenSilent = getBool( p.shifting_when_silent.value ) ? 1 : 0; 
+							}
+							
+							if( p.particles1 ) {  
+								var v = ( p.particles1.value );
+								if( v === false || v === 0 ) particles1 = 0;
+								if( v === true || v == 3 ) particles1 = 3;
+								else particles1 = v;
+							}
+							if( p.particles2 ) {  
+								var v = ( p.particles2.value );
+								if( v === false || v === 0 ) particles2 = 0;
+								if( v === true || v == 3 ) particles2 = 3;
+								else particles2 = v;
+							}
+							if( p.particlesMax ) {
+								var m = Math.ceil( getSlider( p.particlesMax.value, 10, 50000 ) / 3 );
+								particles[0].setMaxParticles( m );
+								particles[1].setMaxParticles( m );
+								particles[2].setMaxParticles( m );
+							}
+							if( p.particlesSpawnCnt ) {
+								particlesSpawnCnt = getSlider( p.particlesSpawnCnt.value, 1, 10 );
+							}
+							if( p.particlesSpawnSize ) {
+								particlesSpawnSize = getSlider( p.particlesSpawnSize.value, 1, 10 )-1;
+								particlesSpawnSize2 = particlesSpawnSize * 2;
+							}
+							if( p.particlesLifetime ) {
+								particlesLifetime = 5 /(21-getSlider( p.particlesLifetime.value, 1, 20 ));
+							}
+							if( p.particlesSpeed ) {
+								particlesSpeed = (21 - getSlider( p.particlesSpeed.value, 1, 20 ))*2;
+							}
+							if( p.particlesSpawnSpread ) {
+								particlesSpawnSpread = getSlider( p.particlesSpawnSpread.value, 0, 100 ) / 100;
+							}
+							if( p.particlesSpawnType1 ) {
+								particlesSpawnType1 = p.particlesSpawnType1.value;
+							}
+							if( p.particlesSpawnType2 ) {
+								particlesSpawnType2 = p.particlesSpawnType2.value;
+							}
+						}
+						catch( ex ) { console.log( ex.message ); }
+					},
+					applyGeneralProperties: function( p ) 
+					{
+						if( p.fps ) { targetFramerate = p.fps; }
+					},
+					setPaused: function( p ) 
+					{ 
+						//console.log( 'setPaused' );
+						isPaused = p ;
+						bgSettingsProxy.setPaused( p );
+					},
+				    userDirectoryFilesAddedOrChanged: function( propertyName, changedFiles ) 
+				    {
+						//console.log( 'userDirectoryFilesAddedOrChanged' );
+				    	bgSettingsProxy.userDirectoryFilesAddedOrChanged( propertyName, changedFiles );
+				    },
+				    userDirectoryFilesRemoved: function(propertyName, removedFiles) 
+				    {
+						//console.log( 'userDirectoryFilesRemoved' );
+				    	bgSettingsProxy.userDirectoryFilesRemoved( propertyName, removedFiles );
+				    }
+				};
+				
+				// register our own audio event
+				if( window.wallpaperRegisterAudioListener ) {
+					window.wallpaperRegisterAudioListener( onAudioData );
+				}
+				else {
+					console.error( 'can\'t register audio listener' );
+				}
+				
+				// start render loop by requesting first frame
+				window.requestAnimationFrame( render );
+			}
+			
+			startWp();
+		</script>
+	</body>
+</html>

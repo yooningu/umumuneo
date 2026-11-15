@@ -3,7 +3,7 @@
 // 시작/정리할 수 있도록 함수로 감쌈. 로직/수치는 원본과 동일함.
 import type { CONFIG as LoginGalaxyConfig } from './LoginBackground';
 
-export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGalaxyConfig): () => void {
+export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGalaxyConfig, isMobile: boolean): () => void {
   const ctx = canvas.getContext('2d', { alpha: false })!;
 
   let w = 1, h = 1, dpr = 1;
@@ -12,16 +12,19 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
   let nodes: any[] = [], packets: any[] = [], terminals: any[] = [], glitches: any[] = [], sparks: any[] = [];
   let nextTerminalAt = 0, nextGlitchAt = 0, nextPacketAt = 0;
   let stopped = false;
+  let bgGradient: CanvasGradient | null = null; // resize 때만 다시 만들고, 매 프레임 재생성하지 않음
 
   const P = CONFIG.program;
+  // 모바일은 네트워크/터미널/글리치 양만 줄여서 가볍게 함 (디자인 자체는 그대로, 밀도만 다름)
+  const mobileDensityScale = isMobile ? 0.55 : 1;
   const opts = {
     background: CONFIG.background.color,
     primary: P.color,
     accent: P.alertColor,
     activity: P.activity,
-    networkDensity: P.networkDensity,
-    terminalAmount: P.terminalAmount,
-    glitchAmount: P.glitchAmount,
+    networkDensity: Math.round(P.networkDensity * mobileDensityScale),
+    terminalAmount: Math.round(P.terminalAmount * mobileDensityScale),
+    glitchAmount: Math.round(P.glitchAmount * mobileDensityScale),
     mouseReaction: P.mouseReaction,
     fps: P.fps,
     bootSequence: P.bootText
@@ -117,6 +120,13 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     mouseX = w * .5; mouseY = h * .5;
     buildNetwork();
+
+    // 배경 글로우 그라디언트는 w/h에만 의존하므로 리사이즈될 때만 다시 만듦 (매 프레임 생성 X).
+    // 부팅 연출(bootFactor)로 서서히 밝아지는 부분은 그리는 쪽에서 globalAlpha로 처리함
+    bgGradient = ctx.createRadialGradient(w * .53, h * .47, 0, w * .53, h * .47, Math.max(w, h) * .68);
+    bgGradient.addColorStop(0, rgba(opts.primary, .028));
+    bgGradient.addColorStop(.45, rgba(opts.primary, .010));
+    bgGradient.addColorStop(1, 'rgba(0,0,0,0)');
   }
 
   function buildNetwork() {
@@ -243,12 +253,10 @@ export function initLoginScene(canvas: HTMLCanvasElement, CONFIG: typeof LoginGa
     ctx.fillRect(0, 0, w, h);
 
     const bf = bootFactor();
-    const glow = ctx.createRadialGradient(w * .53, h * .47, 0, w * .53, h * .47, Math.max(w, h) * .68);
-    glow.addColorStop(0, rgba(opts.primary, .028 * bf));
-    glow.addColorStop(.45, rgba(opts.primary, .010 * bf));
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
+    ctx.fillStyle = bgGradient!;
+    ctx.globalAlpha = bf;
     ctx.fillRect(0, 0, w, h);
+    ctx.globalAlpha = 1;
   }
 
   function nodeScreen(n: any) {

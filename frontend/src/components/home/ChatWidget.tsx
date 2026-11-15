@@ -10,6 +10,7 @@ import AttachMenu from '../common/AttachMenu';
 import NasFilePickerModal from '../common/NasFilePickerModal';
 import NasThumbnail from '../nas/NasThumbnail';
 import type { FileItem } from '../../types';
+import { pickChatPlaceholder } from '../../utils/chatPlaceholder';
 import styles from './ChatWidget.module.css';
 import { RiMic2Fill } from "react-icons/ri";
 import { FaChevronRight, FaStop } from "react-icons/fa6";
@@ -76,6 +77,7 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null);
   const secretMode = true; // 홈 화면 챗봇은 항상 시크릿 모드 - 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
+  const [placeholder] = useState(pickChatPlaceholder); // 시간대별 안내 문구 - 마운트 시 한 번만 고름
   const [alertMessage, setAlertMessage] = useState<string | null>(null); // window.alert() 대신 쓰는 토스트 알림 문구
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -443,7 +445,7 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
         {loadingHistory ? (
           <div className={styles.empty}>대화 불러오는 중...</div>
         ) : messages.length === 0 && (
-          <div className={styles.empty}>일정을 추가하거나 질문해보세요</div>
+          <div className={styles.empty}>{placeholder}</div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant}`}>

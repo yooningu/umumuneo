@@ -10,6 +10,7 @@ import AttachMenu from '../common/AttachMenu';
 import NasFilePickerModal from '../common/NasFilePickerModal';
 import NasThumbnail from '../nas/NasThumbnail';
 import type { FileItem } from '../../types';
+import { pickChatPlaceholder } from '../../utils/chatPlaceholder';
 import styles from './ChatPanel.module.css';
 import { RiMic2Fill } from "react-icons/ri";
 import { FaChevronRight, FaStop } from "react-icons/fa6";
@@ -79,6 +80,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null);
   const [secretMode, setSecretMode] = useState(false); // 켜져있으면 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
+  const [placeholder] = useState(pickChatPlaceholder); // 시간대별 안내 문구 - 마운트 시 한 번만 고름
   const [alertMessage, setAlertMessage] = useState<string | null>(null); // window.alert() 대신 쓰는 토스트 알림 문구
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -476,7 +478,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
             <div className={styles.empty}>대화 불러오는 중...</div>
           ) : messages.length === 0 && (
             <div className={styles.empty}>
-              {secretMode ? '시크릿 대화를 시작해보세요' : '일정을 추가하거나 질문해보세요'}
+              {secretMode ? '시크릿 대화를 시작해보세요' : placeholder}
             </div>
           )}
           {messages.map((m, i) => (
@@ -568,7 +570,7 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
             onPaste={onPasteInput}
-            placeholder="메시지 입력... (이미지 Ctrl+V 가능)"
+            placeholder="어떤 도움을 드릴까요?"
             className={styles.input}
           />
           {loading ? (

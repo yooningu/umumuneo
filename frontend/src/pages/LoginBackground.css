@@ -28,13 +28,28 @@
   font-family: Consolas, "Courier New", monospace;
 }
 
-/* aaa 배경 캔버스 */
-.loginBg #scene {
+/* 배경 캔버스 (아래: 별자리 네트워크 효과, 위: 반투명 오로라 파도) */
+.loginBg #scene,
+.loginBg #liquid {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.loginBg #liquid {
+  pointer-events: none;
+}
+
+/* WebGPU로 그리는 구 (loginSphereGpuEffect.ts) - 화면 전체 크기 캔버스 (커졌다 작아지는 인트로가
+   잘리지 않도록), 좌표 보정으로 .stage 자리에 그려짐. 지원되면 DOM 구(.sphere) 위에 덮어서 보여줌 */
+.loginBg .sphere-gpu {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .loginBg #scanlines {
@@ -60,7 +75,7 @@
 /* 구 영역 (화면 중앙에서 --offset-y만큼 위) */
 .loginBg .stage {
   position: absolute;
-  top: calc(60%);
+  top: calc(55%);
   left: 50%;
   width: var(--stage-size);
   height: var(--stage-size);
@@ -88,6 +103,9 @@
   width: 0;
   height: 0;
   transform: scale3d(var(--intro-scale, 3), var(--intro-scale, 3), var(--intro-scale, 3));
+  /* 별 수백 개가 중첩된 3D 서브트리를 미리 GPU 레이어로 승격해둬서, 스케일 트랜지션 중
+     매 프레임 다시 계산/합성하지 않고 레이어 자체만 확대/축소하게 함 (랙 완화 시도) */
+  will-change: transform;
 }
 
 .loginBg .stage.show .sphere {
@@ -102,6 +120,7 @@
   height: 0;
   animation: loginBgRotation var(--rotate-time, 15s) linear infinite;
 }
+
 
 .loginBg .star::before,
 .loginBg .star::after {
@@ -149,7 +168,7 @@
 /* 상단 글자 (값은 loginGalaxyConfig.ts의 title) */
 .loginBg .title {
   position: absolute;
-  top: var(--title-top, 8%);
+  top: var(--title-top, 12%);
   left: 0;
   right: 0;
   z-index: 10;
@@ -157,7 +176,7 @@
   color: var(--title-color, #fff);
   font-family: "EllisDigitalCoding", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: var(--title-size, 36px);
-  font-weight: var(--title-weight, 300);
+  font-weight: var(--title-weight, var(--font-weight-light));
   letter-spacing: var(--title-spacing, 6px);
   text-shadow: 0 0 18px var(--title-glow, transparent);
   pointer-events: none;
@@ -174,15 +193,15 @@
 /* 제목 아래 작은 설명 글 (값은 loginGalaxyConfig.ts의 title.subtitle*) */
 .loginBg .subtitle {
   position: absolute;
-  top: calc(var(--title-top, 8%) + 48px);
+  top: calc(var(--title-top, 12%) + 72px);
   left: 0;
   right: 0;
   z-index: 10;
   text-align: center;
   color: var(--subtitle-color, #cbd5e1);
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-size: var(--subtitle-size, 14px);
-  font-weight: var(--subtitle-weight, 400);
+  font-size: var(--subtitle-size, var(--font-l));
+  font-weight: var(--subtitle-weight, var(--font-weight-regular));
   letter-spacing: var(--subtitle-spacing, 1px);
   pointer-events: none;
   opacity: 0;

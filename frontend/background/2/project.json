@@ -1,0 +1,209 @@
+{
+	"contentrating" : "Everyone",
+	"description" : "Ultra smooth 8K procedural wave gradient wallpaper with customizable colors, presets, and fluid motion controls.",
+	"file" : "index.html",
+	"general" : 
+	{
+		"properties" : 
+		{
+			"backgroundColor" : 
+			{
+				"index" : 4,
+				"order" : 104,
+				"text" : "Background Color",
+				"type" : "color",
+				"value" : "0 0 0"
+			},
+			"colorPreset" : 
+			{
+				"index" : 0,
+				"options" : 
+				[
+					{
+						"label" : "Emerald Glow (Default)",
+						"value" : "emerald_glow"
+					},
+					{
+						"label" : "Cyberpunk Neon",
+						"value" : "cyberpunk"
+					},
+					{
+						"label" : "Sunset Gold & Fire",
+						"value" : "sunset"
+					},
+					{
+						"label" : "Deep Ocean Blue",
+						"value" : "ocean"
+					},
+					{
+						"label" : "Obsidian & Silver",
+						"value" : "obsidian"
+					},
+					{
+						"label" : "Amethyst Purple",
+						"value" : "amethyst"
+					},
+					{
+						"label" : "Crimson Blood",
+						"value" : "crimson"
+					}
+				],
+				"order" : 100,
+				"text" : "Color Presets",
+				"type" : "combo",
+				"value" : "emerald_glow"
+			},
+			"flowDirection" : 
+			{
+				"index" : 12,
+				"options" : 
+				[
+					{
+						"label" : "Up",
+						"value" : "up"
+					},
+					{
+						"label" : "Down",
+						"value" : "down"
+					},
+					{
+						"label" : "Left",
+						"value" : "left"
+					},
+					{
+						"label" : "Right",
+						"value" : "right"
+					}
+				],
+				"order" : 112,
+				"text" : "Flow Direction",
+				"type" : "combo",
+				"value" : "up"
+			},
+			"glow" : 
+			{
+				"index" : 9,
+				"max" : 6,
+				"min" : 0.5,
+				"order" : 109,
+				"step" : 0.1,
+				"text" : "Glow Intensity",
+				"type" : "slider",
+				"value" : 2.9
+			},
+			"mouseInteraction" : 
+			{
+				"index" : 13,
+				"order" : 113,
+				"text" : "Mouse Interaction",
+				"type" : "bool",
+				"value" : true
+			},
+			"rimWidth" : 
+			{
+				"index" : 11,
+				"max" : 0.35,
+				"min" : 0.05,
+				"order" : 111,
+				"step" : 0.01,
+				"text" : "Rim Width",
+				"type" : "slider",
+				"value" : 0.16
+			},
+			"scale" : 
+			{
+				"index" : 6,
+				"max" : 8,
+				"min" : 1,
+				"order" : 106,
+				"step" : 0.1,
+				"text" : "Wave Scale",
+				"type" : "slider",
+				"value" : 4
+			},
+			"schemecolor" : 
+			{
+				"order" : 0,
+				"text" : "UI Accent",
+				"type" : "color",
+				"value" : "0.431 0.906 0.718"
+			},
+			"sharpness" : 
+			{
+				"index" : 10,
+				"max" : 5,
+				"min" : 1,
+				"order" : 110,
+				"step" : 0.1,
+				"text" : "Edge Sharpness",
+				"type" : "slider",
+				"value" : 2.7
+			},
+			"speed" : 
+			{
+				"index" : 5,
+				"max" : 0.25,
+				"min" : 0.01,
+				"order" : 105,
+				"step" : 0.005,
+				"text" : "Animation Speed",
+				"type" : "slider",
+				"value" : 0.06
+			},
+			"stretch" : 
+			{
+				"index" : 7,
+				"max" : 3.5,
+				"min" : 0.5,
+				"order" : 107,
+				"step" : 0.1,
+				"text" : "Horizontal Stretch",
+				"type" : "slider",
+				"value" : 1.5
+			},
+			"turbulence" : 
+			{
+				"index" : 8,
+				"max" : 3,
+				"min" : 0,
+				"order" : 108,
+				"step" : 0.05,
+				"text" : "Turbulence",
+				"type" : "slider",
+				"value" : 1.2
+			},
+			"waveColor1" : 
+			{
+				"index" : 1,
+				"order" : 101,
+				"text" : "Color 1 (Wave Top)",
+				"type" : "color",
+				"value" : "0.431 0.906 0.718"
+			},
+			"waveColor2" : 
+			{
+				"index" : 2,
+				"order" : 102,
+				"text" : "Color 2 (Wave Body)",
+				"type" : "color",
+				"value" : "0.204 0.827 0.600"
+			},
+			"waveColor3" : 
+			{
+				"index" : 3,
+				"order" : 103,
+				"text" : "Color 3 (Wave Deep Accent)",
+				"type" : "color",
+				"value" : "0.020 0.588 0.412"
+			}
+		}
+	},
+	"preview" : "preview.gif",
+	"ratingsex" : "none",
+	"ratingviolence" : "none",
+	"tags" : [ "Abstract" ],
+	"title" : "wave void 8k - champagneluv",
+	"type" : "web",
+	"version" : 1,
+	"visibility" : "public"
+}

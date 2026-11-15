@@ -4,7 +4,26 @@
 // (관련 id를 가진 .stage/.galaxy/.shape/#scanlines/#vignette/.title 엘리먼트가 이미 DOM에 있어야 함)
 import type { CONFIG as LoginGalaxyConfig } from './LoginBackground';
 
-export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
+// 부제 타이핑 효과에서 한글 음절을 자음→모음→받침 순서로 조합되는 것처럼 보여주기 위한 분해 테이블
+const CHOSEONG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+const HANGUL_BASE = 0xac00, HANGUL_LAST = 0xd7a3;
+
+// 완성된 한글 음절 한 글자를 "초성만" → "초성+중성" → (받침 있으면) "초성+중성+받침" 프레임으로 쪼갬.
+// 한글이 아니면(공백, 숫자, 영문 등) 그 글자 그대로 한 프레임만 돌려줌
+function decomposeHangulChar(ch: string): string[] {
+  const code = ch.codePointAt(0) ?? 0;
+  if (code < HANGUL_BASE || code > HANGUL_LAST) return [ch];
+  const sIndex = code - HANGUL_BASE;
+  const cho = Math.floor(sIndex / (21 * 28));
+  const jung = Math.floor((sIndex % (21 * 28)) / 28);
+  const jong = sIndex % 28;
+  const compose = (j: number) => String.fromCharCode(HANGUL_BASE + (cho * 21 + jung) * 28 + j);
+  const frames = [CHOSEONG[cho], compose(0)];
+  if (jong > 0) frames.push(compose(jong));
+  return frames;
+}
+
+export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig, isMobile: boolean): () => void {
   let cancelled = false;
   let raf = 0;
 
@@ -33,11 +52,74 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
     titleEl.style.display = 'none';
   }
 
-  // 제목 아래 작은 설명 글
+  // 제목 아래 작은 설명 글 - 여러 개면 타이핑하듯 한 글자씩 쳐서 보여주고, 잠깐 멈췄다가
+  // 한 글자씩 지운 뒤 다음 문구를 타이핑함 (subtitleTimer 하나에 항상 "다음 예약된 스텝"만 들어있어서
+  // cleanup에서 그 하나만 지워도 체인 전체가 멈춤)
   const subtitleEl = document.getElementById('subtitle');
+  let subtitleTimer = 0;
   if (subtitleEl) {
-    if (TITLE && TITLE.enabled && TITLE.subtitle) {
-      subtitleEl.textContent = TITLE.subtitle;
+    const subtitles = TITLE?.subtitles ?? [];
+    if (TITLE && TITLE.enabled && subtitles.length > 0) {
+      const STEP_MS = 35;   // 한글 조합 프레임(자음→모음→받침) 하나 넘어가는 데 걸리는 시간
+      const ERASE_MS = 25;  // 한 글자 지우는 데 걸리는 시간
+      const HOLD_MS = TITLE.subtitleRotateMs ?? 2000; // 다 타이핑된 뒤 멈춰있는 시간
+      let subtitleIndex = 0;
+
+      // 한글 자음/모음이 조합되는 느낌이 나도록, 완성된 글자는 그대로 두고 지금 타이핑 중인
+      // 한 글자만 초성 → 초성+중성 → (받침 있으면) 완성형 순서로 바꿔가며 보여줌
+      function typeText(text: string, done: () => void) {
+        const chars = Array.from(text);
+        let charIndex = 0;
+        let completed = '';
+
+        const nextChar = () => {
+          if (charIndex >= chars.length) { done(); return; }
+          const frames = decomposeHangulChar(chars[charIndex]);
+          let frameIndex = 0;
+          const stepFrame = () => {
+            subtitleEl!.textContent = completed + frames[frameIndex];
+            if (frameIndex < frames.length - 1) {
+              frameIndex++;
+              subtitleTimer = window.setTimeout(stepFrame, STEP_MS);
+            } else {
+              completed += frames[frameIndex];
+              charIndex++;
+              subtitleTimer = window.setTimeout(nextChar, STEP_MS);
+            }
+          };
+          stepFrame();
+        };
+        nextChar();
+      }
+
+      function eraseText(done: () => void) {
+        const current = subtitleEl!.textContent ?? '';
+        let i = current.length;
+        const step = () => {
+          subtitleEl!.textContent = current.slice(0, i);
+          i--;
+          if (i >= 0) {
+            subtitleTimer = window.setTimeout(step, ERASE_MS);
+          } else {
+            done();
+          }
+        };
+        step();
+      }
+
+      function showNext() {
+        typeText(subtitles[subtitleIndex], () => {
+          if (subtitles.length <= 1) return;
+          subtitleTimer = window.setTimeout(() => {
+            eraseText(() => {
+              subtitleIndex = (subtitleIndex + 1) % subtitles.length;
+              showNext();
+            });
+          }, HOLD_MS);
+        });
+      }
+
+      showNext();
     } else {
       subtitleEl.style.display = 'none';
     }
@@ -45,22 +127,31 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
 
   function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
 
-  // .stage 영역 안에 점들을 구 형태로 배치 (반지름은 구 영역 크기에 비례)
-  const galaxy = document.getElementById('galaxy')!;
-  const R_MIN = SPHERE.size * SPHERE.radius[0], R_MAX = SPHERE.size * SPHERE.radius[1];
+  // cleanup에서 지우기 위해 바깥 스코프에 참조를 들고 있음 (SPA 내부 라우팅으로 로그인 화면에
+  // 여러 번 들어올 때 이전에 만든 별/아이콘 DOM이 안 지워지고 계속 쌓이는 걸 막기 위함)
+  let galaxyEl: HTMLElement | null = null;
+  let glowEl: HTMLElement | null = null;
 
-  for (let i = 0; i < SPHERE.starCount; i++) {
-    const star = document.createElement('div');
-    star.className = 'star';
-    const size = rand(SPHERE.starSize[0], SPHERE.starSize[1]);
-    star.style.setProperty('--size', size + 'px');
-    star.style.setProperty('--shadow', `0 0 ${rand(1, 5)}px ${rand(0, 1.5)}px ${SPHERE.glowColor}`);
-    star.style.setProperty('--transform',
-      `rotate3d(1, 0, 0, ${rand(0, 360)}deg) ` +
-      `rotate3d(0, 1, 0, ${rand(0, 360)}deg) ` +
-      `rotate3d(0, 0, 1, ${rand(0, 360)}deg) ` +
-      `translate3d(0, 0, ${rand(R_MIN, R_MAX)}px)`);
-    galaxy.appendChild(star);
+  // .stage 영역 안에 점들을 구 형태로 배치 (반지름은 구 영역 크기에 비례)
+  // 모바일은 구 자체를 비활성화함 - DOM에 .sphere/.galaxy가 없으므로(LoginBackground.tsx 참고)
+  // 별 수백 개를 만들고 배치하는 계산 자체를 건너뛰어 자원을 아낌 (단순히 안 보이게 가리는 게 아님)
+  if (!isMobile) {
+    galaxyEl = document.getElementById('galaxy')!;
+    const R_MIN = SPHERE.size * SPHERE.radius[0], R_MAX = SPHERE.size * SPHERE.radius[1];
+
+    for (let i = 0; i < SPHERE.starCount; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = rand(SPHERE.starSize[0], SPHERE.starSize[1]);
+      star.style.setProperty('--size', size + 'px');
+      star.style.setProperty('--shadow', `0 0 ${rand(1, 5)}px ${rand(0, 1.5)}px ${SPHERE.glowColor}`);
+      star.style.setProperty('--transform',
+        `rotate3d(1, 0, 0, ${rand(0, 360)}deg) ` +
+        `rotate3d(0, 1, 0, ${rand(0, 360)}deg) ` +
+        `rotate3d(0, 0, 1, ${rand(0, 360)}deg) ` +
+        `translate3d(0, 0, ${rand(R_MIN, R_MAX)}px)`);
+      galaxyEl.appendChild(star);
+    }
   }
 
   // ── 아이콘: 화면 전체에 흩어져 있던 별들이 모여서 모양을 만들고 멈춤 ──
@@ -213,7 +304,7 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
   // 아이콘 뒤 은은한 빛 (캔버스보다 먼저 넣어서 별 뒤에 깔림)
   const BACK_GLOW = ICON.backGlow;
   if (BACK_GLOW && BACK_GLOW.enabled) {
-    const glowEl = document.createElement('div');
+    glowEl = document.createElement('div');
     glowEl.className = 'icon-glow';
     glowEl.style.setProperty('--glow-size', SHAPE_W * SHAPE_SCALE * BACK_GLOW.size + 'px');
     glowEl.style.setProperty('--glow-color', BACK_GLOW.color);
@@ -396,7 +487,13 @@ export function initLoginGalaxy(CONFIG: typeof LoginGalaxyConfig): () => void {
   return function cleanup() {
     cancelled = true;
     if (raf) cancelAnimationFrame(raf);
+    if (subtitleTimer) clearTimeout(subtitleTimer);
     window.removeEventListener('resize', onResize);
+    // 이 effect가 만든 DOM(별들/아이콘 글로우/아이콘 캔버스)을 정리 - SPA 내부 라우팅으로
+    // 로그인 화면을 반복해서 마운트/언마운트할 때 쌓이지 않도록 함
+    galaxyEl?.replaceChildren();
+    glowEl?.remove();
+    canvasEl.remove();
     rootStyle.removeProperty('--bg');
     rootStyle.removeProperty('--stage-size');
     rootStyle.removeProperty('--offset-y');

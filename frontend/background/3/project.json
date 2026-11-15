@@ -1,0 +1,992 @@
+{
+	"approved" : true,
+	"contentrating" : "Everyone",
+	"description" : "Colorful rings reacting to audio.\n\n[h1]Options[/h1]\n[list]\n[*]2 rings, one with all frequencies, 1 with just low frequencies. Either can be turned off by reducing radius to 0.\n[*]Clock options \n[*]Background Image & Slideshow\n[*]Glowing\n[/list]\n\n\n[h1]Tips[/h1]\n[list]\n[*]Adjust CPU core count for a more accurate cpu usage estimate. ( though it does remain just an estimate )\n[*]Turn on glowing for a more vibrant wallpaper. Off by default to lower default cpu usage.\n[/list]\n\nYin Yang image used in one example: http://imgur.com/mr9Er\n\nSettings for the example with the center \"flower\": \n- I just decreased \"radius 2\" to close to 2, \n- and raised height and height 2 to nearly max. \n\n[h1]Wishlist[/h1]\n[list]\n[*] display date\n[*] move screen/background on bass like this example https://www.youtube.com/watch?v=6oHz4MHXLSU \n[/list]\n\n[h1]Updates[/h1]\n[list]\n[*]Added 3 different additional effects. As I ended up just constantly tweaking I decided to put them up for public scrutiny and get some feedback :) Still have some settings planned but also need to see if I can improve the \"bass\" responsive ones. \n[*]Line Shifting effect. Based on bass volume it will split the lines apart.\n[*]Scale effect. Based on bass volume it will enlarge the circle\n[*]Particle effects. Just spawns some colorful particles based on where there is a peak. \n[*][i]Will try to focus on color customization next while I get some feedback on this[/i]\n[/list]\n[list]\n[*]Added basic custom color option starting with 2 colors. Will be adding more color options later\n[*]I added in a debug graph that I was using for some tweaking in case someone is curious why the bass behaves like it does. This way I don't have to comment in the code anymore either.. \n[*]Tweak bass response a bit more. Seems to work better with some rougher or faster things now. \n[/list]\n[list]\n[*]Particles can now go only outward, only inward or both.\n[*]Can lower the randomness of particles aligning them.\n[*]Can reposition time and ring 2 ( bass ). Main positioning will be used for inner/first/all frequency ring.\n[/list]\n[list]\n[*]Added way to hide rings. As a result the \"Animate when Silent\" options is renamed to \"When Silent\". Your old settings should be preserved.\n[*]Added analog clock version with hour markers.\n[*]Added Reverse frequency range option\n[/list]\n[list]\n[*]Unlocked framerate when visuals could benefit from them. Those are bass effects, particles and slideshow transitions.\n[*]Fixed 2 bugs in the slideshow code\n[*]Added options to enable/disable individual slideshow transitions.\n[/list]\n[list]\n[*]Fixed bug of wallpaper not starting if background image was missing.\n[/list]\n[list]\n[*]Fixed bug where black lines/rings would be drawn if you selected \"hide rings \" for the \"when silent\" setting as well as not an analog clock.\n[/list]\n[list]\n[*]Updated background settings to include video\n[*]Line shifting & scale can now be enabled/disabled when there is no audio. Default is set to off.\n[*]Particle spawn options added to spawn on peaks or bass detection\n[*]Increased maximum particles settings to facilitate the large amount of particles that can be spawned when particles are spawned on bass. \n[*]Show FPS option included to help tweak performance when using particles.\n[/list]",
+	"file" : "index.html",
+	"general" : 
+	{
+		"properties" : 
+		{
+			"animateWhenSilent" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "Animate",
+						"value" : true
+					},
+					{
+						"label" : "Do Nothing",
+						"value" : false
+					},
+					{
+						"label" : "Hide Rings",
+						"value" : 2
+					}
+				],
+				"order" : 24,
+				"text" : "When Silent",
+				"type" : "combo",
+				"value" : true
+			},
+			"animateWhenSilentHeight" : 
+			{
+				"max" : 200,
+				"min" : 1,
+				"order" : 25,
+				"text" : "Animate when Silent Height (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"background" : 
+			{
+				"order" : 60,
+				"text" : "<h4>Background</h4>",
+				"type" : "text"
+			},
+			"backgroundColor" : 
+			{
+				"order" : 61,
+				"text" : "Background Color",
+				"type" : "color",
+				"value" : "0 0 0"
+			},
+			"backgroundImage" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'image'",
+				"order" : 64.5,
+				"text" : "Background Image",
+				"type" : "file",
+				"value" : ""
+			},
+			"backgroundOpacity" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 62,
+				"text" : "Background Image Opacity (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"backgroundSize" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "Cover",
+						"value" : "cover"
+					},
+					{
+						"label" : "Fit",
+						"value" : "contain"
+					}
+				],
+				"order" : 62.5,
+				"text" : "Background Size",
+				"type" : "combo",
+				"value" : "cover"
+			},
+			"backgroundSource" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "[Select One]",
+						"value" : ""
+					},
+					{
+						"label" : "Single Image",
+						"value" : "image"
+					},
+					{
+						"label" : "Single Video",
+						"value" : "video"
+					},
+					{
+						"label" : "Slideshow",
+						"value" : "slideshow"
+					}
+				],
+				"order" : 64,
+				"text" : "Background Source",
+				"type" : "combo",
+				"value" : ""
+			},
+			"backgroundV" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'video'",
+				"order" : 65,
+				"text" : "<h4>Background Video<br><small>- Must be webm format.<br>- CPU usage will increase depending on video quality. This increase is not included in the wallpapers estimates.</small></h4>",
+				"type" : "text"
+			},
+			"backgroundVideo" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'video'",
+				"fileType" : "video",
+				"order" : 66,
+				"text" : "Background Video",
+				"type" : "file",
+				"value" : ""
+			},
+			"backgroundVideoVolume" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'video'",
+				"max" : 100,
+				"min" : 0,
+				"order" : 67,
+				"text" : "Background Video Volume",
+				"type" : "slider",
+				"value" : 0
+			},
+			"backgroundVideo_" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'image'",
+				"order" : 64.25,
+				"text" : "<h4>Background Image</h4>",
+				"type" : "",
+				"value" : ""
+			},
+			"bassGraph" : 
+			{
+				"order" : 381,
+				"text" : "Show Debug Graph",
+				"type" : "bool",
+				"value" : false
+			},
+			"bass_" : 
+			{
+				"order" : 380,
+				"text" : "<h4>Bass</h4>",
+				"type" : "text"
+			},
+			"clock" : 
+			{
+				"order" : 50,
+				"text" : "<h4>Clock</h4>",
+				"type" : "text"
+			},
+			"clockSize" : 
+			{
+				"max" : 200,
+				"min" : 0,
+				"order" : 52,
+				"text" : "Clock Size (%)",
+				"type" : "slider",
+				"value" : 25
+			},
+			"clockType" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "None",
+						"value" : -1
+					},
+					{
+						"label" : "Analog",
+						"value" : 0
+					},
+					{
+						"label" : "Analog w/ Markers",
+						"value" : 3
+					},
+					{
+						"label" : "24h Digital ",
+						"value" : 1
+					},
+					{
+						"label" : "12h Digital",
+						"value" : 2
+					}
+				],
+				"order" : 51,
+				"text" : "Clock Type",
+				"type" : "combo",
+				"value" : -1
+			},
+			"colorGlow" : 
+			{
+				"max" : 20,
+				"min" : 0,
+				"order" : 56,
+				"text" : "Glow Size",
+				"type" : "slider",
+				"value" : 0
+			},
+			"colorGlowStrength" : 
+			{
+				"max" : 4,
+				"min" : 1,
+				"order" : 57,
+				"text" : "Glow Strength",
+				"type" : "slider",
+				"value" : 2
+			},
+			"colorsGlow_" : 
+			{
+				"order" : 55,
+				"text" : "<h4>Glow</h4><br><small>Glow has a small impact on cpu and gpu usage. Set size to 0 to disable.</small>",
+				"type" : "text"
+			},
+			"colorsUseColorRotation" : 
+			{
+				"order" : 32,
+				"text" : "Color Rotate",
+				"type" : "bool",
+				"value" : true
+			},
+			"colorsUseCustom" : 
+			{
+				"order" : 31,
+				"text" : "Use Custom Colors",
+				"type" : "bool",
+				"value" : false
+			},
+			"colors_" : 
+			{
+				"order" : 30,
+				"text" : "<h4>Colors</h4>",
+				"type" : "text"
+			},
+			"colors_r11" : 
+			{
+				"order" : 33,
+				"text" : "Primary Color",
+				"type" : "color",
+				"value" : "1 0 0"
+			},
+			"colors_r12" : 
+			{
+				"order" : 34,
+				"text" : "Secondary Color",
+				"type" : "color",
+				"value" : "0 0 1"
+			},
+			"cpu" : 
+			{
+				"order" : 5000,
+				"text" : "<h4>CPU Warning Settings</h4><small>Set the amount of cores your CPU has and I can adjust the processing time to a cpu usage estimation. Set the warning to 100% if you never want to see a warning.</small>",
+				"type" : "text"
+			},
+			"cpuCores" : 
+			{
+				"max" : 16,
+				"min" : 1,
+				"order" : 5001,
+				"text" : "CPU Cores",
+				"type" : "slider",
+				"value" : 4
+			},
+			"cpuPercWarning" : 
+			{
+				"max" : 100,
+				"min" : 1,
+				"order" : 5002,
+				"text" : "CPU Warning At (%)",
+				"type" : "slider",
+				"value" : 10
+			},
+			"cpuShowFps" : 
+			{
+				"order" : 5003,
+				"text" : "Show FPS",
+				"type" : "bool",
+				"value" : false
+			},
+			"detailLevel" : 
+			{
+				"max" : 5,
+				"min" : 1,
+				"order" : 20,
+				"text" : "Detail Level<br><small>Higher is more cpu usage</small>",
+				"type" : "slider",
+				"value" : 4
+			},
+			"eq" : 
+			{
+				"order" : 400,
+				"text" : "<h4>Equalizer</h4><small>Equaliser exists of 3 frequency bands to tweak the responds for certain frequencies to either focus on certain frequencies or create a more even distribution. Changing values will show the current EQ graph and resulting values in green.<br><br>Freq. values are frequency multiplied 100. So a value of 15 will result in 1500hz.</small>",
+				"type" : "text"
+			},
+			"eq1" : 
+			{
+				"max" : 160,
+				"min" : 0,
+				"order" : 401,
+				"text" : "Band 1 Freq.",
+				"type" : "slider",
+				"value" : 10
+			},
+			"eq1Strength" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 402,
+				"text" : "Band 1 Strength",
+				"type" : "slider",
+				"value" : 100
+			},
+			"eq2" : 
+			{
+				"max" : 160,
+				"min" : 0,
+				"order" : 404,
+				"text" : "Band 2 Freq.",
+				"type" : "slider",
+				"value" : 40
+			},
+			"eq2Strength" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 405,
+				"text" : "Band 2 Strength",
+				"type" : "slider",
+				"value" : 100
+			},
+			"eq3" : 
+			{
+				"max" : 160,
+				"min" : 0,
+				"order" : 407,
+				"text" : "Band 3 Freq.",
+				"type" : "slider",
+				"value" : 140
+			},
+			"eq3Strength" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 408,
+				"text" : "Band 3 Strength",
+				"type" : "slider",
+				"value" : 100
+			},
+			"eqStrength" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 416,
+				"text" : "Global Strength",
+				"type" : "slider",
+				"value" : 35
+			},
+			"eqWidth" : 
+			{
+				"max" : 30,
+				"min" : 1,
+				"order" : 415,
+				"text" : "Width",
+				"type" : "slider",
+				"value" : 27
+			},
+			"frame2MotionBlurAmount" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 21,
+				"text" : "Responsiveness (%)",
+				"type" : "slider",
+				"value" : "66"
+			},
+			"frame2Pow" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "6",
+						"value" : 8
+					},
+					{
+						"label" : "5",
+						"value" : 6
+					},
+					{
+						"label" : "4",
+						"value" : 4
+					},
+					{
+						"label" : "3",
+						"value" : 3
+					},
+					{
+						"label" : "2",
+						"value" : 2
+					},
+					{
+						"label" : "1",
+						"value" : 1.5
+					},
+					{
+						"label" : "No Change",
+						"value" : 1
+					},
+					{
+						"label" : "-1",
+						"value" : 0.66000000000000003
+					},
+					{
+						"label" : "-2",
+						"value" : 0.5
+					},
+					{
+						"label" : "-3",
+						"value" : 0.25
+					}
+				],
+				"order" : 22,
+				"text" : "Volume Scale",
+				"type" : "combo",
+				"value" : 1.5
+			},
+			"frame2ReverseAudio" : 
+			{
+				"order" : 23,
+				"text" : "Reverse Frequencies",
+				"type" : "bool",
+				"value" : false
+			},
+			"height1" : 
+			{
+				"max" : 200,
+				"min" : 1,
+				"order" : 11,
+				"text" : "Height 1 (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"height2" : 
+			{
+				"max" : 200,
+				"min" : 1,
+				"order" : 13,
+				"text" : "Height 2 (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"particles1" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "off",
+						"value" : false
+					},
+					{
+						"label" : "on",
+						"value" : 3
+					},
+					{
+						"label" : "outward",
+						"value" : 1
+					},
+					{
+						"label" : "inward",
+						"value" : 2
+					}
+				],
+				"order" : 361,
+				"text" : "Particles Ring 1",
+				"type" : "combo",
+				"value" : false
+			},
+			"particles2" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "off",
+						"value" : false
+					},
+					{
+						"label" : "on",
+						"value" : 3
+					},
+					{
+						"label" : "outward",
+						"value" : 1
+					},
+					{
+						"label" : "inward",
+						"value" : 2
+					}
+				],
+				"order" : 362,
+				"text" : "Particles Ring 2",
+				"type" : "combo",
+				"value" : false
+			},
+			"particlesLifetime" : 
+			{
+				"max" : 20,
+				"min" : 1,
+				"order" : 366,
+				"text" : "Spawn Lifetime",
+				"type" : "slider",
+				"value" : 10
+			},
+			"particlesMax" : 
+			{
+				"max" : 50000,
+				"min" : 300,
+				"order" : 363,
+				"text" : "Max Particles",
+				"type" : "slider",
+				"value" : 2000
+			},
+			"particlesSpawnCnt" : 
+			{
+				"max" : 5,
+				"min" : 1,
+				"order" : 364,
+				"text" : "Spawn Count",
+				"type" : "slider",
+				"value" : 1
+			},
+			"particlesSpawnSize" : 
+			{
+				"max" : 10,
+				"min" : 1,
+				"order" : 365,
+				"text" : "Spawn Size",
+				"type" : "slider",
+				"value" : 3
+			},
+			"particlesSpawnSpread" : 
+			{
+				"max" : 100,
+				"min" : 0,
+				"order" : 367,
+				"text" : "Spawn Spread (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"particlesSpawnType" : 
+			{
+				"order" : 362.10000000000002,
+				"text" : "Spawning particles on bass spawns a lot of particles and needs the maximum amount of particles to be raise, but comes at the cost of higher cpu usage.",
+				"type" : "text",
+				"value" : 1
+			},
+			"particlesSpawnType1" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "Peak & Bass",
+						"value" : 3
+					},
+					{
+						"label" : "Peak",
+						"value" : 1
+					},
+					{
+						"label" : "Bass",
+						"value" : 2
+					}
+				],
+				"order" : 362.19999999999999,
+				"text" : "Particles Spawn Style Ring 1",
+				"type" : "combo",
+				"value" : 1
+			},
+			"particlesSpawnType2" : 
+			{
+				"options" : 
+				[
+					{
+						"label" : "Peak & Bass",
+						"value" : 3
+					},
+					{
+						"label" : "Peak",
+						"value" : 1
+					},
+					{
+						"label" : "Bass",
+						"value" : 2
+					}
+				],
+				"order" : 362.30000000000001,
+				"text" : "Particles Spawn Style Ring 2",
+				"type" : "combo",
+				"value" : 1
+			},
+			"particlesSpeed" : 
+			{
+				"max" : 20,
+				"min" : 1,
+				"order" : 367,
+				"text" : "Spawn Speed",
+				"type" : "slider",
+				"value" : 17
+			},
+			"particles_" : 
+			{
+				"order" : 360,
+				"text" : "<h4>Particles</h4><small>This will have a heavy impact on cpu and gpu usage. Use the 'Show Fps' settings at the bottom to help tweak performance.</small>",
+				"type" : "text"
+			},
+			"position" : 
+			{
+				"order" : 40,
+				"text" : "<h4>Position</h4><small>Click accurately and press/hold arrow keys.</small> ",
+				"type" : "text"
+			},
+			"positionLinked" : 
+			{
+				"order" : 43,
+				"text" : "Positions of Ring 2 and Time are linked to Main positions",
+				"type" : "bool",
+				"value" : true
+			},
+			"positionRing2X" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 44,
+				"text" : "Ring 2 X Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"positionRing2Y" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 45,
+				"text" : "Ring 2 Y Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"positionTimeX" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 46,
+				"text" : "Time X Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"positionTimeY" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 47,
+				"text" : "Time Y Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"positionX" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 41,
+				"text" : "X Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"positionY" : 
+			{
+				"max" : 3000,
+				"min" : -3000,
+				"order" : 42,
+				"text" : "Y Pos. (px)",
+				"type" : "slider",
+				"value" : 0
+			},
+			"radius1" : 
+			{
+				"max" : 200,
+				"min" : 0,
+				"order" : 12,
+				"text" : "Radius 1 (%)",
+				"type" : "slider",
+				"value" : 66
+			},
+			"radius2" : 
+			{
+				"max" : 200,
+				"min" : 0,
+				"order" : 14,
+				"text" : "Radius 2 (%)",
+				"type" : "slider",
+				"value" : 100
+			},
+			"scale1" : 
+			{
+				"order" : 356,
+				"text" : "Scale Ring 1",
+				"type" : "bool",
+				"value" : false
+			},
+			"scale2" : 
+			{
+				"order" : 357,
+				"text" : "Scale Ring 2",
+				"type" : "bool",
+				"value" : false
+			},
+			"scale_" : 
+			{
+				"order" : 355,
+				"text" : "<h4>Scale Bass<br><small>work in progress, give me some feedback</small></h4>",
+				"type" : "text"
+			},
+			"scale_when_silent" : 
+			{
+				"order" : 358,
+				"text" : "Scale Ring when Silent",
+				"type" : "bool",
+				"value" : false
+			},
+			"schemecolor" : 
+			{
+				"order" : 0,
+				"text" : "Scheme color",
+				"type" : "color",
+				"value" : "0 0 0"
+			},
+			"shifting1" : 
+			{
+				"order" : 351,
+				"text" : "Line shifting Ring 1",
+				"type" : "bool",
+				"value" : false
+			},
+			"shifting2" : 
+			{
+				"order" : 352,
+				"text" : "Line shifting Ring 2",
+				"type" : "bool",
+				"value" : false
+			},
+			"shifting_" : 
+			{
+				"order" : 350,
+				"text" : "<h4>Shift Lines on Bass<br><small>work in progress, give me some feedback</small></h4>",
+				"type" : "text"
+			},
+			"shifting_when_silent" : 
+			{
+				"order" : 353,
+				"text" : "Line shifting when Silent",
+				"type" : "bool",
+				"value" : false
+			},
+			"size" : 
+			{
+				"order" : 10,
+				"text" : "<h4>Visuals</h4>",
+				"type" : "text"
+			},
+			"slideshow" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"order" : 74,
+				"text" : "<h4>Background Slideshow</h4>",
+				"type" : "text"
+			},
+			"slideshowFolder" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"mode" : "fetchall",
+				"order" : 75,
+				"text" : "Image Folder",
+				"type" : "directory"
+			},
+			"slideshowInterval" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"max" : 120,
+				"min" : 1,
+				"order" : 76,
+				"text" : "Image Interval",
+				"type" : "slider",
+				"value" : 5
+			},
+			"slideshowIntervalMultiplier" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"options" : 
+				[
+					{
+						"label" : "seconds",
+						"value" : 1
+					},
+					{
+						"label" : "minutes",
+						"value" : 60
+					},
+					{
+						"label" : "hour",
+						"value" : 3600
+					}
+				],
+				"order" : 77,
+				"text" : "Image Interval Units",
+				"type" : "combo",
+				"value" : 1
+			},
+			"slideshowShowTransitions" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"order" : 79.000100000000003,
+				"text" : "Choose Transitions",
+				"type" : "bool",
+				"value" : false
+			},
+			"slideshowTransFade" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.010000000000005,
+				"text" : "Fade",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransMoveBottom" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.109999999999999,
+				"text" : "Move From Bottom",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransMoveLeft" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.079999999999998,
+				"text" : "Move From Left",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransMoveRight" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.090000000000003,
+				"text" : "Move From Right",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransMoveTop" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.099999999999994,
+				"text" : "Move From Top",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransShuffleBottom" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.150000000000006,
+				"text" : "Shuffle From Bottom",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransShuffleLeft" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.120000000000005,
+				"text" : "Shuffle From Left",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransShuffleRight" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.129999999999995,
+				"text" : "Shuffle From Right",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransShuffleTop" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.140000000000001,
+				"text" : "Shuffle From Top",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomHorzIn" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.040000000000006,
+				"text" : "Zoom Horz In",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomHorzOut" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.049999999999997,
+				"text" : "Zoom Horz Out",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomIn" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.019999999999996,
+				"text" : "Zoom In",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomOut" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.030000000000001,
+				"text" : "Zoom Out",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomVertIn" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.060000000000002,
+				"text" : "Zoom Vert In",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTransZoomVertOut" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.069999999999993,
+				"text" : "Zoom Vert Out",
+				"type" : "bool",
+				"value" : true
+			},
+			"slideshowTrans_" : 
+			{
+				"condition" : "( backgroundSource.value == '' || backgroundSource.value == 'slideshow' ) && slideshowUseTransitions.value && slideshowShowTransitions.value",
+				"order" : 79.001000000000005,
+				"text" : "<h4><small>If you toggle an animation on, it will be used for the next transition.</small></h4>",
+				"type" : "text"
+			},
+			"slideshowTransitionDuration" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"max" : 10,
+				"min" : 0,
+				"order" : 78,
+				"text" : "Transition Duration",
+				"type" : "slider",
+				"value" : 2
+			},
+			"slideshowUseTransitions" : 
+			{
+				"condition" : "backgroundSource.value == '' || backgroundSource.value == 'slideshow'",
+				"order" : 79,
+				"text" : "Use Transitions<br><small>Will increase cpu/gpu usage a little for the duration of each transition.</small>",
+				"type" : "bool",
+				"value" : false
+			}
+		},
+		"supportsaudioprocessing" : true
+	},
+	"preview" : "preview.jpg",
+	"tags" : [ "Abstract" ],
+	"title" : "Rainbow Rings",
+	"type" : "web",
+	"visibility" : "public",
+	"workshopid" : "861933876"
+}
