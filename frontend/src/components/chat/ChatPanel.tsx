@@ -11,7 +11,7 @@ import NasFilePickerModal from '../common/NasFilePickerModal';
 import NasThumbnail from '../nas/NasThumbnail';
 import type { FileItem } from '../../types';
 import { pickChatPlaceholder } from '../../utils/chatPlaceholder';
-import { extractCodePreview, stripPreviewBlocks, type CodePreviewData } from '../../utils/extractCodePreview';
+import { extractCodePreview, stripPreviewBlocks } from '../../utils/extractCodePreview';
 import CodePreviewBlock from './CodePreviewBlock';
 import styles from './ChatPanel.module.css';
 import { RiMic2Fill } from "react-icons/ri";
