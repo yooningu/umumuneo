@@ -71,6 +71,35 @@
   gap: 12px;
 }
 
+/* 모바일 - 검색창을 맨 위 줄로 올리고, 전체선택 체크박스 + 읽음/삭제/차단 버튼들을
+   그 아래 둘째 줄로 내림 (한 줄에 다 넣으면 너무 빡빡해서) */
+@media (max-width: 824px) {
+  .listHeader {
+    flex-wrap: wrap;
+  }
+
+  /* .listHeader의 좌우 패딩(16px)을 음수 마진으로 상쇄해서 검색창만 화면 끝까지 꽉 채움.
+     flex-basis를 100%가 아니라 "100% + 음수 마진 32px만큼 더"로 잡아야, 음수 마진 때문에
+     줄에 여유 공간이 남은 것처럼 계산돼서 체크박스가 옆으로 끼어드는 걸 막을 수 있음 */
+  .searchInput {
+    order: -1;
+    flex: 1 1 calc(100% + 32px);
+    margin: 0 -16px;
+    width: auto;
+  }
+
+  /* .checkbox는 메일 목록 각 행에서도 똑같이 쓰는 클래스라, 헤더 안에서만 순서를
+     바꾸도록 .listHeader로 범위를 좁힘 (안 그러면 목록의 체크박스까지 오른쪽으로 밀림) */
+  .listHeader .checkbox {
+    order: 1;
+  }
+
+  .headerActions {
+    order: 2;
+    flex: 1;
+  }
+}
+
 .headerActionBtn {
   display: flex;
   align-items: center;

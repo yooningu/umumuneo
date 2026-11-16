@@ -11,12 +11,15 @@ import NasFilePickerModal from '../common/NasFilePickerModal';
 import NasThumbnail from '../nas/NasThumbnail';
 import type { FileItem } from '../../types';
 import { pickChatPlaceholder } from '../../utils/chatPlaceholder';
+import { extractCodePreview, stripPreviewBlocks, type CodePreviewData } from '../../utils/extractCodePreview';
+import CodePreviewBlock from './CodePreviewBlock';
 import styles from './ChatPanel.module.css';
 import { RiMic2Fill } from "react-icons/ri";
 import { FaChevronRight, FaStop } from "react-icons/fa6";
+import { BsReverseLayoutSidebarInsetReverse } from "react-icons/bs";
 import { IoClose } from "react-icons/io5";
 import { LiaUserSecretSolid } from "react-icons/lia";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaCode } from "react-icons/fa";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -28,6 +31,9 @@ interface Props {
   onScheduleChange?: () => void;
   initialSessionId?: string | null; // 있으면 그 세션의 기존 대화를 불러와서 이어서 보여줌 (없으면 새 대화)
   onSessionCreated?: (sessionId: string) => void; // 새 세션이 막 생겼을 때(첫 메시지 응답 직후) 알려줌 - 왼쪽 목록 갱신용
+  // 좁은 화면이라 대화 목록이 서랍으로 숨겨져 있을 때만 상위(ChatPage)에서 넘겨줌 - 있을 때만 아이콘이 보이고,
+  // 이땐 시크릿 모드 버튼이 자리를 비켜주러 반대쪽(왼쪽)으로 옮겨감
+  onToggleList?: () => void;
 }
 
 // 이미지 파일을 캔버스에 다시 그려서 PNG base64로 변환한다.
@@ -74,13 +80,34 @@ function fileToBase64(file: File): Promise<string> {
 
 // 챗봇 전용 페이지(ChatPage)에서 쓰는 대화창. 홈 화면의 ChatWidget과 기능은 같지만
 // UI를 서로 다르게 가져갈 예정이라 컴포넌트를 분리해둠 (디자인은 이후 별도로 손볼 것).
-export default function ChatPanel({ onScheduleChange, initialSessionId, onSessionCreated }: Props) {
+export default function ChatPanel({ onScheduleChange, initialSessionId, onSessionCreated, onToggleList }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(!!initialSessionId);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null);
   const [secretMode, setSecretMode] = useState(false); // 켜져있으면 대화가 DB에 저장 안 되고 서버 메모리에만 잠깐 남음
   const [placeholder] = useState(pickChatPlaceholder); // 시간대별 안내 문구 - 마운트 시 한 번만 고름
+  // 코드 미리보기를 보여줄 오른쪽 패널 - 메시지마다 독립적이라, 어느 메시지의 "코드 보기"를
+  // 눌렀는지(인덱스)만 들고 있고 다른 메시지와는 서로 안 이어짐 (클로드 아티팩트처럼 옆으로 띄움)
+  const [previewPanelIndex, setPreviewPanelIndex] = useState<number | null>(null);
+  const [previewPanelWidth, setPreviewPanelWidth] = useState(480); // 좌우로 끌어서 조절하는 패널 너비(px)
+
+  // 패널 왼쪽 가장자리를 드래그해서 너비 조절 (오른쪽 패널이라 왼쪽으로 끌수록 넓어짐)
+  const startPanelResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = previewPanelWidth;
+    const onMove = (ev: MouseEvent) => {
+      const next = startWidth + (startX - ev.clientX);
+      setPreviewPanelWidth(Math.min(960, Math.max(280, next)));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
   const [alertMessage, setAlertMessage] = useState<string | null>(null); // window.alert() 대신 쓰는 토스트 알림 문구
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -145,7 +172,11 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
 
   const addFiles = (files: FileList | File[] | null) => {
     if (!files) return;
-    setPendingFiles(prev => [...prev, ...Array.from(files)]);
+    // Array.from을 여기서 바로 실행해야 함 - setPendingFiles의 콜백은 나중에(렌더링 시점에)
+    // 실행되는데, 그때는 input의 value를 이미 초기화한 뒤라 살아있는 FileList 참조인 files가
+    // 비어있는 상태가 됨 (파일 선택창으로 넣으면 안 올라가고, 드래그앤드롭/붙여넣기는 되던 버그의 원인)
+    const arr = Array.from(files);
+    setPendingFiles(prev => [...prev, ...arr]);
   };
 
   const removeFile = (index: number) => {
@@ -362,10 +393,14 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
         }
       } catch (e) {
         console.error(e);
+        setAlertMessage(`파일 업로드에 실패했어요: ${e instanceof Error ? e.message : String(e)}`);
+        setUploading(false);
+        return;
       } finally {
         setUploading(false);
       }
     }
+
     // 텍스트 없이 이미지만 보내는 경우도 있으니(예: 붙여넣기 후 바로 전송), 텍스트가 없어도
     // 이미지가 있으면 그냥 진행한다. 정말 아무것도 없을 때만(텍스트도 첨부도 없음) 막는다.
     if (!content && imageFiles.length === 0 && nasImageFiles.length === 0) return;
@@ -433,9 +468,14 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
     }
   };
 
+  const activePreview = previewPanelIndex !== null
+    ? extractCodePreview(messages[previewPanelIndex]?.content ?? '')
+    : null;
+
   return (
-    <div
-      className={styles.container}
+    <div className={styles.outer}>
+      <div
+        className={styles.container}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -452,21 +492,31 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
 
       {/* 상단 바 - 대화 영역과 분리된 별도 바. 시크릿 모드일 땐 가운데에 표시되고,
           대화가 아직 시작 안 된 경우에만 우측에 시크릿 모드 전환 아이콘이 뜬다
-          (대화가 시작된 뒤에는 중간에 모드를 바꿀 수 없으니 아이콘을 숨김) */}
+          (대화가 시작된 뒤에는 중간에 모드를 바꿀 수 없으니 아이콘을 숨김).
+          오른쪽 끝부터: 목록 토글(있을 때만), 그 왼쪽에 시크릿 토글 - 둘이 나란히 묶여서 오른쪽에 붙음 */}
       <div className={styles.topBar}>
         {secretMode && (
           <span className={styles.secretModeLabel}>
             시크릿 모드
           </span>
         )}
-        {messages.length === 0 && (
-          <button
-            className={`${styles.secretToggle} ${secretMode ? styles.secretToggleActive : ''}`}
-            onClick={toggleSecretMode}
-            title="시크릿 모드 (대화를 저장하지 않음)"
-          >
-            <LiaUserSecretSolid />
-          </button>
+        {(messages.length === 0 || onToggleList) && (
+          <div className={styles.topBarRight}>
+            {messages.length === 0 && (
+              <button
+                className={`${styles.secretToggle} ${secretMode ? styles.secretToggleActive : ''}`}
+                onClick={toggleSecretMode}
+                title="시크릿 모드 (대화를 저장하지 않음)"
+              >
+                <LiaUserSecretSolid />
+              </button>
+            )}
+            {onToggleList && (
+              <button className={styles.listToggleBtn} onClick={onToggleList} aria-label="대화 목록 열기" title="대화 목록">
+                <BsReverseLayoutSidebarInsetReverse />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -493,7 +543,22 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
               {(m.content || (loading && i === messages.length - 1)) && (
                 <div className={`${styles.bubble} ${m.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant}`}>
                   {m.content ? (
-                    <ReactMarkdown remarkPlugins={[remarkBreaks]}>{m.content}</ReactMarkdown>
+                    <>
+                      <ReactMarkdown remarkPlugins={[remarkBreaks]}>{stripPreviewBlocks(m.content)}</ReactMarkdown>
+                      {(() => {
+                        const preview = extractCodePreview(m.content);
+                        if (!preview) return null;
+                        const isOpen = previewPanelIndex === i;
+                        return (
+                          <button
+                            className={`${styles.previewChip} ${isOpen ? styles.previewChipActive : ''}`}
+                            onClick={() => setPreviewPanelIndex(isOpen ? null : i)}
+                          >
+                            <FaCode /> 코드 미리보기 {isOpen ? '닫기' : '보기'}
+                          </button>
+                        );
+                      })()}
+                    </>
                   ) : (
                     loading && i === messages.length - 1 ? '...' : ''
                   )}
@@ -600,6 +665,24 @@ export default function ChatPanel({ onScheduleChange, initialSessionId, onSessio
           onClose={() => setShowNasPicker(false)}
         />
       )}
+    </div>
+
+    {/* 코드 미리보기 패널 - 클로드 아티팩트처럼 오른쪽에 따로 띄워서 세로 공간을 넉넉하게 줌.
+        메시지와 독립적이라 어느 메시지의 "코드 보기"를 눌렀는지만 반영하고 서로 안 이어짐 */}
+    {activePreview && (
+      <div className={styles.previewPanel} style={{ width: previewPanelWidth }}>
+        <div className={styles.previewPanelResizeHandle} onMouseDown={startPanelResize} />
+        <div className={styles.previewPanelHeader}>
+          <span>코드 미리보기</span>
+          <button className={styles.previewPanelClose} onClick={() => setPreviewPanelIndex(null)}>
+            <IoClose />
+          </button>
+        </div>
+        <div className={styles.previewPanelBody}>
+          <CodePreviewBlock key={previewPanelIndex} {...activePreview} />
+        </div>
+      </div>
+    )}
     </div>
   );
 }

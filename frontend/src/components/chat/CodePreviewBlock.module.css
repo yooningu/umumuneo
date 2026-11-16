@@ -1,0 +1,128 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: var(--gray5);
+  border-bottom: 1px solid var(--gray3);
+}
+
+.tabBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray2);
+}
+
+.tabBtn:hover {
+  background-color: var(--gray4);
+}
+
+.tabBtnActive {
+  background-color: var(--white);
+  color: var(--gray1);
+}
+
+.frame {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: none;
+  display: block;
+  background-color: var(--white);
+}
+
+/* 코드 탭 상단 줄 - 왼쪽은 html/css/js 전환 탭, 오른쪽은 전체 복사 버튼 */
+.codeToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid var(--gray4);
+  background-color: var(--gray5);
+}
+
+/* html/css/js 전환 탭 - 메모장(.tabBar)과 같은 스타일, 닫을 게 없어서 X 버튼만 뺌 */
+.langTabs {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+  padding: 6px 0 0 6px;
+  overflow-x: auto;
+}
+
+.langTab {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background-color: transparent;
+  color: var(--gray3);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.langTab:hover {
+  background-color: var(--gray4);
+}
+
+.langTabActive {
+  background-color: var(--white);
+  color: var(--gray1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.langTabActive:hover {
+  background-color: var(--white);
+}
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray2);
+  cursor: pointer;
+}
+
+.copyBtn:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
+}
+
+.code {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  font-size: var(--font-s);
+  font-family: Consolas, "Courier New", monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  /* --gray5/--gray1은 다크모드에서 서로 뒤집히는 토큰이라, 패널/카드에 쓰는 용도 그대로
+     (gray5=옅은 배경, gray1=본문 글자) 써야 라이트/다크 모두에서 자연스럽게 맞음 */
+  background-color: var(--gray5);
+  color: var(--gray1);
+}

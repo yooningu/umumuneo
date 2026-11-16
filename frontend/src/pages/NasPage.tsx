@@ -1,19 +1,30 @@
 import { useState } from 'react';
+import { FaXmark } from 'react-icons/fa6';
 import NasFileGrid from '../components/nas/NasFileGrid';
 import NasSidebar from '../components/nas/NasSidebar';
+import useMediaQuery from '../hooks/useMediaQuery';
 import type { FileItem } from '../types';
+import drawer from '../styles/drawer.module.css';
 import styles from './NasPage.module.css';
 
 type FileSource = 'UPLOAD' | 'CHATBOT' | 'EMAIL';
 
-// 나스(파일) 페이지: 메인 파일 그리드(경로/검색) + 오른쪽 즐겨찾기·용량 사이드바.
+// 나스 사이드바는 767px 미만에서만 서랍으로 바뀜 - 그 위(태블릿 포함)에서는 PC처럼
+// 항상 고정으로 보여줌 (Sidebar 하단 독 기준인 824px과는 별개)
+const MOBILE_BREAKPOINT = '(max-width: 767px)';
+
+// 나스(파일) 페이지: 메인 파일 그리드(경로/검색) + 즐겨찾기·분류·용량 사이드바.
 // 폴더 이동은 폴더 스택(folderStack)으로 관리해서 경로(breadcrumb) 클릭으로 원하는 단계로 바로 이동한다.
+// 좁은 화면에서는 사이드바가 공간을 차지하지 않고, 경로 옆 아이콘으로 여닫는 서랍으로 바뀐다
+// (챗봇/일정 페이지와 같은 방식).
 export default function NasPage() {
   const [parentId, setParentId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<FileSource | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
 
   const bump = () => setRefreshKey(k => k + 1);
 
@@ -24,6 +35,7 @@ export default function NasPage() {
     setSearch('');
     setFolderStack([]);
     setParentId(null);
+    setDrawerOpen(false);
   };
 
   const openFolder = (id: string, name: string) => {
@@ -37,6 +49,7 @@ export default function NasPage() {
     });
     setParentId(id);
     setSearch('');
+    setDrawerOpen(false);
   };
 
   // 경로(breadcrumb)에서 중간 폴더를 클릭하면 그 폴더까지만 남기고 그 자리로 이동
@@ -56,20 +69,28 @@ export default function NasPage() {
     setSearch('');
     setFolderStack(ancestors.map(a => ({ id: a.id, name: a.name })));
     setParentId(ancestors.length > 0 ? ancestors[ancestors.length - 1].id : null);
+    setDrawerOpen(false);
   };
+
+  const sidebarContent = (
+    <NasSidebar
+      refreshKey={refreshKey}
+      onOpenFolder={openFolder}
+      onNavigateToFolderPath={navigateToFolderPath}
+      sourceFilter={sourceFilter}
+      onSelectSource={selectSource}
+    />
+  );
 
   return (
     <div className={styles.container}>
       <div className={styles.body}>
-        <div className={styles.sidePane}>
-          <NasSidebar
-            refreshKey={refreshKey}
-            onOpenFolder={openFolder}
-            onNavigateToFolderPath={navigateToFolderPath}
-            sourceFilter={sourceFilter}
-            onSelectSource={selectSource}
-          />
-        </div>
+        {/* 데스크톱/태블릿 - 항상 보이는 사이드 패널 */}
+        {!isMobile && (
+          <div className={styles.sidePane}>
+            {sidebarContent}
+          </div>
+        )}
         <div className={styles.mainPane}>
           <NasFileGrid
             parentId={parentId}
@@ -83,9 +104,22 @@ export default function NasPage() {
             onNavigateSource={() => selectSource(sourceFilter)}
             onNavigateFolder={goToFolderIndex}
             onChanged={bump}
+            onToggleSidebar={isMobile ? () => setDrawerOpen(true) : undefined}
           />
         </div>
       </div>
+
+      {/* 모바일 - 즐겨찾기/분류 사이드바가 오른쪽에서 열리는 서랍 + 어두운 배경으로 덮어씌워짐 */}
+      {isMobile && drawerOpen && (
+        <div className={drawer.drawerOverlay} onClick={() => setDrawerOpen(false)}>
+          <div className={`${drawer.drawerPanel} ${styles.drawerPanel}`.trim()} onClick={e => e.stopPropagation()}>
+            <button type="button" className={drawer.drawerClose} onClick={() => setDrawerOpen(false)} aria-label="닫기">
+              <FaXmark />
+            </button>
+            {sidebarContent}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

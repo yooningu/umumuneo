@@ -1,0 +1,14 @@
+<svg width="384" height="384" viewBox="0 0 384 384" fill="none" xmlns="http://www.w3.org/2000/svg">
+<mask id="stroke0_508_13" fill="white">
+<path d="M0 20C0 8.95431 8.95431 0 20 0H86C97.0457 0 106 8.9543 106 20V225C106 236.046 97.0457 245 86 245H20C8.9543 245 0 236.046 0 225V20Z"/>
+</mask>
+<rect width="106" height="245" rx="20" stroke-width="56" stroke="black" mask="url(#stroke0_508_13)"/>
+<mask id="stroke1_508_13" fill="white">
+<path d="M139 127C139 115.954 147.954 107 159 107H225C236.046 107 245 115.954 245 127V364C245 375.046 236.046 384 225 384H159C147.954 384 139 375.046 139 364V127Z"/>
+</mask>
+<rect x="139" y="107" width="106" height="277" rx="20" stroke-width="56" stroke="black" mask="url(#stroke1_508_13)"/>
+<mask id="stroke2_508_13" fill="white">
+<path d="M278 85C278 73.9543 286.954 65 298 65H364C375.046 65 384 73.9543 384 85V258C384 269.046 375.046 278 364 278H298C286.954 278 278 269.046 278 258V85Z"/>
+</mask>
+<rect x="278" y="65" width="106" height="213" rx="20" stroke-width="56" stroke="black" mask="url(#stroke2_508_13)"/>
+</svg>

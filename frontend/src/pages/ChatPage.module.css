@@ -9,9 +9,25 @@
 .sidePane {
   width: 260px;
   min-width: 260px;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--gray3);
   border-radius: 16px;
+  box-sizing: border-box;
+  /* 펼쳐질 때(= 이 규칙으로 돌아올 때) 쓰이는 타이밍 - 모서리와 크기가 같이 바뀜 */
+  transition: width 0.25s ease, min-width 0.25s ease, height 0.25s ease, border-radius 0.25s ease;
+}
+
+/* 접혔을 때 - 목록은 사라지고 동그란 아이콘 하나만 남음 (너비뿐 아니라 높이도 줄어듦).
+   상하좌우 크기가 거의 다 줄어든 뒤에야 모서리가 둥글게 바뀌기 시작해서, 사각 박스가
+   오그라들다가 마지막에 동그란 아이콘 테두리가 "되는" 것처럼 보이게 함 */
+.sidePane.sidePaneCollapsed {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  align-self: flex-start;
+  transition: width 0.22s ease, min-width 0.22s ease, height 0.22s ease, border-radius 0.15s ease 0.18s;
 }
 
 .mainPane {
@@ -23,26 +39,22 @@
 
 /* 태블릿 모드 - 사이드 목록을 240px로 줄임 (리스트라 그리드 제약 없는 홈 미니캘린더보다 더 좁혀도 됨) */
 @media (min-width: 768px) and (max-width: 1203px) {
-  .sidePane {
+  .sidePane:not(.sidePaneCollapsed) {
     width: 240px;
     min-width: 240px;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 824px) {
   .container {
-    flex-direction: column;
     padding: 12px;
+    gap: 12px;
   }
+}
 
-  .sidePane {
-    width: 100%;
-    min-width: 0;
-    max-height: 30vh;
-  }
-
-  .mainPane {
-    flex: 1;
-    min-height: 0;
-  }
+/* 모바일 - 목록은 사이드 패널이 아니라(DOM에도 아예 안 그려짐, ChatPage.tsx) 오른쪽에서
+   열리는 서랍 + 어두운 배경으로 덮어씌워짐. 공통 스타일(styles/drawer.module.css)에 이
+   너비만 더해서 씀 (일정은 420px, 챗봇/나스는 320px로 서로 조금 다름) */
+.drawerPanel {
+  max-width: 320px;
 }

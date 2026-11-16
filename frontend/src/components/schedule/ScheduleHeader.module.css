@@ -1,12 +1,12 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 28px;
   flex-wrap: wrap;
   height: 48px;
 }
 
-.left {
+.dateNav {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -17,6 +17,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* .header가 space-between 대신 gap만 쓰므로, 이 그룹만 오른쪽 끝으로 밀어냄 */
+  margin-left: auto;
 }
 
 .navGroup {
@@ -127,6 +129,9 @@
 .toggleBtn {
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 12px;
   border: none;
   border-radius: 10px;
@@ -139,6 +144,19 @@
   transition: color 0.2s ease;
 }
 
+/* 데스크톱에선 글자만, 모바일에선 아이콘만 (아래 미디어쿼리에서 뒤집음) */
+.toggleIcon {
+  display: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* Timetable.svg는 각 rect에 fill="black"이 박혀있어서, 일반 CSS 규칙으로 덮어써야 함
+   (presentation attribute라 inline style보다 우선순위가 낮아서 덮어쓰기가 먹힘) */
+.toggleIcon rect {
+  fill: currentColor;
+}
+
 .toggleBtnActive {
   color: var(--white);
   font-weight: var(--font-weight-semibold);
@@ -148,10 +166,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* 화면 크기와 상관없이 항상 + 아이콘만 보여주는 정사각 버튼 */
 .addBtn {
   height: 40px;
-  width: 100px;
-  padding: 8px;
+  width: 40px;
+  padding: 0;
   border: none;
   border-radius: 10px;
   background-color: var(--brand);
@@ -160,20 +179,52 @@
   font-weight: var(--font-weight-bold);
   cursor: pointer;
   box-shadow: var(--shadow-raised-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@media (max-width: 767px) {
+/* 784px 미만 - 스케줄러/캘린더 토글은 글자 대신 아이콘만 보여주는 정사각 버튼으로 (아직 한 줄 유지) */
+@media (max-width: 784px) {
+  .toggleBtn {
+    width: 40px;
+    padding: 0;
+  }
+
+  .toggleIcon {
+    display: block;
+  }
+
+  .toggleBtnText {
+    display: none;
+  }
+}
+
+/* 645px 미만 - 1줄: [스케줄러/캘린더 토글] ... [오늘 + 일정 추가 + 목록 서랍 아이콘], 2줄: 날짜 이동 */
+@media (max-width: 645px) {
   .header {
     height: auto;
     row-gap: 10px;
   }
 
-  .left {
-    width: 100%;
+  .viewToggle {
+    order: 1;
+  }
+
+  .right {
+    order: 2;
+  }
+
+  .dateNav {
+    order: 3;
+    flex: 1 1 100%;
     gap: 10px;
   }
 
-  .addBtn {
+  /* 이전/다음 버튼은 양 끝으로, 날짜 라벨은 그 사이 가운데에 오도록 (두 버튼 폭이 같아서
+     space-between만으로도 가운데 항목이 정확히 중앙에 옴) */
+  .navGroup {
     width: 100%;
+    justify-content: space-between;
   }
 }

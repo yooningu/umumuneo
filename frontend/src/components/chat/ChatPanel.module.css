@@ -1,3 +1,11 @@
+/* 코드 미리보기 패널이 열리면 옆으로 나란히 놓이는 바깥 틀 (클로드 아티팩트처럼) */
+.outer {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
 .container {
   position: relative;
   display: flex;
@@ -7,6 +15,93 @@
   height: 100%;
   background-color: transparent;
   width: 100%;
+}
+
+/* 메시지 안에 뜨는 "코드 미리보기 보기" 칩 버튼 */
+.previewChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--gray3);
+  border-radius: 999px;
+  background-color: var(--gray5);
+  color: var(--gray2);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.previewChip:hover {
+  background-color: var(--gray4);
+}
+
+.previewChipActive {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* 코드 미리보기 오른쪽 패널 - 너비는 JS에서 인라인 style로 줌(드래그로 조절) */
+.previewPanel {
+  position: relative;
+  flex-shrink: 0;
+  height: 100%;
+  border-left: 1px solid var(--gray3);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--white);
+}
+
+/* 패널 왼쪽 가장자리의 드래그 핸들 - 좌우로 끌어서 패널 너비를 조절함 */
+.previewPanelResizeHandle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.previewPanelResizeHandle:hover {
+  background-color: var(--brand);
+  opacity: 0.4;
+}
+
+.previewPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gray3);
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
+}
+
+.previewPanelClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--gray2);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.previewPanelClose:hover {
+  background-color: var(--gray5);
+}
+
+.previewPanelBody {
+  flex: 1;
+  min-height: 0;
 }
 
 .dragOverlay {
@@ -43,11 +138,39 @@
   color: var(--gray3);
 }
 
-.secretToggle {
+/* 오른쪽 끝에 붙는 묶음 - 목록 토글(있을 때)과 시크릿 토글을 나란히 묶음.
+   오른쪽부터: 목록 토글, 그 왼쪽에 시크릿 토글 (DOM 순서 그대로) */
+.topBarRight {
   position: absolute;
   right: 0px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secretToggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--gray3);
+  background-color: var(--white);
+  color: var(--gray3);
+  cursor: pointer;
+  font-size: var(--font-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secretToggleActive {
+  background-color: var(--gray3);
+  border-color: transparent;
+  color: var(--gray5);
+}
+
+.listToggleBtn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -59,13 +182,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-xl);
 }
 
-.secretToggleActive {
-  background-color: var(--gray3);
-  border-color: transparent;
-  color: var(--gray5);
+.listToggleBtn:hover {
+  background-color: var(--gray4);
+  color: var(--gray1);
 }
 
 /* 메시지 영역 + 입력창을 묶는 바디 - 대화가 없으면 가운데, 시작되면 평소대로(입력창 하단 고정).
@@ -403,4 +524,21 @@
 .sendButton:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* 모바일(ChatPage.module.css와 같은 767px 기준) - 옆으로 나란히 둘 화면 너비가 없어서,
+   코드 미리보기 패널을 화면 전체를 덮는 오버레이로 바꿈. 드래그로 너비 조절도 의미 없어서 숨김 */
+@media (max-width: 767px) {
+  .previewPanel {
+    position: fixed;
+    inset: 0;
+    width: 100% !important;
+    max-width: 100%;
+    border-left: none;
+    z-index: 100;
+  }
+
+  .previewPanelResizeHandle {
+    display: none;
+  }
 }

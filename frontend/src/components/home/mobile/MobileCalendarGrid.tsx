@@ -163,7 +163,7 @@ export default function MobileCalendarGrid({ selectedDate, onDateSelect, refresh
   const [expanded, setExpanded] = useState(false);
   const [rowH, setRowH] = useState(50);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const handleStartY = useRef<number | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
   const today = new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -305,16 +305,20 @@ export default function MobileCalendarGrid({ selectedDate, onDateSelect, refresh
     return <div className={miniStyles.daysGrid}>{cells.map(d => renderDayCell(d, d.getMonth() === ref.getMonth()))}</div>;
   };
 
-  // 손잡이 드래그: 일정 거리 이상 아래로 당기면 펼침, 위로 올리면 접힘(탭으로는 안 바뀜 -
-  // 실수로 스치기만 해도 토글되지 않게, 반드시 의도적으로 당겨야만 전환되도록 함)
-  const onHandleDown = (e: ReactPointerEvent) => {
-    handleStartY.current = e.clientY;
-    e.currentTarget.setPointerCapture(e.pointerId);
+  // 펼침/접힘 드래그: 손잡이 바뿐 아니라 달력 전체 어디서든 세로로 당기면 전환되도록 함
+  // (작은 바 하나만 드래그 가능한 영역이면 정확히 잡기 불편해서 영역을 넓힘).
+  // 단, 가로로 더 많이 움직인 경우(= 주/월 좌우 스와이프 의도)는 무시해서 SwipeStrip의
+  // 좌우 넘기기 제스처와 안 겹치게 함. pointerCapture는 안 걸어서 안쪽 SwipeStrip의
+  // 캡처를 가로채지 않음 - 탭/스와이프로는 안 바뀜(실수로 스치기만 해도 토글 안 되게)
+  const onContainerDown = (e: ReactPointerEvent) => {
+    dragStart.current = { x: e.clientX, y: e.clientY };
   };
-  const onHandleUp = (e: ReactPointerEvent) => {
-    if (handleStartY.current === null) return;
-    const dy = e.clientY - handleStartY.current;
-    handleStartY.current = null;
+  const onContainerUp = (e: ReactPointerEvent) => {
+    if (!dragStart.current) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    dragStart.current = null;
+    if (Math.abs(dy) <= Math.abs(dx)) return;
     if (dy > HANDLE_DRAG_PX) setExpanded(true);
     else if (dy < -HANDLE_DRAG_PX) setExpanded(false);
   };
@@ -323,7 +327,11 @@ export default function MobileCalendarGrid({ selectedDate, onDateSelect, refresh
   const bodyHeight = expanded ? rowH * currentMonthRows + ROW_GAP * (currentMonthRows - 1) : rowH;
 
   return (
-    <div className={`${miniStyles.container} ${styles.container}`.trim()}>
+    <div
+      className={`${miniStyles.container} ${styles.container}`.trim()}
+      onPointerDown={onContainerDown}
+      onPointerUp={onContainerUp}
+    >
       <div className={miniStyles.weekdayRow}>
         {DAY_LABELS.map((d, i) => (
           <div key={d} className={[miniStyles.weekdayCell, i === 5 ? miniStyles.saturday : '', i === 6 ? miniStyles.sunday : ''].join(' ').trim()}>
@@ -349,7 +357,8 @@ export default function MobileCalendarGrid({ selectedDate, onDateSelect, refresh
         </div>
       </div>
 
-      <div className={styles.handle} onPointerDown={onHandleDown} onPointerUp={onHandleUp}>
+      {/* 이제 드래그는 컨테이너 전체에서 받지만, 여기 당길 수 있다는 걸 보여주는 시각적 표시는 남겨둠 */}
+      <div className={styles.handle}>
         <span className={styles.handleBar} />
       </div>
     </div>

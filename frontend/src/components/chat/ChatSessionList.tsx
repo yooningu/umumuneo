@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IoClose } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
+import { BsReverseLayoutSidebarInsetReverse } from "react-icons/bs";
 import { getSessions, deleteSession } from '../../api/chat';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
@@ -11,6 +12,9 @@ interface Props {
   activeSessionId: string | null;
   onSelect: (sessionId: string | null) => void;
   refreshKey?: number;
+  // 접혀있으면 목록 자체를 숨기고 이 동그란 토글 아이콘만 보여줌 (ChatPage.tsx가 너비/높이 애니메이션을 담당)
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function formatRelative(dateStr: string): string {
@@ -26,7 +30,7 @@ function formatRelative(dateStr: string): string {
 
 // 챗봇 페이지 왼쪽에 들어가는 대화 목록. 클릭하면 그 세션으로, "+ 새 대화"를 누르면
 // sessionId를 null로 올려줘서(ChatPage가 ChatWidget을 새로 마운트) 빈 대화를 시작한다.
-export default function ChatSessionList({ activeSessionId, onSelect, refreshKey }: Props) {
+export default function ChatSessionList({ activeSessionId, onSelect, refreshKey, collapsed, onToggleCollapse }: Props) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -34,6 +38,15 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
   useEffect(() => {
     getSessions().then(setSessions).catch(console.error).finally(() => setLoading(false));
   }, [refreshKey]);
+
+  // 접힌 상태 - 목록 데이터를 불러올 필요도 없이, 다시 펼치는 동그란 토글 버튼만 보여줌
+  if (collapsed) {
+    return (
+      <button className={styles.collapsedToggle} onClick={onToggleCollapse} aria-label="대화 목록 펼치기" title="대화 목록 펼치기">
+        <BsReverseLayoutSidebarInsetReverse />
+      </button>
+    );
+  }
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -55,10 +68,19 @@ export default function ChatSessionList({ activeSessionId, onSelect, refreshKey 
 
   return (
     <div className={styles.container}>
-      <button className={styles.newBtn} onClick={() => onSelect(null)}>
-        <FaPlus />
-        새 대화
-      </button>
+      <div className={styles.topRow}>
+        <button className={styles.newBtn} onClick={() => onSelect(null)}>
+          <FaPlus />
+          새 대화
+        </button>
+        {/* 서랍(모바일)에서 쓰일 땐 onToggleCollapse를 안 넘겨줘서 이 버튼이 안 뜸 - 닫기는
+            서랍 자체의 X/바깥 영역 클릭으로 처리하기 때문 */}
+        {onToggleCollapse && (
+          <button className={styles.collapseBtn} onClick={onToggleCollapse} aria-label="대화 목록 접기" title="대화 목록 접기">
+            <BsReverseLayoutSidebarInsetReverse />
+          </button>
+        )}
+      </div>
       <div className={styles.list}>
         {loading ? (
           [0, 1, 2, 3, 4].map(i => (

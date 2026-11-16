@@ -142,7 +142,11 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
 
   const addFiles = (files: FileList | File[] | null) => {
     if (!files) return;
-    setPendingFiles(prev => [...prev, ...Array.from(files)]);
+    // Array.from을 여기서 바로 실행해야 함 - setPendingFiles의 콜백은 나중에(렌더링 시점에)
+    // 실행되는데, 그때는 input의 value를 이미 초기화한 뒤라 살아있는 FileList 참조인 files가
+    // 비어있는 상태가 됨 (파일 선택창으로 넣으면 안 올라가고, 드래그앤드롭/붙여넣기는 되던 버그의 원인)
+    const arr = Array.from(files);
+    setPendingFiles(prev => [...prev, ...arr]);
   };
 
   const removeFile = (index: number) => {
@@ -352,6 +356,9 @@ export default function ChatWidget({ onScheduleChange, initialSessionId, onSessi
         }
       } catch (e) {
         console.error(e);
+        setAlertMessage(`파일 업로드에 실패했어요: ${e instanceof Error ? e.message : String(e)}`);
+        setUploading(false);
+        return;
       } finally {
         setUploading(false);
       }

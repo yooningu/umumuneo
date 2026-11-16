@@ -41,19 +41,11 @@
   .container {
     padding: 12px;
   }
+}
 
-  .body {
-    flex-direction: column;
-  }
-
-  .mainPane {
-    flex: 1;
-    min-height: 320px;
-  }
-
-  .sidePane {
-    width: 100%;
-    min-width: 0;
-    max-height: 30vh;
-  }
+/* 모바일 - 사이드바는 공간을 차지하는 사이드 패널이 아니라(DOM에도 아예 안 그려짐, NasPage.tsx)
+   오른쪽에서 열리는 서랍 + 어두운 배경으로 덮어씌워짐 (챗봇/일정 페이지의 서랍 패턴과 동일).
+   공통 스타일(styles/drawer.module.css)에 이 너비만 더해서 씀 (일정은 420px, 챗봇/나스는 320px) */
+.drawerPanel {
+  max-width: 320px;
 }

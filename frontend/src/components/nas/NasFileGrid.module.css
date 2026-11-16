@@ -151,6 +151,28 @@
   color: var(--white);
 }
 
+/* 즐겨찾기/분류 사이드바가 서랍으로 숨겨진 좁은 화면에서만 뜨는 토글 (경로 오른쪽, actionRow 맨 끝).
+   테두리/배경 없이, 그만큼 아이콘 자체 크기를 키워서 존재감을 줌 */
+.sidebarToggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--gray2);
+  cursor: pointer;
+  font-size: var(--font-xl);
+}
+
+.sidebarToggleBtn:hover {
+  background-color: var(--gray4);
+}
+
 /* 선택바의 "여러 개 선택" 동그라미 토글 - PC는 Ctrl+클릭이 있어서 숨김 */
 .selectModeToggleBtn {
   display: none;

@@ -6,11 +6,16 @@ import { getMails, getMailDetail, deleteMail, setMailRead, blockSender } from '.
 import { downloadFile, getPreviewBlobUrl } from '../api/file';
 import Skeleton from '../components/common/Skeleton';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import useMediaQuery from '../hooks/useMediaQuery';
 import type { MailItem, MailDetail, MailAttachment } from '../types';
 import styles from './MailPage.module.css';
 
 const PAGE_SIZE = 20;
 const MAX_VISIBLE_PAGES = 5;
+// Sidebar가 하단 독으로 바뀌는 지점(824px)과 동일하게 맞춤
+const MOBILE_BREAKPOINT = '(max-width: 824px)';
+// 바닥에서 이만큼(px) 남았을 때 미리 다음 페이지를 불러옴 (완전히 끝에 닿기 전에 자연스럽게 이어지도록)
+const LOAD_MORE_THRESHOLD_PX = 200;
 
 // 페이지네이션에 보여줄 페이지 번호들 - 현재 페이지를 가운데 두고 최대 5개까지,
 // 끝쪽에 가까우면 그만큼 반대쪽으로 더 보여줌 (항상 5개를 채우려고 시도)
@@ -38,6 +43,32 @@ function MailListSkeleton() {
         <Skeleton width="60%" height={15} className={styles.skeletonGap} />
         <Skeleton width="85%" height={13} className={styles.skeletonGap} />
       </div>
+    </div>
+  );
+}
+
+// 메일 상단바(제목/보낸사람)에 보여줄 스켈레톤
+function MailDetailTopSkeleton() {
+  return (
+    <>
+      <Skeleton width="50%" height={14} />
+      <Skeleton width="30%" height={11} className={styles.skeletonGap} />
+    </>
+  );
+}
+
+// 메일 본문을 열었을 때, 실제 본문이 올 때까지 보여줄 스켈레톤 (날짜 줄 + 본문 줄 여러 개)
+function MailDetailSkeleton() {
+  return (
+    <div>
+      <div className={styles.detailMeta}>
+        <Skeleton width={130} height={12} />
+      </div>
+      <Skeleton width="70%" height={16} className={styles.skeletonGap} />
+      <Skeleton width="100%" height={13} className={styles.skeletonGap} />
+      <Skeleton width="95%" height={13} className={styles.skeletonGap} />
+      <Skeleton width="90%" height={13} className={styles.skeletonGap} />
+      <Skeleton width="60%" height={13} className={styles.skeletonGap} />
     </div>
   );
 }
@@ -154,17 +185,36 @@ export default function MailPage() {
   const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
+  // true면 다음 fetch 결과를 기존 목록 뒤에 이어붙임(모바일 무한스크롤 전용) - 명시적으로
+  // loadMore()에서만 켜줘서, 검색/새로고침/페이지 버튼 클릭 등 다른 경로로 page가 바뀔 때
+  // 실수로 이어붙여져서 중복되는 일이 없게 함
+  const appendNextRef = useRef(false);
+  const hasMore = page + 1 < totalPages;
 
   useEffect(() => {
     setLoading(true);
+    const shouldAppend = appendNextRef.current;
+    appendNextRef.current = false;
     getMails({ page, size: PAGE_SIZE, search: search.trim() || undefined })
       .then(data => {
-        setMails(data.content);
+        setMails(prev => (shouldAppend ? [...prev, ...data.content] : data.content));
         setTotalPages(data.totalPages);
       })
       .catch(() => setError('메일 목록을 불러오지 못했어요.'))
       .finally(() => setLoading(false));
   }, [page, search, refreshKey]);
+
+  // 모바일 전용 - 목록을 바닥 쪽으로 어느 정도 내리면(완전히 끝까지 안 가도) 다음 페이지를 이어붙임
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!isMobile || loading || !hasMore) return;
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < LOAD_MORE_THRESHOLD_PX) {
+      appendNextRef.current = true;
+      setPage(p => p + 1);
+    }
+  };
 
   const handleSearchChange = (v: string) => {
     setSearch(v);
@@ -215,6 +265,7 @@ export default function MailPage() {
         return next;
       });
       if (openMailId && ids.includes(openMailId)) closeMail();
+      setPage(0); // 모바일에서 무한스크롤로 여러 페이지를 이어붙인 상태였다면 깔끔하게 처음부터 다시
       setRefreshKey(k => k + 1);
     } catch (e) {
       console.error(e);
@@ -258,8 +309,14 @@ export default function MailPage() {
             <IoArrowBack />
           </button>
           <div className={styles.detailTopInfo}>
-            <div className={styles.detailTopSubject}>{detail?.subject || (detailLoading ? '' : '(제목 없음)')}</div>
-            {detail && <div className={styles.detailTopFrom}>{detail.fromAddress}</div>}
+            {detailLoading ? (
+              <MailDetailTopSkeleton />
+            ) : (
+              <>
+                <div className={styles.detailTopSubject}>{detail?.subject || '(제목 없음)'}</div>
+                {detail && <div className={styles.detailTopFrom}>{detail.fromAddress}</div>}
+              </>
+            )}
           </div>
           <button
             className={styles.deleteBtn}
@@ -272,7 +329,7 @@ export default function MailPage() {
 
         <div className={styles.detailScroll}>
           {error && <div className={styles.errorBox}>{error}</div>}
-          {!error && detailLoading && <div className={styles.empty}>불러오는 중...</div>}
+          {!error && detailLoading && <MailDetailSkeleton />}
           {!error && !detailLoading && detail && (
             <div>
               <div className={styles.detailMeta}>
@@ -354,12 +411,18 @@ export default function MailPage() {
         />
       </div>
 
-      <div className={styles.listScroll}>
-        {loading && Array.from({ length: PAGE_SIZE }, (_, i) => <MailListSkeleton key={i} />)}
+      <div
+        className={styles.listScroll}
+        onScroll={handleListScroll}
+        // 더 불러올 페이지가 남아있는 동안은(모바일) 바닥에 닿아도 네비 독을 숨기지 않음 -
+        // 아직 끝이 아니라 곧 더 이어붙을 거라서. 진짜로 더 없을 때만 Sidebar의 기본 동작에 맡김
+        data-keep-nav={isMobile && hasMore ? 'true' : undefined}
+      >
+        {loading && mails.length === 0 && Array.from({ length: PAGE_SIZE }, (_, i) => <MailListSkeleton key={i} />)}
         {!loading && mails.length === 0 && (
           <div className={styles.empty}>{search ? '검색 결과가 없어요.' : '받은 메일이 없어요.'}</div>
         )}
-        {!loading && mails.map(mail => (
+        {mails.map(mail => (
           <div
             key={mail.id}
             className={styles.listItem}
@@ -389,9 +452,17 @@ export default function MailPage() {
             </div>
           </div>
         ))}
+        {/* 이미 보여줄 메일이 있는 상태에서 더 불러오는 중(모바일 무한스크롤)일 때만 바닥에 살짝 보여줌 */}
+        {loading && mails.length > 0 && (
+          <>
+            <MailListSkeleton />
+            <MailListSkeleton />
+          </>
+        )}
       </div>
 
-      {totalPages > 0 && (
+      {/* 모바일은 페이지 버튼 대신 무한스크롤 */}
+      {!isMobile && totalPages > 0 && (
         <div className={styles.pagination}>
           <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(0)} title="처음">
             <FaAnglesLeft />

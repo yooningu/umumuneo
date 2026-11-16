@@ -1,4 +1,4 @@
-import { cloneElement, type ReactElement } from 'react';
+import { cloneElement, useEffect, useState, type ReactElement } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { IoTodayOutline, IoToday } from "react-icons/io5";
@@ -27,12 +27,34 @@ const NAV_ITEMS = [
   { path: '/settings', label: '설정', icon: <IoSettingsOutline />, activeIcon: <IoSettings />, iconViewBox: '26 26 460 460', mobileHidden: true },
 ];
 
+const NEAR_BOTTOM_PX = 4; // 스크롤이 이 정도까지 바닥에 붙으면 "맨 끝"으로 침
+const MIN_SCROLLABLE_HEIGHT = 150; // 작은 팝오버/드롭다운 스크롤까지 반응하지 않도록 거르는 최소 높이
+
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  // 모바일 전용 - 어떤 스크롤 영역이든(일정 목록, 타임라인 등) 맨 아래에 닿으면 떠있는
+  // 독을 아래로 내려서 숨기고, 거기서 조금이라도 위로 올리면 다시 보이게 함
+  const [hiddenByScroll, setHiddenByScroll] = useState(false);
+
+  useEffect(() => {
+    // scroll 이벤트는 기본적으로 버블링이 안 돼서, window에 캡처 단계로 걸어야
+    // 어느 하위 스크롤 영역에서 발생했든 잡을 수 있음
+    const onScroll = (e: Event) => {
+      const el = e.target;
+      if (!(el instanceof HTMLElement) || el.clientHeight < MIN_SCROLLABLE_HEIGHT) return;
+      // 하루짜리 타임라인(MobileDayAgenda)처럼 이미 패딩으로 네비 자리를 비워둔 화면은
+      // 끝까지 스크롤해도 가려질 일이 없으니 숨기지 않고 항상 보이게 함
+      if (el.closest('[data-keep-nav]')) { setHiddenByScroll(false); return; }
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setHiddenByScroll(distanceFromBottom <= NEAR_BOTTOM_PX);
+    };
+    window.addEventListener('scroll', onScroll, true);
+    return () => window.removeEventListener('scroll', onScroll, true);
+  }, []);
 
   return (
-    <nav className={styles.sidebar}>
+    <nav className={`${styles.sidebar} ${hiddenByScroll ? styles.sidebarHidden : ''}`.trim()}>
       <div className={styles.buttonContainer}>
         {NAV_ITEMS.map((item, index) => {
           const isActive = location.pathname === item.path;

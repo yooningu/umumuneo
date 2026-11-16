@@ -9,6 +9,7 @@ import MobileSchedulePanel from '../components/home/mobile/MobileSchedulePanel';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { FaXmark } from 'react-icons/fa6';
 import { toDateStr } from '../utils/date';
+import drawer from '../styles/drawer.module.css';
 import styles from './SchedulePage.module.css';
 
 // 이 너비 밑으로는 주간 스케줄러 대신 홈 화면에서 쓰는 하루짜리 스케줄러를 씀
@@ -143,9 +144,9 @@ export default function SchedulePage() {
 
       {/* 모바일 - 일정 목록은 평소엔 숨겨두고, 헤더의 아이콘을 누르면 오른쪽에서 서랍으로 띄움 */}
       {isMobileList && listDrawerOpen && (
-        <div className={styles.drawerOverlay} onClick={() => setListDrawerOpen(false)}>
-          <div className={styles.drawerPanel} onClick={e => e.stopPropagation()}>
-            <button type="button" className={styles.drawerClose} onClick={() => setListDrawerOpen(false)} aria-label="닫기">
+        <div className={drawer.drawerOverlay} onClick={() => setListDrawerOpen(false)}>
+          <div className={`${drawer.drawerPanel} ${styles.drawerPanel}`.trim()} onClick={e => e.stopPropagation()}>
+            <button type="button" className={drawer.drawerClose} onClick={() => setListDrawerOpen(false)} aria-label="닫기">
               <FaXmark />
             </button>
             {sideContent}

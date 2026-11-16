@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type DragEvent } from 'react';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { FaArrowDownLong, FaStar } from 'react-icons/fa6';
-import { BsDownload, BsPencil, BsTrash } from 'react-icons/bs';
+import { BsDownload, BsPencil, BsTrash, BsReverseLayoutSidebarInsetReverse } from 'react-icons/bs';
 import { FaRegCheckCircle, FaCheck } from 'react-icons/fa';
 import { getFiles, createDirectory, toggleFavorite, renameFile, downloadFile, deleteFile, moveFile, copyFile } from '../../api/file';
 import { enqueueUpload, collectDroppedEntries, subscribeUploadDone, type DroppedEntry } from '../../state/uploadQueue';
@@ -36,6 +36,8 @@ interface Props {
   onNavigateSource: () => void;
   onNavigateFolder: (index: number) => void;
   onChanged: () => void;
+  // 좁은 화면이라 즐겨찾기/분류 사이드바가 서랍으로 숨겨져 있을 때만 상위(NasPage)에서 넘겨줌 - 있을 때만 아이콘이 보임
+  onToggleSidebar?: () => void;
 }
 
 type SortKey = 'name' | 'updatedAt' | 'sizeBytes';
@@ -72,7 +74,7 @@ function formatSize(bytes?: number): string {
 
 // 나스(파일) 메인 영역: 상단 빠른 작업(새 폴더/업로드) + 정렬 헤더 + 파일/폴더 타일 그리드.
 // 검색어가 있으면 전체(폴더 무관) 검색, 없으면 현재 폴더(parentId) 안의 목록을 보여줌.
-export default function NasFileGrid({ parentId, search, onSearchChange, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged }: Props) {
+export default function NasFileGrid({ parentId, search, onSearchChange, sourceFilter, folderStack, refreshKey, onOpenFolder, onNavigateRoot, onNavigateSource, onNavigateFolder, onChanged, onToggleSidebar }: Props) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -668,6 +670,11 @@ export default function NasFileGrid({ parentId, search, onSearchChange, sourceFi
             </span>
           ))}
         </div>
+        {onToggleSidebar && (
+          <button className={styles.sidebarToggleBtn} onClick={onToggleSidebar} aria-label="즐겨찾기/분류 열기" title="즐겨찾기/분류">
+            <BsReverseLayoutSidebarInsetReverse />
+          </button>
+        )}
         {selected.size === 0 && (
           <input
             className={styles.searchInput}

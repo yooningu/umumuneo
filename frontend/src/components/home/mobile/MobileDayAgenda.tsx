@@ -242,6 +242,9 @@ export default function MobileDayAgenda({ selectedDate, refreshKey, onScheduleCh
     <div
       className={styles.container}
       ref={containerRef}
+      // 하루짜리 타임라인은 이미 padding-bottom으로 네비 독만큼 자리를 비워놔서, 끝까지
+      // 스크롤해도 가려질 일이 없음 - Sidebar.tsx가 이 표시를 보고 자동 숨김을 안 하게 함
+      data-keep-nav="true"
       onContextMenu={e => {
         if (!onRequestAddSchedule) return;
         e.preventDefault();

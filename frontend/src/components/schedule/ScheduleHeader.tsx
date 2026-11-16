@@ -1,7 +1,16 @@
 import { useState } from 'react';
-import { FaChevronLeft, FaChevronRight, FaListUl } from "react-icons/fa6";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
+import { BsReverseLayoutSidebarInsetReverse } from "react-icons/bs";
+import { FaPlus, FaCalendarMinus } from "react-icons/fa";
+import Timetable from '../../assets/icon/Timetable.svg?react';
 import DatePickerPopover from '../common/DatePickerPopover';
+import useMediaQuery from '../../hooks/useMediaQuery';
 import styles from './ScheduleHeader.module.css';
+
+// 이 너비 밑으로는(=2줄로 쪼개지는 기준, ScheduleHeader.module.css와 동일) "오늘" 버튼이
+// 날짜 이동 묶음 대신 +버튼 옆(오른쪽 그룹)으로 옮겨감. CSS만으로는 서로 다른 부모
+// (day-nav ↔ right)로 옮길 수 없어서 여기서 직접 분기함
+const NARROW_HEADER = '(max-width: 645px)';
 
 export type ScheduleViewMode = 'scheduler' | 'calendar';
 
@@ -24,24 +33,29 @@ export default function ScheduleHeader({
   viewMode, onViewModeChange, rangeLabel, selectedDate, onDateSelect, onPrev, onNext, onToday, onAdd, onToggleList,
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const isNarrow = useMediaQuery(NARROW_HEADER);
   return (
     <div className={styles.header}>
-      <div className={styles.left}>
-        <div className={styles.viewToggle}>
-          <div className={`${styles.toggleThumb} ${viewMode === 'calendar' ? styles.toggleThumbRight : ''}`.trim()} />
-          <button
-            className={`${styles.toggleBtn} ${viewMode === 'scheduler' ? styles.toggleBtnActive : ''}`.trim()}
-            onClick={() => onViewModeChange('scheduler')}
-          >
-            스케줄러
-          </button>
-          <button
-            className={`${styles.toggleBtn} ${viewMode === 'calendar' ? styles.toggleBtnActive : ''}`.trim()}
-            onClick={() => onViewModeChange('calendar')}
-          >
-            캘린더
-          </button>
-        </div>
+      <div className={styles.viewToggle}>
+        <div className={`${styles.toggleThumb} ${viewMode === 'calendar' ? styles.toggleThumbRight : ''}`.trim()} />
+        <button
+          className={`${styles.toggleBtn} ${viewMode === 'scheduler' ? styles.toggleBtnActive : ''}`.trim()}
+          onClick={() => onViewModeChange('scheduler')}
+        >
+          <Timetable className={styles.toggleIcon} />
+          <span className={styles.toggleBtnText}>스케줄러</span>
+        </button>
+        <button
+          className={`${styles.toggleBtn} ${viewMode === 'calendar' ? styles.toggleBtnActive : ''}`.trim()}
+          onClick={() => onViewModeChange('calendar')}
+        >
+          <FaCalendarMinus className={styles.toggleIcon} />
+          <span className={styles.toggleBtnText}>캘린더</span>
+        </button>
+      </div>
+
+      {/* 화면이 좁아지면 이 묶음(날짜 이동)이 둘째 줄로 통째로 내려감 (ScheduleHeader.module.css) */}
+      <div className={styles.dateNav}>
         <div className={styles.navGroup}>
           <button className={styles.navCircle} onClick={onPrev} aria-label="이전"><FaChevronLeft /></button>
           <span className={styles.rangeLabelWrap}>
@@ -58,16 +72,20 @@ export default function ScheduleHeader({
           </span>
           <button className={styles.navCircle} onClick={onNext} aria-label="다음"><FaChevronRight /></button>
         </div>
-        <button className={styles.todayBtn} onClick={onToday}>오늘</button>
+        {!isNarrow && <button className={styles.todayBtn} onClick={onToday}>오늘</button>}
       </div>
 
       <div className={styles.right}>
+        {/* 오른쪽 끝부터: 목록 서랍 아이콘, 그 왼쪽에 +, 그 왼쪽에 오늘(좁을 때만 여기로 옮겨옴) */}
+        {isNarrow && <button className={styles.todayBtn} onClick={onToday}>오늘</button>}
+        <button className={styles.addBtn} onClick={onAdd} aria-label="스케줄 추가" title="스케줄 추가">
+          <FaPlus />
+        </button>
         {onToggleList && (
           <button className={styles.listToggleBtn} onClick={onToggleList} aria-label="일정 목록 열기">
-            <FaListUl />
+            <BsReverseLayoutSidebarInsetReverse />
           </button>
         )}
-        <button className={styles.addBtn} onClick={onAdd}>스케줄 추가</button>
       </div>
     </div>
   );
