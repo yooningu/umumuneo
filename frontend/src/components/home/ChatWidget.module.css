@@ -118,7 +118,7 @@
 
 .bubbleUser {
   border-radius: 12px 12px 2px 12px;
-  background-color: var(--sub);
+  background-color: var(--brand);
   color: var(--white);
 }
 
@@ -237,14 +237,14 @@
   gap: 6px;
   padding: 6px 12px 0;
   font-size: var(--font-s);
-  color: var(--sub);
+  color: var(--brand);
 }
 
 .statusDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--sub);
+  background-color: var(--brand);
   animation: statusPulse 1s ease-in-out infinite;
 }
 
@@ -316,9 +316,9 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--sub);
+  background-color: var(--brand);
   border: none;
-  color: var(--gray5);
+  color: var(--white);
   cursor: pointer;
   font-size: var(--font-l);
   display: flex;
