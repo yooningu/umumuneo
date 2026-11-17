@@ -1,6 +1,13 @@
 .shell {
   display: flex;
-  height: 100vh;
+  height: 100%;
+  /* 노치/홈 인디케이터 영역 - 앱(웹뷰)처럼 화면을 꽉 채워 여는 환경에서만 실제 값이 생기고,
+     일반 브라우저 탭에서는 브라우저 UI가 이미 그 영역을 차지해서 보통 0으로 처리됨.
+     --native-safe-top/bottom은 Expo 앱의 웹뷰(expo_go/src/app/index.tsx)가 정확한 수치를
+     직접 주입해주는 값 - WKWebView 안에서 env()가 0으로 읽히는 경우가 있어서 우선 사용하고,
+     그 값이 없는 일반 브라우저에서는 env()로 자연스럽게 대체됨 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
+  padding-bottom: var(--native-safe-bottom, env(safe-area-inset-bottom));
   overflow: hidden;
 }
 

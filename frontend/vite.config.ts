@@ -9,6 +9,17 @@ export default defineConfig({
   server: {
     // 기본값(localhost)만 열면 같은 docker 네트워크의 다른 컨테이너(cloudflared)에서 접근이 안 됨.
     host: true,
+    // 폰(Expo 웹뷰 등)에서 LAN IP로 이 개발서버에 접속할 때, 브라우저 입장에서 API 호출이
+    // cross-origin이 되는 걸 막으려고 운영 백엔드로 프록시함 - 서버 간 전달이라 CORS 자체가
+    // 적용 안 되고(브라우저가 보는 요청 주소는 항상 이 개발서버 자신), 백엔드 CORS 설정을
+    // 건드리거나 배포할 필요가 없음. frontend/.env의 VITE_API_BASE_URL을 이 프록시 경로(/api)로
+    // 바꿔서 쓰면 됨 (.env는 gitignore 대상이라 로컬에서만 바꿔도 안전함)
+    proxy: {
+      '/api': {
+        target: 'https://api.umumuneo.com',
+        changeOrigin: true,
+      },
+    },
     // Windows 호스트 + Docker 바인드 마운트에서는 기본 파일 감시(fs.watch)가
     // 변경 이벤트를 못 받는 경우가 있어 폴링 방식으로 강제한다.
     watch: {

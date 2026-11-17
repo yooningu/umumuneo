@@ -86,7 +86,7 @@
   .sidebar {
     position: fixed;
     left: 50%;
-    bottom: 12px;
+    bottom: calc(12px + var(--native-safe-bottom, env(safe-area-inset-bottom)));
     transform: translateX(-50%);
     width: auto;
     height: auto;

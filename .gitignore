@@ -11,3 +11,6 @@ backend/uploads/
 # 파이썬 컴파일 캐시 - .py 소스가 gitignore돼도 .pyc 안엔 문자열 상수(토큰 등)가 그대로 남아있을 수 있음
 __pycache__/
 *.pyc
+
+# 윈도우에서 `> nul`로 출력을 버리려다 생긴 실수성 빈 파일
+backend/nul
