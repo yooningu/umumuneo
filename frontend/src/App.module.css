@@ -4,21 +4,13 @@
   overflow: hidden;
 }
 
-/* 노치/홈 인디케이터 영역 - 스크롤 안 되는 .shell에 패딩을 주면 그 부분만 따로 고정된
-   블록처럼 보여서(스크롤해도 안 움직임, 배경색도 분리되어 보임), 실제로 스크롤되는
-   .main 안쪽에 패딩을 준다. 이러면 스크롤할 때 이 여백도 콘텐츠와 같이 밀려서, 그 자리에
-   있던 진짜 콘텐츠(색이 다른 카드 등)가 자연스럽게 이어져 보임.
-   앱(웹뷰)처럼 화면을 꽉 채워 여는 환경에서만 실제 값이 생기고, 일반 브라우저 탭에서는
-   브라우저 UI가 이미 그 영역을 차지해서 보통 0으로 처리됨.
-   --native-safe-top/bottom은 Expo 앱의 웹뷰(expo_go/src/app/index.tsx)가 정확한 수치를
-   직접 주입해주는 값 - WKWebView 안에서 env()가 0으로 읽히는 경우가 있어서 우선 쓰고,
-   그 값이 없는 일반 브라우저에서는 env()로 자연스럽게 대체됨 */
+/* 노치/홈 인디케이터 패딩을 여기(.main)에 전역으로 주지 않음 - 페이지마다 실제로 스크롤되는
+   영역이 .main 자신이 아니라 그 안쪽의 별도 컨테이너(홈의 MobileDayAgenda 등)인 경우가 많아서,
+   여기 주면 그 안쪽 스크롤과 무관하게 고정된 블록처럼 보임. 대신 각 페이지의 실제 상단바/
+   스크롤 컨테이너 쪽에서 직접 처리함 (예: HomeMobileTopBar, MobileDayAgenda) */
 .main {
   flex: 1;
   overflow: auto;
   background-color: var(--white);
-  padding-top: var(--native-safe-top, env(safe-area-inset-top));
-  padding-bottom: var(--native-safe-bottom, env(safe-area-inset-bottom));
-  box-sizing: border-box;
 }
 

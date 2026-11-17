@@ -3,6 +3,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
+  /* 노치 영역 - 이 바가 홈 화면의 실제 "상단"이라 여기서 직접 흡수함 (앱 웹뷰에서만 값이
+     생기고, 일반 브라우저에서는 보통 0) */
+  padding-top: calc(12px + var(--native-safe-top, env(safe-area-inset-top)));
   flex-shrink: 0;
 }
 
