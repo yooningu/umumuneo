@@ -26,8 +26,8 @@ export default function HomeScreen() {
   // 디버그용 - 지금 웹뷰가 "진짜 최신" CSS 파일을 쓰고 있는지(캐시된 예전 파일이 아닌지) 확인
   const checkCssJs = `
     (function() {
-      var link = document.querySelector('link[rel="stylesheet"]');
-      window.ReactNativeWebView.postMessage(link ? link.href : '(no css link found)');
+      var link = document.querySelector('link[rel="stylesheet"][href*="/assets/"]');
+      window.ReactNativeWebView.postMessage(link ? link.href : '(no bundle css link found)');
     })();
     true;
   `;
