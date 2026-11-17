@@ -4,6 +4,9 @@
   gap: 28px;
   flex-wrap: wrap;
   height: 48px;
+  box-sizing: content-box;
+  /* 노치 영역 - 이 헤더가 일정 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
 }
 
 .dateNav {

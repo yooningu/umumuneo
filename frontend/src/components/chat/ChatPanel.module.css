@@ -15,6 +15,10 @@
   height: 100%;
   background-color: transparent;
   width: 100%;
+  box-sizing: border-box;
+  /* 홈 인디케이터 영역 - 입력창(.inputRow)이 이 컨테이너의 마지막 자식이라, 여기 패딩을
+     주면 입력창이 그만큼 위로 밀려서 여유 공간이 생김 (앱 웹뷰에서만 값, 일반 브라우저는 0) */
+  padding-bottom: var(--native-safe-bottom, env(safe-area-inset-bottom));
 }
 
 /* 메시지 안에 뜨는 "코드 미리보기 보기" 칩 버튼 */
@@ -127,6 +131,8 @@
   min-height: 36px;
   background-color: none;
   top: 5px;
+  /* 노치 영역 - 이 바가 챗봇 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
 }
 
 .secretModeLabel {

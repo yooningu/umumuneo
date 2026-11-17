@@ -16,6 +16,8 @@
   align-items: center;
   gap: 10px;
   padding: 0 16px;
+  /* 노치 영역 - 이 줄이 메일 목록 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
 }
 
 /* 브라우저 기본 체크박스 대신 테두리 + 체크 표시만 그려서 보여줌 (채워진 배경 없음) */
@@ -135,6 +137,9 @@
   background-color: var(--white);
   border: 1px solid var(--gray3);
   border-radius: 16px;
+  /* 홈 인디케이터 영역 - 스크롤되는 리스트 안쪽이라 스크롤할 때 같이 밀려 움직임 */
+  padding-bottom: var(--native-safe-bottom, env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .highlight {
@@ -305,6 +310,8 @@
   align-items: center;
   gap: 12px;
   padding-bottom: 12px;
+  /* 노치 영역 - 이 줄이 메일 상세 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
   border-bottom: 1px solid var(--gray4);
 }
 
@@ -377,6 +384,9 @@
   min-height: 0;
   overflow-y: auto;
   padding: 20px 4px;
+  /* 홈 인디케이터 영역 - 스크롤되는 본문 안쪽이라 스크롤할 때 같이 밀려 움직임 */
+  padding-bottom: calc(20px + var(--native-safe-bottom, env(safe-area-inset-bottom)));
+  box-sizing: border-box;
 }
 
 .detailMeta {

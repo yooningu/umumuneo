@@ -27,6 +27,8 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
+  /* 노치 영역 - 이 줄이 나스 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+  padding-top: calc(12px + var(--native-safe-top, env(safe-area-inset-top)));
   border-bottom: 1px solid var(--gray4);
   flex-wrap: wrap;
 }
@@ -278,6 +280,8 @@
   justify-items: center;
   gap: 12px;
   padding: 16px;
+  /* 홈 인디케이터 영역 - 스크롤되는 그리드 안쪽이라 스크롤할 때 같이 밀려 움직임 */
+  padding-bottom: calc(16px + var(--native-safe-bottom, env(safe-area-inset-bottom)));
   align-content: start;
   /* 빈 공간에서는 평소처럼 세로 스크롤이 되어야 함 - 타일 위에서 끌 때만(.tile의 touch-action:none)
      커스텀 드래그(폴더로 이동)가 스크롤을 가로챔 */
@@ -406,6 +410,8 @@
   display: flex;
   flex-direction: column;
   padding: 4px 8px;
+  /* 홈 인디케이터 영역 - 스크롤되는 리스트 안쪽이라 스크롤할 때 같이 밀려 움직임 */
+  padding-bottom: calc(4px + var(--native-safe-bottom, env(safe-area-inset-bottom)));
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;

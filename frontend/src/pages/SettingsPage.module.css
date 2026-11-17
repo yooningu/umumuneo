@@ -3,6 +3,9 @@
   overflow-y: auto;
   padding: 16px;
   box-sizing: border-box;
+  /* 노치/홈 인디케이터 영역 - 이 컨테이너 자체가 스크롤되는 영역이라 여기서 바로 흡수함 */
+  padding-top: calc(16px + var(--native-safe-top, env(safe-area-inset-top)));
+  padding-bottom: calc(16px + var(--native-safe-bottom, env(safe-area-inset-bottom)));
 }
 
 .card {
