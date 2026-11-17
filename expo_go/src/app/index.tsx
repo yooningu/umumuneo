@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,8 @@ export default function HomeScreen() {
         style={styles.webview}
         bounces={false}
         overScrollMode="never"
+        // 배포할 때마다 웹뷰가 예전 페이지를 캐싱해서 새 버전이 바로 안 보이는 걸 방지
+        cacheEnabled={false}
         injectedJavaScriptBeforeContentLoaded={injectedJs}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
@@ -39,6 +41,10 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" />
         </View>
       )}
+      {/* 임시 디버그용 - useSafeAreaInsets가 실제로 값을 받아오는지 눈으로 확인하려고 띄움 */}
+      <View style={styles.debugBadge} pointerEvents="none">
+        <Text style={styles.debugText}>top: {insets.top} / bottom: {insets.bottom}</Text>
+      </View>
     </View>
   );
 }
@@ -61,5 +67,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
+  },
+  debugBadge: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  debugText: {
+    backgroundColor: 'red',
+    color: '#fff',
+    fontSize: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
 });
