@@ -28,9 +28,14 @@ public class UserBusStop {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 부산 BIMS의 정류장 고유번호(ARS번호) - 도착정보 조회(BusService.getArrivals)에 그대로 씀
-    @Column(name = "arsno", length = 20, nullable = false)
-    private String arsno;
+    // TAGO 전국 통합 정류소 ID - 근처 정류장 검색(findNearbyStops)에서 받아오고,
+    // 도착정보 조회(BusService.getTagoArrivals)에 cityCode와 함께 그대로 씀
+    @Column(name = "node_id", length = 30, nullable = false)
+    private String nodeId;
+
+    // TAGO 도시코드 - nodeId와 한 쌍으로 도착정보 조회 API에 필요
+    @Column(name = "city_code", length = 10, nullable = false)
+    private String cityCode;
 
     // 정류장 이름 - 등록 시점에 API에서 받아온 걸 캐싱(매번 안 불러오고 목록에 바로 표시하려고)
     @Column(name = "stop_name", length = 100)

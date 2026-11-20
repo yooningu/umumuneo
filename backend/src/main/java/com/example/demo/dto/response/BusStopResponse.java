@@ -8,7 +8,8 @@ import java.util.List;
 @Getter
 public class BusStopResponse {
     private final String id;
-    private final String arsno;
+    private final String nodeId;
+    private final String cityCode;
     private final String stopName;
     private final String nickname;
     private final Double latitude;
@@ -17,7 +18,8 @@ public class BusStopResponse {
 
     public BusStopResponse(UserBusStop stop) {
         this.id = stop.getId();
-        this.arsno = stop.getArsno();
+        this.nodeId = stop.getNodeId();
+        this.cityCode = stop.getCityCode();
         this.stopName = stop.getStopName();
         this.nickname = stop.getNickname();
         this.latitude = stop.getLatitude();

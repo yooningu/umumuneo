@@ -5,6 +5,7 @@ import com.example.demo.dto.request.BusStopRequest;
 import com.example.demo.dto.response.BusArrivalResponse;
 import com.example.demo.dto.response.BusStopResponse;
 import com.example.demo.dto.response.NearbyStopResponse;
+import com.example.demo.dto.response.StopRouteResponse;
 import com.example.demo.service.BusStopService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,15 @@ public class BusController {
             @RequestParam double lon
     ) throws Exception {
         return ResponseEntity.ok(busStopService.findNearby(lat, lon));
+    }
+
+    // GET /api/v1/bus/stops/routes?cityCode=&nodeId= - 즐겨찾기 등록 전, 정류장을 지나는 노선 목록
+    @GetMapping("/stops/routes")
+    public ResponseEntity<List<StopRouteResponse>> getRoutesForStop(
+            @RequestParam String cityCode,
+            @RequestParam String nodeId
+    ) throws Exception {
+        return ResponseEntity.ok(busStopService.getRoutesForStop(cityCode, nodeId));
     }
 
     // GET /api/v1/bus/my-stops - 내가 즐겨찾는 정류장 목록 (각 정류장이 추적 중인 노선들 포함)

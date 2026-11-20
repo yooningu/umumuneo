@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 // 기상청 API허브 "단기예보조회(getVilageFcst)" 연동. 오늘 포함 최대 5일치 최저/최고기온 + 강수확률만 뽑아서 쓴다.
@@ -49,7 +50,8 @@ public class WeatherService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter DAY_LABEL_FMT = DateTimeFormatter.ofPattern("M월 d일(E)", Locale.KOREAN);
 
-    public record DayForecast(LocalDate date, Double minTemp, Double maxTemp, Integer maxPop) {}
+    // sky(하늘상태): 1=맑음, 3=구름많음, 4=흐림 / pty(강수형태): 0=없음, 1=비, 2=비/눈, 3=눈, 4=소나기
+    public record DayForecast(LocalDate date, Double minTemp, Double maxTemp, Integer maxPop, Integer sky, Integer pty) {}
 
     // 챗봇이 그대로 보여줄 수 있는 자연어 요약 텍스트 (기본 격자 - application.properties의 kma.nx/ny)
     public String getWeeklySummaryText() throws Exception {
@@ -97,10 +99,15 @@ public class WeatherService {
         Map<String, Double> minByDate = new LinkedHashMap<>();
         Map<String, Double> maxByDate = new LinkedHashMap<>();
         Map<String, Integer> popByDate = new LinkedHashMap<>();
+        // sky/pty는 TMN/TMX와 달리 시간마다 값이 오므로, 하루 아이콘으로 쓸 대표값을 고르기 위해
+        // fcstTime(예: 1200) -> 값 형태로 모아뒀다가 나중에 한 번에 대표값을 뽑는다
+        Map<String, TreeMap<Integer, Integer>> skyByDate = new LinkedHashMap<>();
+        Map<String, TreeMap<Integer, Integer>> ptyByDate = new LinkedHashMap<>();
         TreeSet<String> dates = new TreeSet<>();
 
         for (JsonNode item : items) {
             String date = item.path("fcstDate").asText();
+            String time = item.path("fcstTime").asText();
             String category = item.path("category").asText();
             String value = item.path("fcstValue").asText();
             dates.add(date);
@@ -110,7 +117,11 @@ public class WeatherService {
                     case "TMN" -> minByDate.put(date, Double.parseDouble(value));
                     case "TMX" -> maxByDate.put(date, Double.parseDouble(value));
                     case "POP" -> popByDate.merge(date, Integer.parseInt(value), Math::max);
-                    default -> { /* 기온/강수확률 외 항목은 지금은 안 씀 */ }
+                    case "SKY" -> skyByDate.computeIfAbsent(date, k -> new TreeMap<>())
+                            .put(Integer.parseInt(time), Integer.parseInt(value));
+                    case "PTY" -> ptyByDate.computeIfAbsent(date, k -> new TreeMap<>())
+                            .put(Integer.parseInt(time), Integer.parseInt(value));
+                    default -> { /* 기온/강수확률/하늘상태/강수형태 외 항목은 지금은 안 씀 */ }
                 }
             } catch (NumberFormatException ignored) {
                 // "강수없음" 같은 비수치 값은 건너뜀
@@ -120,9 +131,30 @@ public class WeatherService {
         List<DayForecast> result = new ArrayList<>();
         for (String dateStr : dates) {
             LocalDate date = LocalDate.parse(dateStr, DATE_FMT);
-            result.add(new DayForecast(date, minByDate.get(dateStr), maxByDate.get(dateStr), popByDate.get(dateStr)));
+            Integer pty = pickRepresentativePty(ptyByDate.get(dateStr));
+            Integer sky = pickRepresentativeNearNoon(skyByDate.get(dateStr));
+            result.add(new DayForecast(date, minByDate.get(dateStr), maxByDate.get(dateStr), popByDate.get(dateStr), sky, pty));
         }
         return result;
+    }
+
+    // 그날 아이콘 대표 강수형태: 하루 중 비/눈이 한 번이라도 예보돼 있으면(값이 0이 아니면) 그걸
+    // 우선 보여줌(정오 값만 보면 비 예보를 놓칠 수 있어서) - 없으면 0(강수 없음)
+    private Integer pickRepresentativePty(TreeMap<Integer, Integer> byTime) {
+        if (byTime == null || byTime.isEmpty()) return null;
+        TreeMap<Integer, Integer> nonZero = new TreeMap<>();
+        byTime.forEach((time, value) -> { if (value != 0) nonZero.put(time, value); });
+        return nonZero.isEmpty() ? 0 : pickRepresentativeNearNoon(nonZero);
+    }
+
+    // 정오(12시)에 가장 가까운 시각의 값을 그날의 대표값으로 사용
+    private Integer pickRepresentativeNearNoon(TreeMap<Integer, Integer> byTime) {
+        if (byTime == null || byTime.isEmpty()) return null;
+        Map.Entry<Integer, Integer> floor = byTime.floorEntry(1200);
+        Map.Entry<Integer, Integer> ceiling = byTime.ceilingEntry(1200);
+        if (floor == null) return ceiling.getValue();
+        if (ceiling == null) return floor.getValue();
+        return (1200 - floor.getKey() <= ceiling.getKey() - 1200) ? floor.getValue() : ceiling.getValue();
     }
 
     // 지금 시각 기준으로 가장 최근에 발표됐을 단기예보 회차(base_date, base_time)를 계산

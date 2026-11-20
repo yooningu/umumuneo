@@ -5,19 +5,21 @@ import lombok.Getter;
 
 @Getter
 public class BusArrivalResponse {
-    private final String lineNo;
     private final String stopName;
-    private final String min1;
-    private final String station1;
-    private final String min2;
-    private final String station2;
+    private final String routeId;
+    private final String lineNo;
+    private final String routeType;
+    private final Integer stationsLeft;
+    private final String vehicleType;
+    private final Integer arrivalSeconds;
 
-    public BusArrivalResponse(BusService.BusArrival arrival) {
-        this.lineNo = arrival.lineno();
-        this.stopName = arrival.nodenm();
-        this.min1 = arrival.min1();
-        this.station1 = arrival.station1();
-        this.min2 = arrival.min2();
-        this.station2 = arrival.station2();
+    public BusArrivalResponse(BusService.TagoArrival arrival) {
+        this.stopName = arrival.stopName();
+        this.routeId = arrival.routeId();
+        this.lineNo = arrival.routeNo();
+        this.routeType = arrival.routeType();
+        this.stationsLeft = arrival.stationsLeft();
+        this.vehicleType = arrival.vehicleType();
+        this.arrivalSeconds = arrival.arrivalSeconds();
     }
 }

@@ -27,7 +27,11 @@ public class UserBusStopLine {
     @JoinColumn(name = "user_bus_stop_id", nullable = false)
     private UserBusStop userBusStop;
 
-    // 버스 노선 번호(예: "8", "103") - BusService.BusArrival.lineno()와 매칭해서 도착정보를 가져옴
+    // TAGO 노선 ID - 특정노선버스 도착예정정보 조회(BusService.getTagoArrivalsForRoute)에 그대로 씀
+    @Column(name = "route_id", length = 30, nullable = false)
+    private String routeId;
+
+    // 버스 노선 번호(예: "8", "103") - 화면에 표시용으로 등록 시점에 캐싱
     @Column(name = "line_no", length = 20, nullable = false)
     private String lineNo;
 

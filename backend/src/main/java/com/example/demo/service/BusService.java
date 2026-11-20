@@ -14,12 +14,13 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 // 부산광역시_부산버스정보시스템(BIMS) 연동. 기본 정류장(ARS번호)에서 출근버스 노선들 도착정보만 뽑아서 쓴다.
+// (우무 챗봇의 출근버스 하드코딩 기능 전용 - 아래 TAGO 연동과는 완전히 별개)
 @Service
 @RequiredArgsConstructor
 public class BusService {
@@ -33,23 +34,33 @@ public class BusService {
     @Value("${bus.busan.default-arsno}")
     private String defaultArsno;
 
-    // 국가대중교통정보센터(TAGO) 연동 - "내 주변 정류장 검색"은 부산 BIMS엔 없어서(도착정보 조회만
-    // 지원) 전국 표준 API인 TAGO의 좌표기반 근접정류소 목록조회를 대신 씀.
-    // ⚠️ 주의: TAGO 응답에 arsno가 그대로 들어있는지 확실하지 않음(nodeid/nodeno 등 다른 필드일
-    //    수 있음) - 실제 키 발급받고 한 번 호출해본 뒤, findNearbyStops()의 필드 파싱 부분을
-    //    실제 응답 구조에 맞게 확인/수정해야 함
+    // 국가대중교통정보센터(TAGO) - 버스정류소정보조회 서비스(BusSttnInfoInqireService).
+    // 좌표기반근접정류소 목록조회 / 정류소별경유노선 목록조회에 사용
     @Value("${tago.service-key}")
     private String tagoServiceKey;
 
-    @Value("${tago.base-url}")
-    private String tagoBaseUrl;
+    @Value("${tago.sttninfo-base-url}")
+    private String tagoSttnInfoBaseUrl;
+
+    // 국가대중교통정보센터(TAGO) - 버스도착정보조회 서비스(ArvlInfoInqireService).
+    // 정류소별 실시간 도착예정정보(전체 노선 / 특정 노선)에 사용
+    @Value("${tago.arvlinfo-base-url}")
+    private String tagoArvlInfoBaseUrl;
 
     // 출근버스로 챙겨볼 노선 번호
     private static final List<String> COMMUTE_LINES = List.of("8", "11", "103");
 
     public record BusArrival(String lineno, String nodenm, String min1, String station1, String min2, String station2) {}
 
-    public record NearbyStop(String arsno, String stopName, double latitude, double longitude) {}
+    // TAGO 근처 정류장 검색 결과 (nodeId/cityCode는 TAGO 전국 통합 체계 - 부산 BIMS의 arsno와는 다른 번호 체계)
+    public record NearbyStop(String nodeId, String cityCode, String stopName, double latitude, double longitude) {}
+
+    // 정류소를 지나는 노선 목록 - 즐겨찾기에 추가할 노선을 고를 때 사용
+    public record StopRoute(String routeId, String routeNo, String routeType, String startStopName, String endStopName) {}
+
+    // TAGO 도착정보 (정류소별 전체 노선 / 특정 노선 공용)
+    public record TagoArrival(String nodeId, String stopName, String routeId, String routeNo, String routeType,
+                               Integer stationsLeft, String vehicleType, Integer arrivalSeconds) {}
 
     // 기본 정류장에서 출근버스(8/11/103) 도착정보만 자연어로 정리
     public String getCommuteBusText() throws Exception {
@@ -70,24 +81,7 @@ public class BusService {
     // 정류장(ARS 번호) 도착정보 원본 목록 조회
     public List<BusArrival> getArrivals(String arsno) throws Exception {
         String url = baseUrl + "/bitArrByArsno?arsno=" + arsno + "&serviceKey=" + serviceKey;
-
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(15000);
-
-        String body;
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) sb.append(line);
-            body = sb.toString();
-        }
-
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+        Document doc = fetchXml(url);
 
         String resultCode = firstText(doc, "resultCode");
         if (!"00".equals(resultCode)) {
@@ -110,15 +104,107 @@ public class BusService {
         return result;
     }
 
-    // 좌표 주변 정류장 검색 (TAGO 좌표기반 근접정류소 목록조회). 사용자가 정류장을 즐겨찾기에
-    // 등록할 때 "내 주변 정류장" 목록을 보여주는 용도 - 거기서 arsno를 골라서
-    // UserBusStop에 저장하면, 실제 도착정보는 기존 getArrivals(arsno)로 그대로 조회됨
+    // 좌표 주변 정류장 검색 (TAGO 좌표기반근접정류소 목록조회, getCrdntPrxmtSttnList)
     public List<NearbyStop> findNearbyStops(double lat, double lon) throws Exception {
-        String url = tagoBaseUrl + "/getCrdntPrxmtSttnList"
+        String url = tagoSttnInfoBaseUrl + "/getCrdntPrxmtSttnList"
                 + "?serviceKey=" + tagoServiceKey
                 + "&gpsLati=" + lat + "&gpsLong=" + lon
                 + "&numOfRows=20&pageNo=1&_type=xml";
+        Document doc = fetchXml(url);
+        checkTagoResult(doc, "정류장 검색");
 
+        List<NearbyStop> result = new ArrayList<>();
+        NodeList items = doc.getElementsByTagName("item");
+        for (int i = 0; i < items.getLength(); i++) {
+            Element item = (Element) items.item(i);
+            String latStr = childText(item, "gpslati");
+            String lonStr = childText(item, "gpslong");
+            result.add(new NearbyStop(
+                    childText(item, "nodeid"),
+                    childText(item, "citycode"),
+                    childText(item, "nodenm"),
+                    latStr != null ? Double.parseDouble(latStr) : 0,
+                    lonStr != null ? Double.parseDouble(lonStr) : 0
+            ));
+        }
+        return result;
+    }
+
+    // 정류소별 경유노선 목록 조회 (TAGO, getSttnThrghRouteList) - 즐겨찾기에 추가할 노선 선택용
+    public List<StopRoute> getRoutesForStop(String cityCode, String nodeId) throws Exception {
+        String url = tagoSttnInfoBaseUrl + "/getSttnThrghRouteList"
+                + "?serviceKey=" + tagoServiceKey
+                + "&cityCode=" + cityCode + "&nodeid=" + URLEncoder.encode(nodeId, StandardCharsets.UTF_8)
+                + "&numOfRows=100&pageNo=1&_type=xml";
+        Document doc = fetchXml(url);
+        checkTagoResult(doc, "경유노선 조회");
+
+        List<StopRoute> result = new ArrayList<>();
+        NodeList items = doc.getElementsByTagName("item");
+        for (int i = 0; i < items.getLength(); i++) {
+            Element item = (Element) items.item(i);
+            result.add(new StopRoute(
+                    childText(item, "routeid"),
+                    childText(item, "routeno"),
+                    childText(item, "routetp"),
+                    childText(item, "startnodenm"),
+                    childText(item, "endnodenm")
+            ));
+        }
+        return result;
+    }
+
+    // 정류소별 도착예정정보 전체 조회 (TAGO, getSttnAcctoArvlPrearngeInfoList)
+    public List<TagoArrival> getTagoArrivals(String cityCode, String nodeId) throws Exception {
+        String url = tagoArvlInfoBaseUrl + "/getSttnAcctoArvlPrearngeInfoList"
+                + "?serviceKey=" + tagoServiceKey
+                + "&cityCode=" + cityCode + "&nodeId=" + URLEncoder.encode(nodeId, StandardCharsets.UTF_8)
+                + "&numOfRows=50&pageNo=1&_type=xml";
+        return parseTagoArrivals(fetchXml(url));
+    }
+
+    // 정류소별 특정노선버스 도착예정정보 조회 (TAGO, getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList)
+    // - 노선별 알람 기능에서 "이 노선 몇 분 남았는지"만 콕 집어 확인할 때 사용
+    public List<TagoArrival> getTagoArrivalsForRoute(String cityCode, String nodeId, String routeId) throws Exception {
+        String url = tagoArvlInfoBaseUrl + "/getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList"
+                + "?serviceKey=" + tagoServiceKey
+                + "&cityCode=" + cityCode + "&nodeId=" + URLEncoder.encode(nodeId, StandardCharsets.UTF_8)
+                + "&routeId=" + URLEncoder.encode(routeId, StandardCharsets.UTF_8)
+                + "&numOfRows=10&pageNo=1&_type=xml";
+        return parseTagoArrivals(fetchXml(url));
+    }
+
+    private List<TagoArrival> parseTagoArrivals(Document doc) throws Exception {
+        checkTagoResult(doc, "도착정보 조회");
+
+        List<TagoArrival> result = new ArrayList<>();
+        NodeList items = doc.getElementsByTagName("item");
+        for (int i = 0; i < items.getLength(); i++) {
+            Element item = (Element) items.item(i);
+            String stationsLeft = childText(item, "arrprevstationcnt");
+            String arrivalSeconds = childText(item, "arrtime");
+            result.add(new TagoArrival(
+                    childText(item, "nodeid"),
+                    childText(item, "nodenm"),
+                    childText(item, "routeid"),
+                    childText(item, "routeno"),
+                    childText(item, "routetp"),
+                    stationsLeft != null && !stationsLeft.isBlank() ? Integer.parseInt(stationsLeft) : null,
+                    childText(item, "vehicletp"),
+                    arrivalSeconds != null && !arrivalSeconds.isBlank() ? Integer.parseInt(arrivalSeconds) : null
+            ));
+        }
+        return result;
+    }
+
+    private void checkTagoResult(Document doc, String context) {
+        String resultCode = firstText(doc, "resultCode");
+        if (resultCode != null && !"00".equals(resultCode)) {
+            throw new RuntimeException("TAGO " + context + " API 오류: " + firstText(doc, "resultMsg"));
+        }
+    }
+
+    private Document fetchXml(String url) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(8000);
@@ -135,38 +221,7 @@ public class BusService {
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
-
-        String resultCode = firstText(doc, "resultCode");
-        if (resultCode != null && !"00".equals(resultCode)) {
-            throw new RuntimeException("정류장 검색 API 오류: " + firstText(doc, "resultMsg"));
-        }
-
-        List<NearbyStop> result = new ArrayList<>();
-        NodeList items = doc.getElementsByTagName("item");
-        for (int i = 0; i < items.getLength(); i++) {
-            Element item = (Element) items.item(i);
-            // arsno 필드가 실제 응답에 없을 수 있음 - 있으면 그걸 쓰고, 없으면 nodeid/nodeno로 대체
-            // (이 경우 getArrivals가 못 알아먹을 수 있으니 실제 응답 보고 바로잡아야 함)
-            String arsno = firstNonBlank(childText(item, "arsno"), childText(item, "nodeno"), childText(item, "nodeid"));
-            String name = childText(item, "nodenm");
-            String latStr = childText(item, "gpslati");
-            String lonStr = childText(item, "gpslong");
-            result.add(new NearbyStop(
-                    arsno,
-                    name,
-                    latStr != null ? Double.parseDouble(latStr) : 0,
-                    lonStr != null ? Double.parseDouble(lonStr) : 0
-            ));
-        }
-        return result;
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String v : values) {
-            if (v != null && !v.isBlank()) return v;
-        }
-        return null;
+        return builder.parse(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     // "N분 후 도착 (M정류장 전)" / "운행대기" / 정보 없으면 null

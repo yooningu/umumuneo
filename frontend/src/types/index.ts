@@ -79,6 +79,14 @@ export interface Notification {
   offsetMin: number;
   notifyAt: string;
 }
+export interface DayForecast {
+  date: string; // yyyy-MM-dd
+  minTemp: number | null;
+  maxTemp: number | null;
+  maxPop: number | null;
+  sky: number | null; // 1=맑음, 3=구름많음, 4=흐림
+  pty: number | null; // 0=없음, 1=비, 2=비/눈, 3=눈, 4=소나기
+}
 export interface ChatSession {
   id: string;
   title: string | null;

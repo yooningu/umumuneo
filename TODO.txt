@@ -3,10 +3,10 @@
 
 ## 미니PC에서 해야 할 일
 - 미니PC의 .env(C:\Users\yig07\OneDrive\Desktop\umumuneo\.env)에 새 키 2개 추가:
-  - TAGO_SERVICE_KEY (국가대중교통정보센터, data.go.kr - 주변 버스정류장 검색용)
+  - TAGO_SERVICE_KEY (국가대중교통정보센터, data.go.kr - 주변 버스정류장 검색/경유노선/도착정보용)
   - VWORLD_API_KEY (브이월드, 국토교통부 - 주소<->좌표 변환용)
   - 추가 후 docker compose up -d --build 로 backend 재기동해야 반영됨
-- TAGO 서비스 아직 키 발급 안 했으면 data.go.kr에서 "국가대중교통정보센터_버스정류소정보" 활용신청
-- BusService.findNearbyStops()가 실제로 arsno 필드를 제대로 돌려주는지 확인 필요
-  (문서로 확실히 못 찾아서 nodeid/nodeno로 폴백 넣어둔 상태 - 실제 호출해보고 다르면 수정)
+- TAGO 서비스 아직 키 발급 안 했으면 data.go.kr에서 아래 2개 활용신청:
+  - "국토교통부_(TAGO)_버스정류소정보" (BusSttnInfoInqireService)
+  - "국토교통부_(TAGO)_버스도착정보" (ArvlInfoInqireService)
 
