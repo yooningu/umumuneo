@@ -160,15 +160,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  /* 박스가 아이콘(20px)보다 너무 빡빡하면 아이콘이 가장자리에서 잘려 보임 - 여유 있게 키움 */
+  width: 36px;
+  height: 36px;
   margin-left: auto;
   border: none;
   border-radius: 6px;
   background: none;
   color: var(--gray2);
   cursor: pointer;
-  font-size: var(--font-xl);
+  font-size: var(--icon-m);
 }
 
 .sidebarToggleBtn:hover {
@@ -260,7 +261,7 @@
   background: transparent;
   color: var(--gray3);
   cursor: pointer;
-  font-size: var(--font-m);
+  font-size: var(--icon-s);
   transition: color 0.2s ease;
 }
 

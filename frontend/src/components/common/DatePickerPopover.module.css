@@ -94,7 +94,7 @@
 }
 
 .today {
-  color: var(--sub);
+  color: var(--brand);
   font-weight: var(--font-weight-bold);
 }
 
@@ -107,6 +107,6 @@
   border-top: 1px solid var(--gray4);
   background: none;
   font-size: var(--font-s);
-  color: var(--sub);
+  color: var(--brand);
   cursor: pointer;
 }

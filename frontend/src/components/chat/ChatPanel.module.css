@@ -149,8 +149,11 @@
 .topBarRight {
   position: absolute;
   right: 0px;
-  top: 50%;
-  transform: translateY(-50%);
+  /* position:absolute는 부모(.topBar)의 padding-top(노치 여백)을 무시하고 박스 맨 위부터
+     차지하므로, top을 그 패딩만큼 직접 밀어줘야 실제 콘텐츠 영역(패딩 아래) 안에서만
+     가운데 정렬됨 - 안 그러면 패딩이 클 때 중간값이 여전히 노치 안쪽에 걸침 */
+  top: var(--native-safe-top, env(safe-area-inset-top));
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -164,7 +167,7 @@
   background-color: var(--white);
   color: var(--gray3);
   cursor: pointer;
-  font-size: var(--font-xl);
+  font-size: var(--icon-l);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,7 +187,7 @@
   background-color: var(--white);
   color: var(--gray3);
   cursor: pointer;
-  font-size: var(--font-m);
+  font-size: var(--icon-m);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -516,6 +519,7 @@
 .sendButton {
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   border-radius: 50%;
   background-color: var(--brand);
   border: none;

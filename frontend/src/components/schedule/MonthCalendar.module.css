@@ -11,6 +11,14 @@
   border-bottom: 1px solid var(--gray4);
 }
 
+/* 네비바가 모바일로 바뀌는 824px 이하에서만 - SchedulePage의 .mainPane 테두리가 없어지면서
+   표 위쪽이 뚫려 보이는 걸 직접 막음. 그 위(824px 초과)는 .mainPane 테두리가 이미 막아줌 */
+@media (max-width: 824px) {
+  .weekdayRow {
+    border-top: 1px solid var(--gray4);
+  }
+}
+
 .weekdayCell {
   text-align: center;
   font-size: var(--font-s);

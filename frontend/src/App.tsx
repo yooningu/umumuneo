@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import MobileNav from './components/MobileNav';
+import useMediaQuery from './hooks/useMediaQuery';
 import EmailAliasModal from './components/EmailAliasModal';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/auth/CallbackPage';
@@ -18,11 +20,12 @@ import { applyTheme } from './utils/theme';
 import { useKeyboardInset } from './hooks/useKeyboardInset';
 import styles from './App.module.css';
 
-// 왼쪽 고정 사이드바 + 페이지 레이아웃
+// 왼쪽 고정 사이드바(PC) 또는 하단 플로팅 독(모바일) + 페이지 컨텐츠
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const isMobile = useMediaQuery('(max-width: 824px)'); // Sidebar/MobileNav가 바뀌는 기준과 동일
   return (
     <div className={styles.shell}>
-      <Sidebar />
+      {isMobile ? <MobileNav /> : <Sidebar />}
       {/* 페이지 컨텐츠 */}
       <main className={styles.main}>
         {children}

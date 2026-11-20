@@ -43,13 +43,22 @@
 /* 일정 페이지 전용 모바일 기준 - 904px 미만부터는 일정 목록이 사이드 패널이 아니라
    서랍으로 바뀌므로(SchedulePage.tsx의 isMobileList) 본문엔 mainPane 하나만 남음 */
 @media (max-width: 903px) {
-  .container {
-    padding: 12px;
-  }
-
   .mainPane {
     flex: 1;
     min-height: 320px;
+  }
+}
+
+/* 네비바가 모바일(하단 플로팅 독)로 바뀌는 기준(824px, App.tsx의 isMobile)과 맞춤 -
+   그 위(태블릿 포함, 824px 초과)는 PC처럼 패딩/라운드 있는 카드 모양 유지 */
+@media (max-width: 824px) {
+  .container {
+    padding: 0;
+  }
+
+  .mainPane {
+    border: none;
+    border-radius: 0;
   }
 }
 

@@ -15,10 +15,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding-left: 16px;
   /* 노치 영역 - 이 줄이 메일 목록 화면의 실제 "상단"이라 여기서 직접 흡수함 */
-  padding-top: var(--native-safe-top, env(safe-area-inset-top));
+  padding-top: calc(12px + var(--native-safe-top, env(safe-area-inset-top)));
 }
+
 
 /* 브라우저 기본 체크박스 대신 테두리 + 체크 표시만 그려서 보여줌 (채워진 배경 없음) */
 .checkbox {
@@ -78,15 +79,13 @@
 @media (max-width: 824px) {
   .listHeader {
     flex-wrap: wrap;
+    padding-right: 16px;
   }
 
-  /* .listHeader의 좌우 패딩(16px)을 음수 마진으로 상쇄해서 검색창만 화면 끝까지 꽉 채움.
-     flex-basis를 100%가 아니라 "100% + 음수 마진 32px만큼 더"로 잡아야, 음수 마진 때문에
-     줄에 여유 공간이 남은 것처럼 계산돼서 체크박스가 옆으로 끼어드는 걸 막을 수 있음 */
   .searchInput {
     order: -1;
-    flex: 1 1 calc(100% + 32px);
-    margin: 0 -16px;
+    flex: 1 1 100%;
+    margin: 0;
     width: auto;
   }
 
@@ -142,6 +141,38 @@
   box-sizing: border-box;
 }
 
+/* PC - 전역 스크롤바 호버 감지(App.tsx의 useGlobalScrollbarHover)가 여기서는 안 먹혀서,
+   순수 CSS :hover로 직접 보강함 */
+.listScroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--gray4);
+}
+
+/* 네비바가 모바일로 바뀌는 824px 이하에서만 - 그 위(PC)는 카드 모양(패딩+라운드) 유지 */
+@media (max-width: 824px) {
+  .container {
+    padding: 0;
+  }
+
+  .listScroll {
+    border: none;
+    border-radius: 0;
+    /* 테두리가 없어지면서 위쪽이 뚫려 보이는 걸 직접 막음 */
+    border-top: 1px solid var(--gray4);
+    /* 스크롤바 자체를 안 보이게 막음 (크롬/파이어폭스/사파리 데스크톱 스타일 스크롤바 기준 -
+       iOS 네이티브 모멘텀 스크롤 표시줄은 CSS로 못 막음, OS 차원의 동작이라 그대로 나옴) */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .listScroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .detailTopBar {
+    padding: 12px 16px;
+  }
+}
+
 .highlight {
   background-color: var(--brand);
   color: var(--white);
@@ -176,6 +207,7 @@
 
 .checkboxCol {
   flex-shrink: 0;
+  align-self: center;
   width: 17px;
   height: 17px;
 }
@@ -311,7 +343,7 @@
   gap: 12px;
   padding-bottom: 12px;
   /* 노치 영역 - 이 줄이 메일 상세 화면의 실제 "상단"이라 여기서 직접 흡수함 */
-  padding-top: var(--native-safe-top, env(safe-area-inset-top));
+  padding-top: calc(12px + var(--native-safe-top, env(safe-area-inset-top)));
   border-bottom: 1px solid var(--gray4);
 }
 
@@ -480,10 +512,4 @@
 .downloadButton:hover {
   background-color: var(--brand);
   color: var(--white);
-}
-
-@media (max-width: 767px) {
-  .container {
-    padding: 12px;
-  }
 }

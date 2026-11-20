@@ -20,6 +20,11 @@
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  /* 노치/홈 인디케이터 영역 - .drawerClose랑 안쪽 리스트(ChatSessionList 등)가 전부
+     일반 flex 흐름의 자식이라(absolute 아님) 여기 패딩만 줘도 전부 같이 밀려 내려옴 */
+  padding-top: var(--native-safe-top, env(safe-area-inset-top));
+  padding-bottom: var(--native-safe-bottom, env(safe-area-inset-bottom));
   animation: drawerSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

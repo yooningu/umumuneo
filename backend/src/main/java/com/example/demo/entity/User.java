@@ -52,6 +52,25 @@ public class User {
     @Column(name = "color_index", nullable = false)
     private Integer colorIndex = 0;
 
+    // 날씨/버스 기능에 쓰는 기준 위치 - 주소 직접 입력이든 GPS든 결국 이 5개로 정리돼서 저장됨
+    // (AddressService.LocationInfo 참고). 아직 위치를 설정 안 한 유저는 전부 null
+    @Column(name = "admin_dong", length = 100)
+    private String adminDong;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    // 기상청 단기예보 API 전용 격자좌표 - 위경도로부터 KmaGridConverter로 미리 계산해서 저장해둠
+    // (매번 변환하지 않고, 날씨 조회할 때 바로 씀)
+    @Column(name = "kma_nx")
+    private Integer kmaNx;
+
+    @Column(name = "kma_ny")
+    private Integer kmaNy;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

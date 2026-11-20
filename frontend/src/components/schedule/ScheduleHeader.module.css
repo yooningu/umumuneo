@@ -4,9 +4,19 @@
   gap: 28px;
   flex-wrap: wrap;
   height: 48px;
-  box-sizing: content-box;
-  /* 노치 영역 - 이 헤더가 일정 화면의 실제 "상단"이라 여기서 직접 흡수함 */
-  padding-top: var(--native-safe-top, env(safe-area-inset-top));
+}
+
+/* 네비바가 모바일로 바뀌는 824px 이하에서만 - 그 위(PC)는 SchedulePage의 .container
+   패딩(16px)이 이미 있어서 여기 따로 줄 필요 없음 */
+@media (max-width: 824px) {
+  .header {
+    box-sizing: content-box;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 0;
+    /* 노치 영역 - 이 헤더가 일정 화면의 실제 "상단"이라 여기서 직접 흡수함 */
+    padding-top: calc(12px + var(--native-safe-top, env(safe-area-inset-top)));
+  }
 }
 
 .dateNav {
@@ -40,7 +50,7 @@
   border: 1px solid var(--gray3);
   background: var(--white);
   cursor: pointer;
-  font-size: var(--font-l);
+  font-size: var(--icon-m);
   line-height: 1;
   color: var(--gray2);
   box-shadow: var(--shadow-raised);
@@ -56,7 +66,7 @@
   border: 1px solid var(--gray3);
   background: var(--white);
   cursor: pointer;
-  font-size: var(--font-m);
+  font-size: var(--icon-m);
   color: var(--gray2);
   box-shadow: var(--shadow-raised);
 }
@@ -118,7 +128,8 @@
   bottom: 4px;
   left: 4px;
   width: calc(50% - 4px);
-  border-radius: 10px;
+  /* 바깥 트랙(.viewToggle)의 radius(10px) - 패딩(4px) = 6px - 안쪽 모서리가 동심원처럼 맞음 */
+  border-radius: 6px;
   background-color: var(--brand);
   box-shadow: var(--shadow-toggle-thumb-brand);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -137,7 +148,8 @@
   justify-content: center;
   padding: 6px 12px;
   border: none;
-  border-radius: 10px;
+  /* 바깥 트랙(.viewToggle)의 radius(10px) - 패딩(4px) = 6px - 안쪽 모서리가 동심원처럼 맞음 */
+  border-radius: 6px;
   width: 80px;
   background: transparent;
   cursor: pointer;
@@ -150,8 +162,8 @@
 /* 데스크톱에선 글자만, 모바일에선 아이콘만 (아래 미디어쿼리에서 뒤집음) */
 .toggleIcon {
   display: none;
-  width: 18px;
-  height: 18px;
+  width: var(--icon-m);
+  height: var(--icon-m);
 }
 
 /* Timetable.svg는 각 rect에 fill="black"이 박혀있어서, 일반 CSS 규칙으로 덮어써야 함
@@ -178,7 +190,7 @@
   border-radius: 10px;
   background-color: var(--brand);
   color: var(--white);
-  font-size: var(--font-m);
+  font-size: var(--icon-m);
   font-weight: var(--font-weight-bold);
   cursor: pointer;
   box-shadow: var(--shadow-raised-brand);
@@ -224,10 +236,13 @@
     gap: 10px;
   }
 
-  /* 이전/다음 버튼은 양 끝으로, 날짜 라벨은 그 사이 가운데에 오도록 (두 버튼 폭이 같아서
-     space-between만으로도 가운데 항목이 정확히 중앙에 옴) */
+  /* 모바일에서는 이전/다음 버튼 자체를 없애고 날짜 라벨만 가운데 둠 */
   .navGroup {
     width: 100%;
-    justify-content: space-between;
+    justify-content: center;
+  }
+
+  .navCircle {
+    display: none;
   }
 }

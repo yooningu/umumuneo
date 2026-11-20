@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.request.UserRequest;
+import com.example.demo.dto.response.LocationResponse;
 import com.example.demo.dto.response.UserResponse;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
@@ -16,6 +17,7 @@ import java.util.regex.Pattern;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AddressService addressService;
 
     // umumuneo.com 메일 별칭 형식: 영소문자/숫자만, 3~20자 (이메일 주소 앞부분이라 특수문자 최대한 배제)
     private static final Pattern EMAIL_ALIAS_PATTERN = Pattern.compile("^[a-z0-9]{3,20}$");
@@ -61,5 +63,39 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
         user.setDeletionRequestedAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    // 내 기준 위치 조회 (날씨/버스 기능용)
+    @Transactional(readOnly = true)
+    public LocationResponse getLocation(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+        return new LocationResponse(user);
+    }
+
+    // 주소 문자열로 내 위치 설정
+    @Transactional
+    public LocationResponse setLocationByAddress(String userId, String address) throws Exception {
+        AddressService.LocationInfo info = addressService.geocodeAddress(address);
+        return applyLocation(userId, info);
+    }
+
+    // GPS 위경도로 내 위치 설정
+    @Transactional
+    public LocationResponse setLocationByGps(String userId, double lat, double lon) throws Exception {
+        AddressService.LocationInfo info = addressService.reverseGeocode(lat, lon);
+        return applyLocation(userId, info);
+    }
+
+    private LocationResponse applyLocation(String userId, AddressService.LocationInfo info) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+        user.setAdminDong(info.adminDong());
+        user.setLatitude(info.latitude());
+        user.setLongitude(info.longitude());
+        user.setKmaNx(info.kmaNx());
+        user.setKmaNy(info.kmaNy());
+        userRepository.save(user);
+        return new LocationResponse(user);
     }
 }

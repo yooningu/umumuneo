@@ -26,6 +26,13 @@
   --font-l: 18px;
   --font-xl: 24px;
 
+  /* 아이콘 크기 단계: 소(small)/중(medium)/대(large) - 버튼 안 아이콘(font-size나
+     width/height)에 공통으로 씀. 네비 아이콘/홈 설정 아이콘처럼 특별히 커야 하는 것만
+     --icon-l, 나머지 대부분은 --icon-m */
+  --icon-s: 16px;
+  --icon-m: 20px;
+  --icon-l: 24px;
+
   /* 폰트 두께 단계: light(300) ~ bold(700), 600은 semibold */
   --font-weight-light: 300;
   --font-weight-regular: 400;
@@ -34,14 +41,14 @@
   --font-weight-bold: 700;
 
   /* 토글(스위치) 전용 소프트 그림자 - 떠있는 썸(선택 막대)과 파인 트랙(바깥 배경)에 공통으로 씀.
-     썸이 브랜드색(주황)인 토글은 라이트모드에선 같은 값, 다크모드에서만 더 쎄게(아래 재정의 참고) */
+     다크모드에서는 아래에서 숫자(진하기)는 그대로 두고 밝은 쪽/어두운 쪽 비중만 서로 바꿔서 재정의함 */
   --shadow-toggle-thumb: 0 0 6px rgba(108, 108, 108, 0.45);
   /* 주황 썸은 배경 자체가 밝아서 흐릿한 단일 그림자로는 티가 잘 안 나 - 짙은 쪽/밝은 쪽을 나눈 입체 그림자로 */
   --shadow-toggle-thumb-brand: 2px 2px 5px rgba(19, 21, 20, 0.3), -2px -2px 5px rgba(255, 255, 255, 0.95);
   --shadow-toggle-track: inset -2px -2px 5px rgba(255, 255, 255, 0.64), inset 2px 2px 5px rgba(19, 21, 20, 0.16);
 
   /* 버튼류(스케줄 페이지 이전/다음/오늘/추가 버튼 등)에 쓰는 떠있는 느낌의 소프트 그림자.
-     브랜드색(주황) 배경 버튼은 라이트모드에선 같은 값, 다크모드에서만 더 쎄게(아래 재정의 참고) */
+     다크모드에서는 숫자는 그대로 두고 밝은 쪽/어두운 쪽 비중만 서로 바꿔서 재정의함(아래 참고) */
   --shadow-raised: 2px 2px 4px rgba(19, 21, 20, 0.16), -2px -2px 4px rgba(255, 255, 255, 0.9);
   --shadow-raised-brand: var(--shadow-raised);
 }
@@ -63,14 +70,15 @@
   --red: var(--red2);
   --yellow: var(--yellow2);
 
-  /* 소프트 그림자도 다시 정의 - 라이트모드 값은 흰 배경 위에 뜬다는 전제로 흰색 하이라이트를 섞어놨는데
-     어두운 배경 위에서 그대로 쓰면 하이라이트가 튀어 보여서, 어두운 배경에 맞게 하이라이트/그림자를 다시 잡음 */
-  --shadow-toggle-thumb: 0 0 10px rgba(0, 0, 0, 0.8);
-  --shadow-toggle-thumb-brand: 3px 3px 8px rgba(0, 0, 0, 0.8), -3px -3px 8px rgba(255, 255, 255, 0.35);
-  --shadow-toggle-track: inset -2px -2px 5px rgba(255, 255, 255, 0.12), inset 2px 2px 5px rgba(0, 0, 0, 0.7);
-  --shadow-raised: 3px 3px 6px rgba(0, 0, 0, 0.7), -3px -3px 6px rgba(255, 255, 255, 0.12);
-  /* 브랜드색 배경 버튼은 다크모드에서 더 쎄게 - 흰 배경 버튼보다 그림자를 키움 */
-  --shadow-raised-brand: 4px 4px 9px rgba(0, 0, 0, 0.85), -4px -4px 9px rgba(255, 255, 255, 0.18);
+  /* 그림자 토큰 재정의 - 세기(투명도 숫자)는 라이트모드랑 완전히 동일한 숫자 세트를 그대로 쓰고,
+     어느 쪽이 더 진한지(밝은 면/어두운 면)만 서로 바꿈. 흰 배경에선 밝은 하이라이트가 도드라지고
+     어두운 배경에선 반대로 어두운 쪽이 도드라지는 게 자연스러워서 방향만 뒤집는 것 - 전체적인
+     진하기 자체는 라이트모드랑 똑같이 유지함 */
+  --shadow-toggle-thumb: 0 0 6px rgba(0, 0, 0, 0.45);
+  --shadow-toggle-thumb-brand: 2px 2px 5px rgba(19, 21, 20, 0.95), -2px -2px 5px rgba(255, 255, 255, 0.3);
+  --shadow-toggle-track: inset -2px -2px 5px rgba(255, 255, 255, 0.16), inset 2px 2px 5px rgba(19, 21, 20, 0.64);
+  --shadow-raised: 2px 2px 4px rgba(19, 21, 20, 0.9), -2px -2px 4px rgba(255, 255, 255, 0.16);
+  --shadow-raised-brand: var(--shadow-raised);
 }
 
 /* 브라우저 기본 여백/박스 모델 리셋 - html/body에 기본으로 붙는 margin 등을 제거 */

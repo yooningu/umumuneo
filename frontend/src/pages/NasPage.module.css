@@ -39,7 +39,12 @@
 
 @media (max-width: 767px) {
   .container {
-    padding: 12px;
+    padding: 0;
+  }
+
+  .mainPane {
+    border: none;
+    border-radius: 0;
   }
 }
 

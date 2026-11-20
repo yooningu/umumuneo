@@ -186,16 +186,16 @@ export default function MailPage() {
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
-  // true면 다음 fetch 결과를 기존 목록 뒤에 이어붙임(모바일 무한스크롤 전용) - 명시적으로
-  // loadMore()에서만 켜줘서, 검색/새로고침/페이지 버튼 클릭 등 다른 경로로 page가 바뀔 때
-  // 실수로 이어붙여져서 중복되는 일이 없게 함
-  const appendNextRef = useRef(false);
   const hasMore = page + 1 < totalPages;
 
   useEffect(() => {
     setLoading(true);
-    const shouldAppend = appendNextRef.current;
-    appendNextRef.current = false;
+    // 모바일 무한스크롤에서만 이어붙임 - 검색/새로고침/페이지 버튼 클릭은 항상 page를 0으로
+    // 리셋해서 호출하므로(아래 참고) page>0은 "스크롤로 다음 페이지를 더 불러온 것"과 항상 일치함.
+    // (예전엔 ref 플래그로 추적했는데, 스크롤이 빨라서 setPage가 연속으로 여러 번 불리면
+    // 앞선 fetch의 effect가 먼저 끝나면서 플래그를 꺼버려 뒤의 fetch가 append 대신 replace가
+    // 되는 레이스 컨디션이 있었음 - page 값 자체로 판단하면 그런 타이밍 문제가 없음)
+    const shouldAppend = isMobile && page > 0;
     getMails({ page, size: PAGE_SIZE, search: search.trim() || undefined })
       .then(data => {
         setMails(prev => (shouldAppend ? [...prev, ...data.content] : data.content));
@@ -211,7 +211,6 @@ export default function MailPage() {
     const el = e.currentTarget;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distanceFromBottom < LOAD_MORE_THRESHOLD_PX) {
-      appendNextRef.current = true;
       setPage(p => p + 1);
     }
   };

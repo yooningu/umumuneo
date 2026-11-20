@@ -35,9 +35,11 @@ services:
       # Cloudflare Tunnel로 배포됐을 때 쓰는 값. 로컬에서만 켤 땐 없어도 application.properties 기본값(localhost)으로 동작함.
       - KAKAO_REDIRECT_URI=https://umumuneo.com/auth/callback
       - APP_PUBLIC_BASE_URL=https://api.umumuneo.com
-      # 기상청/부산버스 API 키 - 실제 값은 .env(gitignore됨)에 있음
+      # 기상청/부산버스/TAGO(전국 버스정류소 검색)/브이월드(주소<->좌표) API 키 - 실제 값은 .env(gitignore됨)에 있음
       - KMA_AUTH_KEY=${KMA_AUTH_KEY}
       - BUS_BUSAN_SERVICE_KEY=${BUS_BUSAN_SERVICE_KEY}
+      - TAGO_SERVICE_KEY=${TAGO_SERVICE_KEY}
+      - VWORLD_API_KEY=${VWORLD_API_KEY}
       # Cloudflare Email Routing Worker가 메일을 전달할 때 검증용으로 쓰는 공유 시크릿
       - EMAIL_INBOUND_SECRET=${EMAIL_INBOUND_SECRET}
       # 우무(음성 비서) 고정 토큰 발급이 허용된 계정 ID - 실제 값은 .env(gitignore됨)에 있음

@@ -33,10 +33,23 @@ public class BusService {
     @Value("${bus.busan.default-arsno}")
     private String defaultArsno;
 
+    // 국가대중교통정보센터(TAGO) 연동 - "내 주변 정류장 검색"은 부산 BIMS엔 없어서(도착정보 조회만
+    // 지원) 전국 표준 API인 TAGO의 좌표기반 근접정류소 목록조회를 대신 씀.
+    // ⚠️ 주의: TAGO 응답에 arsno가 그대로 들어있는지 확실하지 않음(nodeid/nodeno 등 다른 필드일
+    //    수 있음) - 실제 키 발급받고 한 번 호출해본 뒤, findNearbyStops()의 필드 파싱 부분을
+    //    실제 응답 구조에 맞게 확인/수정해야 함
+    @Value("${tago.service-key}")
+    private String tagoServiceKey;
+
+    @Value("${tago.base-url}")
+    private String tagoBaseUrl;
+
     // 출근버스로 챙겨볼 노선 번호
     private static final List<String> COMMUTE_LINES = List.of("8", "11", "103");
 
     public record BusArrival(String lineno, String nodenm, String min1, String station1, String min2, String station2) {}
+
+    public record NearbyStop(String arsno, String stopName, double latitude, double longitude) {}
 
     // 기본 정류장에서 출근버스(8/11/103) 도착정보만 자연어로 정리
     public String getCommuteBusText() throws Exception {
@@ -95,6 +108,65 @@ public class BusService {
             ));
         }
         return result;
+    }
+
+    // 좌표 주변 정류장 검색 (TAGO 좌표기반 근접정류소 목록조회). 사용자가 정류장을 즐겨찾기에
+    // 등록할 때 "내 주변 정류장" 목록을 보여주는 용도 - 거기서 arsno를 골라서
+    // UserBusStop에 저장하면, 실제 도착정보는 기존 getArrivals(arsno)로 그대로 조회됨
+    public List<NearbyStop> findNearbyStops(double lat, double lon) throws Exception {
+        String url = tagoBaseUrl + "/getCrdntPrxmtSttnList"
+                + "?serviceKey=" + tagoServiceKey
+                + "&gpsLati=" + lat + "&gpsLong=" + lon
+                + "&numOfRows=20&pageNo=1&_type=xml";
+
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(8000);
+        conn.setReadTimeout(15000);
+
+        String body;
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line);
+            body = sb.toString();
+        }
+
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+
+        String resultCode = firstText(doc, "resultCode");
+        if (resultCode != null && !"00".equals(resultCode)) {
+            throw new RuntimeException("정류장 검색 API 오류: " + firstText(doc, "resultMsg"));
+        }
+
+        List<NearbyStop> result = new ArrayList<>();
+        NodeList items = doc.getElementsByTagName("item");
+        for (int i = 0; i < items.getLength(); i++) {
+            Element item = (Element) items.item(i);
+            // arsno 필드가 실제 응답에 없을 수 있음 - 있으면 그걸 쓰고, 없으면 nodeid/nodeno로 대체
+            // (이 경우 getArrivals가 못 알아먹을 수 있으니 실제 응답 보고 바로잡아야 함)
+            String arsno = firstNonBlank(childText(item, "arsno"), childText(item, "nodeno"), childText(item, "nodeid"));
+            String name = childText(item, "nodenm");
+            String latStr = childText(item, "gpslati");
+            String lonStr = childText(item, "gpslong");
+            result.add(new NearbyStop(
+                    arsno,
+                    name,
+                    latStr != null ? Double.parseDouble(latStr) : 0,
+                    lonStr != null ? Double.parseDouble(lonStr) : 0
+            ));
+        }
+        return result;
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
     }
 
     // "N분 후 도착 (M정류장 전)" / "운행대기" / 정보 없으면 null

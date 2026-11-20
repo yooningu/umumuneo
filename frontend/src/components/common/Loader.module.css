@@ -1,7 +1,7 @@
 .loader {
   position: relative;
   display: inline-block;
-  color: #7c8cf8;
+  color: var(--brand);
   /* 전체가 계속 회전 (점들의 중앙 수렴/확산과 같은 주기로 돌아서 한 번 돌 때마다 모였다 퍼짐) */
   animation: loaderSpin 1.6s linear infinite;
 }

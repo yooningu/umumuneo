@@ -39,7 +39,7 @@
   background: none;
   color: var(--gray2);
   cursor: pointer;
-  font-size: 20px;
+  font-size: var(--icon-l);
 }
 
 .settingsButton:hover {

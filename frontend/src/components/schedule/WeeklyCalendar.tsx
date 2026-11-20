@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
+import { FaStar } from 'react-icons/fa';
 import { getSchedules } from '../../api/schedule';
 import { getHolidaysCached } from '../../state/holidayCache';
 import { getTimetables } from '../../api/timetable';
@@ -269,7 +270,11 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
           ].join(' ').trim();
           return (
             <div key={i} onClick={() => onDateSelect(date)} className={headerClassName}>
-              <div className={labelClassName}>{DAY_LABELS[mondayBasedDow(date)]}</div>
+              {/* 임시 테스트용 - 요일 라벨 옆에 m 사이즈 아이콘 하나, 중앙 정렬이 어떻게 보이는지 확인용 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <div className={labelClassName}>{DAY_LABELS[mondayBasedDow(date)]}</div>
+                <FaStar style={{ fontSize: 'var(--icon-m)', color: 'var(--gray3)' }} />
+              </div>
               <div className={numberClassName}>
                 {date.getDate()}
               </div>

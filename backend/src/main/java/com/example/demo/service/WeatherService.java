@@ -51,9 +51,14 @@ public class WeatherService {
 
     public record DayForecast(LocalDate date, Double minTemp, Double maxTemp, Integer maxPop) {}
 
-    // 챗봇이 그대로 보여줄 수 있는 자연어 요약 텍스트
+    // 챗봇이 그대로 보여줄 수 있는 자연어 요약 텍스트 (기본 격자 - application.properties의 kma.nx/ny)
     public String getWeeklySummaryText() throws Exception {
-        List<DayForecast> days = getForecast();
+        return getWeeklySummaryText(nx, ny);
+    }
+
+    // 유저가 자기 위치를 등록해뒀으면 그 격자(User.kmaNx/kmaNy)로 조회
+    public String getWeeklySummaryText(int nx, int ny) throws Exception {
+        List<DayForecast> days = getForecast(nx, ny);
         if (days.isEmpty()) {
             return "지금은 날씨 정보를 가져올 수 없어요. 잠시 후 다시 시도해주세요.";
         }
@@ -80,10 +85,14 @@ public class WeatherService {
         return sb.toString().trim();
     }
 
-    // 오늘부터 API가 제공하는 마지막 날짜까지, 일별 최저/최고기온 + 그날 중 최대 강수확률
+    // 오늘부터 API가 제공하는 마지막 날짜까지, 일별 최저/최고기온 + 그날 중 최대 강수확률 (기본 격자)
     public List<DayForecast> getForecast() throws Exception {
+        return getForecast(nx, ny);
+    }
+
+    public List<DayForecast> getForecast(int nx, int ny) throws Exception {
         String[] base = computeBaseDateTime();
-        JsonNode items = callApi(base[0], base[1]);
+        JsonNode items = callApi(base[0], base[1], nx, ny);
 
         Map<String, Double> minByDate = new LinkedHashMap<>();
         Map<String, Double> maxByDate = new LinkedHashMap<>();
@@ -138,7 +147,7 @@ public class WeatherService {
         return new String[]{date.format(DATE_FMT), String.format("%02d00", chosenHour)};
     }
 
-    private JsonNode callApi(String baseDate, String baseTime) throws Exception {
+    private JsonNode callApi(String baseDate, String baseTime, int nx, int ny) throws Exception {
         String url = baseUrl
                 + "?pageNo=1&numOfRows=1000&dataType=JSON"
                 + "&base_date=" + baseDate
