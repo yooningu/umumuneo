@@ -1,0 +1,181 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.card {
+  width: 360px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background-color: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray1);
+  margin-bottom: 10px;
+}
+
+.description {
+  font-size: var(--font-s);
+  color: var(--gray2);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.list {
+  overflow-y: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.listItem {
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--gray4);
+  border-radius: 8px;
+  background-color: var(--white);
+  color: var(--gray1);
+  font-size: var(--font-s);
+  cursor: pointer;
+}
+
+.listItem:hover {
+  background-color: var(--gray5);
+}
+
+.listItem:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.routeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--gray4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.routeItem:hover {
+  background-color: var(--gray5);
+}
+
+.routeNo {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray1);
+  white-space: nowrap;
+}
+
+.routeDesc {
+  font-size: var(--font-s);
+  color: var(--gray3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orDivider {
+  text-align: center;
+  color: var(--gray3);
+  font-size: var(--font-s);
+  margin: 12px 0;
+}
+
+.addressRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addressRow .nicknameInput {
+  margin-bottom: 0;
+}
+
+.nicknameInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--gray4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: var(--font-s);
+  color: var(--gray1);
+  margin-bottom: 12px;
+  outline: none;
+}
+
+.nicknameInput:focus {
+  border-color: var(--brand);
+}
+
+.empty {
+  color: var(--gray2);
+  font-size: var(--font-s);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.error {
+  color: var(--red2);
+  font-size: var(--font-s);
+  margin-bottom: 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn {
+  padding: 8px 16px;
+  border: 1px solid var(--gray3);
+  border-radius: 8px;
+  background-color: var(--white);
+  color: var(--gray1);
+  font-size: var(--font-s);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+
+.cancelBtn:hover {
+  background-color: var(--gray5);
+}
+
+.primaryBtn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--brand);
+  color: var(--white);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised-brand);
+}
+
+.primaryBtn:hover {
+  opacity: 0.85;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

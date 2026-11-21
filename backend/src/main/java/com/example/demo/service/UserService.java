@@ -87,6 +87,12 @@ public class UserService {
         return applyLocation(userId, info);
     }
 
+    // GPS 위경도를 행정동 이름으로 미리보기만(저장 안 함) - 설정 화면에서 "저장" 누르기 전에
+    // 입력창/지도에 표시만 해주는 용도
+    public LocationResponse previewLocationByGps(double lat, double lon) throws Exception {
+        return new LocationResponse(addressService.reverseGeocode(lat, lon));
+    }
+
     private LocationResponse applyLocation(String userId, AddressService.LocationInfo info) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));

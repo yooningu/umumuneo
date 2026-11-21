@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMe, updateMe, deleteMe } from '../api/user';
+import { getMe, updateMe, deleteMe, getLocation, setLocationByAddress, setLocationByGps } from '../api/user';
 import { getSessions, revokeSession, revokeAllSessions } from '../api/auth';
 import { getBlockedSenders, unblockSender } from '../api/mail';
 import { applyTheme, type Theme } from '../utils/theme';
+import { reverseGeocodeKakao } from '../utils/kakaoMapLoader';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import type { User, SessionInfo, BlockedSender } from '../types';
+import type { User, SessionInfo, BlockedSender, LocationInfo } from '../types';
 import styles from './SettingsPage.module.css';
 
 function formatRelative(dateStr: string): string {
@@ -38,6 +39,14 @@ export default function SettingsPage() {
   const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [blockedSenders, setBlockedSenders] = useState<BlockedSender[]>([]);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const [location, setLocation] = useState<LocationInfo | null>(null);
+  const [addressInput, setAddressInput] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [locatingGps, setLocatingGps] = useState(false);
+  // GPS로 고른 정확한 좌표 - 있으면 "저장" 시 이 좌표로 저장(문자열 역변환 없이 정확하게),
+  // 주소 입력란을 직접 수정하면 비워져서 그때부턴 입력한 주소 문자열 기준으로 저장됨
+  const [pickedLatLng, setPickedLatLng] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     getMe()
@@ -48,7 +57,73 @@ export default function SettingsPage() {
       .catch(console.error);
     getSessions().then(setSessions).catch(console.error);
     getBlockedSenders().then(setBlockedSenders).catch(console.error);
+    getLocation().then(setLocation).catch(console.error);
   }, []);
+
+  // 주소 입력란을 직접 고치면, GPS로 집어뒀던 정확한 좌표는 더 이상 유효하지 않으니 비움
+  const handleAddressInputChange = (value: string) => {
+    setAddressInput(value);
+    if (pickedLatLng) setPickedLatLng(null);
+  };
+
+  const handleUseGps = () => {
+    if (locatingGps) return;
+    if (!navigator.geolocation) {
+      setAddressError('이 브라우저는 위치 정보를 지원하지 않아요.');
+      return;
+    }
+    setLocatingGps(true);
+    setAddressError(null);
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        const { latitude, longitude } = position.coords;
+        setPickedLatLng({ lat: latitude, lng: longitude });
+        try {
+          // 좌표를 행정동 이름으로 미리보기(저장 전 입력란 표시용, 백엔드 호출 없이 카카오로 바로 처리)
+          const regionName = await reverseGeocodeKakao(latitude, longitude);
+          setAddressInput(regionName ?? '현재 위치');
+        } catch (e) {
+          console.error(e);
+          // 이름을 못 가져왔어도 좌표 자체는 유효하니, 저장은 여전히 가능하게 둠
+          setAddressInput('현재 위치');
+        } finally {
+          setLocatingGps(false);
+        }
+      },
+      error => {
+        // code 1=권한거부, 2=위치못찾음, 3=시간초과 - timeout 안 걸면 이 콜백 자체가 영원히 안 불릴 수 있어서 명시함
+        setAddressError(
+          error.code === error.PERMISSION_DENIED
+            ? '위치 권한이 거부됐어요. 브라우저/OS 설정에서 이 사이트의 위치 권한을 허용해주세요.'
+            : '위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요.'
+        );
+        setLocatingGps(false);
+      },
+      { timeout: 10000 }
+    );
+  };
+
+  // 저장은 이 버튼을 눌렀을 때만 실제로 반영됨 - pickedLatLng가 있으면(GPS로 고른 직후,
+  // 입력란을 그 뒤에 직접 고치지 않았으면) 정확한 좌표로, 없으면 입력란의 주소 문자열로 저장
+  const handleSave = async () => {
+    if (!addressInput.trim() || savingAddress) return;
+    setSavingAddress(true);
+    setAddressError(null);
+    try {
+      const updated = pickedLatLng
+        ? await setLocationByGps(pickedLatLng.lat, pickedLatLng.lng)
+        : await setLocationByAddress(addressInput.trim());
+      setLocation(updated);
+      setAddressInput('');
+      setPickedLatLng(null);
+    } catch (e) {
+      const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setAddressError(message || '위치를 저장하지 못했어요. 다시 확인해주세요.');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
 
   const handleUnblock = async (blocked: BlockedSender) => {
     setUnblockingId(blocked.id);
@@ -149,6 +224,39 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>위치</div>
+          <div className={styles.row}>
+            <span className={styles.rowLabel}>현재 설정된 위치</span>
+            <span className={styles.rowValue}>{location?.adminDong ?? '아직 설정 안 함'}</span>
+          </div>
+          <div className={styles.locationInputRow}>
+            <input
+              className={styles.locationInput}
+              value={addressInput}
+              onChange={e => handleAddressInputChange(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              placeholder="도로명 주소 입력 (예: 서울특별시 중구 세종대로 110)"
+            />
+            <button
+              className={styles.secondaryBtn}
+              onClick={handleSave}
+              disabled={!addressInput.trim() || savingAddress}
+            >
+              {savingAddress ? '저장 중...' : '저장'}
+            </button>
+          </div>
+          {addressError && <div className={styles.locationError}>{addressError}</div>}
+          <div className={styles.orDivider}>또는</div>
+          <button className={styles.secondaryBtn} onClick={handleUseGps} disabled={locatingGps}>
+            {locatingGps ? '위치 가져오는 중...' : 'GPS로 내 위치 찾기'}
+          </button>
+          <div className={styles.locationHint}>
+            위치를 고르면 입력란에 표시만 되고, "저장" 버튼을 눌러야 실제로 저장돼요.
+            날씨 예보와 버스 정류장 검색에 이 위치가 기준으로 쓰여요.
           </div>
         </div>
 

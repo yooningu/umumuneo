@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, type CSSProperties, type MouseEvent } from
 import { getSchedules } from '../../api/schedule';
 import { getHolidaysCached } from '../../state/holidayCache';
 import { getTimetables } from '../../api/timetable';
-import type { Schedule, Timetable } from '../../types';
+import { getWeatherForecast } from '../../api/weather';
+import type { Schedule, Timetable, DayForecast } from '../../types';
 import { toDateStr } from '../../utils/date';
 import { attachLongPress } from '../../utils/longPress';
+import { getWeatherIconUrl } from '../../utils/weatherIcon';
 import ScheduleDetailModal from './ScheduleDetailModal';
 import ScheduleEditModal from './ScheduleEditModal';
 import TimetableDetailModal from './TimetableDetailModal';
@@ -119,6 +121,7 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
+  const [forecast, setForecast] = useState<Map<string, DayForecast>>(new Map());
   const [visibleCount, setVisibleCount] = useState(7);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
@@ -204,6 +207,13 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
       .catch(console.error);
   }, [refreshKey]);
 
+  // 날씨 - 오늘부터 API가 주는 마지막 날짜까지만 오고(보통 3~5일), 그 이후 날짜는 데이터가 없음
+  useEffect(() => {
+    getWeatherForecast()
+      .then(data => setForecast(new Map(data.map(d => [d.date, d]))))
+      .catch(console.error);
+  }, [refreshKey]);
+
   // 컨테이너 너비에 따라 보여줄 요일 수를 갱신
   useEffect(() => {
     const el = containerRef.current;
@@ -267,11 +277,18 @@ export default function WeeklyCalendar({ selectedDate, onDateSelect, refreshKey,
             dow === 6 ? styles.saturday : '',
             dow === 0 ? styles.sunday : '',
           ].join(' ').trim();
+          const dayForecast = forecast.get(toDateStr(date));
+          const weatherIconUrl = dayForecast ? getWeatherIconUrl(dayForecast.sky, dayForecast.pty) : null;
           return (
             <div key={i} onClick={() => onDateSelect(date)} className={headerClassName}>
               <div className={labelClassName}>{DAY_LABELS[mondayBasedDow(date)]}</div>
-              <div className={numberClassName}>
-                {date.getDate()}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <div className={numberClassName} style={{ margin: 0 }}>
+                  {date.getDate()}
+                </div>
+                {weatherIconUrl && (
+                  <img src={weatherIconUrl} alt="" style={{ width: 20, height: 20 }} />
+                )}
               </div>
               {/* 공휴일은 실제 일정이 아니라 공휴일 API에서만 받아온 값 - 그냥 보여주기용 */}
               {holidayName && <div className={styles.holidayLabel}>{holidayName}</div>}

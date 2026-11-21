@@ -1,0 +1,14 @@
+.map {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--gray4);
+}
+
+.error {
+  color: var(--red2);
+  font-size: var(--font-s);
+  padding: 20px 12px;
+  text-align: center;
+  border: 1px solid var(--gray4);
+  border-radius: 10px;
+}

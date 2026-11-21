@@ -72,4 +72,13 @@ public class UserController {
         }
         return ResponseEntity.ok(response);
     }
+
+    // GET /api/v1/users/me/location/preview?lat=&lon= - GPS 좌표를 행정동 이름으로 미리보기만(저장 안 함)
+    @GetMapping("/me/location/preview")
+    public ResponseEntity<LocationResponse> previewLocation(
+            @RequestParam double lat,
+            @RequestParam double lon
+    ) throws Exception {
+        return ResponseEntity.ok(userService.previewLocationByGps(lat, lon));
+    }
 }

@@ -26,6 +26,7 @@ import java.util.List;
 public class BusStopService {
 
     private final BusService busService;
+    private final AddressService addressService;
     private final UserRepository userRepository;
     private final UserBusStopRepository userBusStopRepository;
     private final UserBusStopLineRepository userBusStopLineRepository;
@@ -33,6 +34,12 @@ public class BusStopService {
     // 내 주변 정류장 검색 (아직 즐겨찾기 등록 전 - 그냥 후보 목록)
     public List<NearbyStopResponse> findNearby(double lat, double lon) throws Exception {
         return busService.findNearbyStops(lat, lon).stream().map(NearbyStopResponse::new).toList();
+    }
+
+    // 주소 문자열로 주변 정류장 검색 (GPS 권한이 없을 때의 대안 - 주소를 좌표로 바꾼 뒤 그대로 위임)
+    public List<NearbyStopResponse> findNearbyByAddress(String address) throws Exception {
+        AddressService.LocationInfo info = addressService.geocodeAddress(address);
+        return findNearby(info.latitude(), info.longitude());
     }
 
     // 정류장을 지나는 노선 목록 (즐겨찾기에 추가할 노선 선택용)

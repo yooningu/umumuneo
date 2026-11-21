@@ -52,7 +52,7 @@
 }
 
 .dayNumber {
-  font-size: var(--font-l);
+  font-size: var(--font-xl);
   font-weight: var(--font-weight-bold);
   width: 36px;
   height: 36px;

@@ -23,12 +23,20 @@ public class BusController {
 
     private final BusStopService busStopService;
 
-    // GET /api/v1/bus/stops/nearby?lat=&lon= - 즐겨찾기 등록 전, 주변 정류장 후보 검색
+    // GET /api/v1/bus/stops/nearby?lat=&lon= (GPS) 또는 ?address= (주소 문자열) - 즐겨찾기 등록 전,
+    // 주변 정류장 후보 검색. GPS 권한이 없는 환경을 위해 둘 중 하나만 주면 됨
     @GetMapping("/stops/nearby")
     public ResponseEntity<List<NearbyStopResponse>> findNearbyStops(
-            @RequestParam double lat,
-            @RequestParam double lon
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lon,
+            @RequestParam(required = false) String address
     ) throws Exception {
+        if (address != null && !address.isBlank()) {
+            return ResponseEntity.ok(busStopService.findNearbyByAddress(address));
+        }
+        if (lat == null || lon == null) {
+            throw new IllegalArgumentException("lat/lon 또는 address 중 하나는 있어야 합니다.");
+        }
         return ResponseEntity.ok(busStopService.findNearby(lat, lon));
     }
 

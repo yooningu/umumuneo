@@ -87,6 +87,50 @@ export interface DayForecast {
   sky: number | null; // 1=맑음, 3=구름많음, 4=흐림
   pty: number | null; // 0=없음, 1=비, 2=비/눈, 3=눈, 4=소나기
 }
+export interface LocationInfo {
+  adminDong: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+export interface BusStopLine {
+  id: string;
+  routeId: string;
+  lineNo: string;
+  alarmMinutes: number | null;
+}
+export interface BusStop {
+  id: string;
+  nodeId: string;
+  cityCode: string;
+  stopName: string;
+  nickname: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  lines: BusStopLine[];
+}
+export interface NearbyStop {
+  nodeId: string;
+  cityCode: string;
+  stopName: string;
+  latitude: number;
+  longitude: number;
+}
+export interface StopRoute {
+  routeId: string;
+  routeNo: string;
+  routeType: string;
+  startStopName: string;
+  endStopName: string;
+}
+export interface BusArrival {
+  stopName: string;
+  routeId: string;
+  lineNo: string;
+  routeType: string;
+  stationsLeft: number | null;
+  vehicleType: string;
+  arrivalSeconds: number | null;
+}
 export interface ChatSession {
   id: string;
   title: string | null;
